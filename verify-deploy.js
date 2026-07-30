@@ -69,11 +69,13 @@ for (const {file, minLines, required} of FILES) {
     result.issues.push(`TOO SHORT: ${lines} lines (min ${minLines}) — file may be truncated`);
   }
 
-  // 4. Non-ASCII chars
+  // 4. Non-ASCII chars (only matters in dashboard.js - browser JS)
   const badChars = src.split('').filter(c => c.charCodeAt(0) > 127).length;
-  if (badChars > 0) {
+  if (badChars > 0 && file === 'dashboard.js') {
     result.ok = false;
     result.issues.push(`NON-ASCII: ${badChars} chars — may cause browser JS errors`);
+  } else if (badChars > 0) {
+    result.issues.push(`INFO non-ASCII: ${badChars} chars (emoji in console output - OK)`);
   }
 
   // 5. Required functions/strings
@@ -109,9 +111,11 @@ for (const {file, minLines, required} of FILES) {
       const headSrc = execSync(`git show HEAD:${file}`, {encoding:'utf8'});
       const headVer = (headSrc.match(/BOT_VERSION\s*=\s*'([^']+)'/) || [])[1] || '?';
       result.headVersion = headVer;
-      if (result.version === headVer) {
+      if (result.version === headVer && (result.added || 0) > 0) {
         result.issues.push(`VERSION NOT BUMPED: still ${headVer} — bump before deploying`);
         result.ok = false;
+      } else if (result.version === headVer) {
+        result.issues.push(`INFO version ${headVer} unchanged (no code changes detected)`);
       }
     } catch { result.headVersion = null; }
   }
