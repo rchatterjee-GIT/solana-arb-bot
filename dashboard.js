@@ -95,6 +95,7 @@ function buildHTML() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <title>Arb Bot ${VERSION}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -263,7 +264,7 @@ function renderBal(d){
   document.getElementById('tc').textContent='$'+total.toFixed(2);
   if(d.krakenEnabled){document.getElementById('kc').style.display='';document.getElementById('lk').textContent=d.kraken!=null?'$'+d.kraken.toFixed(2):'?';}
 }
-
+setTimeout(function(){refresh();setInterval(refresh,3000);setInterval(loadStatus,30000);},100);
 </script>
 </body>
 </html>`;
@@ -405,7 +406,7 @@ const server = http.createServer(async function(req, res) {
 
   } else {
     res.writeHead(200, {'Content-Type':'text/html'});
-    res.end(buildHTML());
+    res.end(H());
   }
 });
 
