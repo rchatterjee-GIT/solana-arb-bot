@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 set "BOT=C:\Users\Ramen\solana-arb-bot"
-set "DL=%USERPROFILE%\Downloads"
+set "DL=D:\Downloads"
 set "ARCH=%BOT%\archive\%date:~-4%-%date:~3,2%-%date:~0,2%_%time:~0,2%%time:~3,2%"
 set "ARCH=%ARCH: =0%"
 
