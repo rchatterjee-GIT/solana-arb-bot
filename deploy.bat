@@ -1,4 +1,3 @@
-cat > ~/solana-arb-bot/deploy.bat << 'EOF'
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
@@ -25,25 +24,23 @@ echo       Done.
 echo.
 echo [3/6] Syntax checking...
 node --check okx-arb.js >nul 2>&1
-if errorlevel 1 (echo ERROR: okx-arb.js & pause & exit /b 1)
+if errorlevel 1 (echo ERROR: okx-arb.js syntax & pause & exit /b 1)
 node --check dashboard.js >nul 2>&1
-if errorlevel 1 (echo ERROR: dashboard.js & pause & exit /b 1)
-node --check kraken-scaffold.js >nul 2>&1
-if errorlevel 1 (echo ERROR: kraken-scaffold.js & pause & exit /b 1)
+if errorlevel 1 (echo ERROR: dashboard.js syntax & pause & exit /b 1)
 node --check watchdog.js >nul 2>&1
-if errorlevel 1 (echo ERROR: watchdog.js & pause & exit /b 1)
+if errorlevel 1 (echo ERROR: watchdog.js syntax & pause & exit /b 1)
 echo       All OK.
 
 echo.
 echo [4/6] Validating config...
-node -e "try{JSON.parse(require('fs').readFileSync('arb-config.json','utf8'));process.exit(0);}catch(e){console.error(e.message);process.exit(1);}" >nul 2>&1
+node -e "try{JSON.parse(require('fs').readFileSync('arb-config.json','utf8'));process.exit(0);}catch(e){process.exit(1);}" >nul 2>&1
 if errorlevel 1 (echo ERROR: arb-config.json invalid & pause & exit /b 1)
 echo       OK.
 
 echo.
 echo [5/6] Backing up state...
 if exist "arb-state.json" copy /Y "arb-state.json" "arb-state.json.deploy-bak" >nul
-if exist "trades.json"    copy /Y "trades.json"    "trades.json.deploy-bak"    >nul
+if exist "trades.json" copy /Y "trades.json" "trades.json.deploy-bak" >nul
 echo       Done.
 
 echo.
@@ -57,5 +54,5 @@ echo ============================================
 echo  DEPLOYED: %BOTVER%
 echo  Dashboard: http://localhost:3000
 echo ============================================
-pause >nul
-EOF
+echo.
+pause
