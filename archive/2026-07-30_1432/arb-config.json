@@ -1,0 +1,56 @@
+{
+  "POLICY_SKIP_OKX": [
+    "TRUMP",
+    "POPCAT",
+    "BONK",
+    "JUP",
+    "BOME"
+  ],
+  "POLICY_SKIP_BYBIT": [
+    "JUP",
+    "TRUMP",
+    "POPCAT",
+    "BONK",
+    "BOME",
+    "GOAT"
+  ],
+  "RECOVERY_SKIP_BYBIT": [
+    "SOL"
+  ],
+  "TRADE_SIZE_USD": 120,
+  "MIN_SPREAD_CEX": 1,
+  "WINS_TARGET": 10,
+  "SMART_SELL": true,
+  "HOLD_MIN_SPREAD_PCT": 0.4,
+  "HOLD_MAX_HOURS": 2,
+  "HOLD_STOP_LOSS_PCT": 5,
+  "HOLD_CHECK_SECS": 30,
+  "APPROACH_BANDS": [
+    {
+      "pct": 60,
+      "cooldown_min": 30
+    },
+    {
+      "pct": 75,
+      "cooldown_min": 15
+    },
+    {
+      "pct": 90,
+      "cooldown_min": 5
+    }
+  ],
+  "APPROACH_ACTIVE_WEEKDAY_START": 5,
+  "APPROACH_ACTIVE_WEEKDAY_END": 15,
+  "WEEKEND_ALERTS": true,
+  "VOLATILE_MODE": false,
+  "VOLATILE_BAND_MULTIPLIER": 0.8,
+  "note": "Edit via node command only. Changes take effect within 30s.",
+  "MAX_CONCURRENT_TRADES": 2,
+  "MIN_SPREAD_BUFFER_PCT": 20,
+  "KRAKEN_ENABLED": true,
+  "REBALANCE_TARGET_SOLANA": 200,
+  "REBALANCE_TARGET_OKX": 350,
+  "REBALANCE_TARGET_BYBIT": 300,
+  "REBALANCE_TARGET_KRAKEN": 300,
+  "KRAKEN_SYNTHETIC": true
+}
