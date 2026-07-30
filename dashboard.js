@@ -557,7 +557,7 @@ async function loadDeployStatus(){
 }
 
 async function rollback(){
-  if(!confirm('Rollback arb-state.json and trades.json to pre-deploy backup?\nThis will revert state but NOT revert code files.')) return;
+  if(!confirm('Rollback arb-state.json and trades.json to pre-deploy backup? This will revert state but NOT revert code files.')) return;
   var btn=document.getElementById('rollbackBtn');
   btn.textContent='Rolling back...';btn.disabled=true;
   try{
