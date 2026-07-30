@@ -66,3 +66,4 @@ solana.tar.bz2
 # Node
 node_modules/
 package-lock.json
+archive/
