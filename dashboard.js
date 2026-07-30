@@ -405,7 +405,7 @@ const server = http.createServer(async function(req, res) {
 
   } else {
     res.writeHead(200, {'Content-Type':'text/html'});
-    res.end(H());
+    res.end(buildHTML());
   }
 });
 
