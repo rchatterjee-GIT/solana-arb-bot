@@ -1,18 +1,20 @@
 {
   "POLICY_SKIP_OKX": [
-    "TRUMP",
-    "POPCAT",
+    "BOME",
     "BONK",
     "JUP",
-    "BOME"
+    "POPCAT",
+    "RENDER",
+    "TRUMP"
   ],
   "POLICY_SKIP_BYBIT": [
-    "JUP",
-    "TRUMP",
-    "POPCAT",
-    "BONK",
     "BOME",
-    "GOAT"
+    "BONK",
+    "GOAT",
+    "JUP",
+    "MEW",
+    "POPCAT",
+    "TRUMP"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
@@ -52,5 +54,11 @@
   "REBALANCE_TARGET_OKX": 350,
   "REBALANCE_TARGET_BYBIT": 300,
   "REBALANCE_TARGET_KRAKEN": 300,
-  "KRAKEN_SYNTHETIC": true
+  "KRAKEN_SYNTHETIC": false,
+  "lastTestDate": "2026-08-02T06:02:24.863Z",
+  "lastTestSummary": {
+    "passed": 95,
+    "failed": 5,
+    "warned": 2
+  }
 }

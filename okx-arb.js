@@ -1,5 +1,7 @@
 require('dotenv').config();
 // ── Version History ───────────────────────────────────────────────────────────
+// v4.12 — consecutiveClean resets on restart (session-based)
+// v4.11 — consecutiveClean now persists to state after every trade
 // v4.10 — Kraken scaffold (KRAKEN_ENABLED/KRAKEN_SYNTHETIC), sim cooldown,
 //          atomic locks, OKX WS watchdog, consecutiveClean counter,
 //          TradeLogger ms-precision forensics, rebalance command,
@@ -31,7 +33,7 @@ const wallet     = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.
 console.log('🔑 Wallet loaded:', wallet.publicKey.toString());
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_VERSION            = 'v4.10';
+const BOT_VERSION            = 'v4.12';
 const TRADE_SIZE_USD         = 120;
 const MIN_SPREAD_CEX         = 1.00;
 const MAX_RETRIES            = 3;
@@ -148,6 +150,7 @@ function logTrade(trade) {
     if (trade.direction !== 'RECOVERY') {
       totalTrades++;
       consecutiveClean++;
+      saveState().catch(function(e) { logCrash('logTrade:saveState', e); });
     }
   } catch (err) { logCrash('logTrade', err); }
 }
@@ -190,7 +193,7 @@ let totalProfit     = _state.totalProfit;
 let totalTrades     = _state.totalTrades;
 let winningTrades   = _state.winningTrades;
 let consecutiveWins  = _state.consecutiveWins  || 0;
-let consecutiveClean = _state.consecutiveClean || 0;
+let consecutiveClean = _state.consecutiveClean || 0; // persistent until $240 scale
 let startCapital    = _state.startCapital;
 
 // ── Runtime state ─────────────────────────────────────────────────────────────
@@ -2087,9 +2090,9 @@ async function runStartupChecks() {
         }
         consecutiveWins = c;
         // Recalculate consecutiveClean — count from end until a crash/recovery
-        consecutiveClean = realTrades.length; // all clean unless we find a gap
+        // consecutiveClean stays at 0 on restart - counts from this session only
         await saveState();
-        console.log(`✅ State corrected: ${totalTrades} trades, ${winningTrades}W, P&L $${totalProfit.toFixed(2)}, ${consecutiveWins} consec wins, ${consecutiveClean} consec clean`);
+        console.log(`✅ State corrected: ${totalTrades} trades, ${winningTrades}W, P&L $${totalProfit.toFixed(2)}, ${consecutiveWins} consec wins`);
       }
     }
   } catch (err) { logCrash('startupIntegrityCheck', err); }

@@ -162,7 +162,7 @@ tr:hover td{background:#14141f}
   <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div></div>
   <div class="card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
   <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div></div>
-  <div class="card" id="kc" style="display:none"><div class="val" id="lk">-</div><div class="lbl">Kraken <span class="badge bp" style="font-size:.6rem">SIM</span></div></div>
+  <div class="card" id="kc" style="display:none"><div class="val" id="lk">-</div><div class="lbl">Kraken <span class="badge bp" style="font-size:.6rem" id="kb">SIM</span></div></div>
 </div>
 
 <div class="g5">
@@ -340,8 +340,9 @@ function render(d){
   var wins=d.state&&d.state.consecutiveWins||0,tgt=10,clean=d.state&&d.state.consecutiveClean||0;
   var wbar='';for(var i=0;i<tgt;i++)wbar+='<div class="wdot '+(i<wins?'wf':'we')+'"></div>';
   document.getElementById('wb').innerHTML=wbar;document.getElementById('wt').textContent=wins+'/'+tgt+' wins';
-  var cbar='';for(var i=0;i<tgt;i++)cbar+='<div class="wdot" style="background:'+(i<clean?'#22c55e':'#1e1e30')+'"></div>';
-  document.getElementById('cb').innerHTML=cbar;document.getElementById('ct').textContent=clean+'/'+tgt+' clean';
+  var ctgt=20;
+  var cbar='';for(var i=0;i<ctgt;i++)cbar+='<div class="wdot" style="background:'+(i<clean?'#22c55e':'#1e1e30')+'"></div>';
+  document.getElementById('cb').innerHTML=cbar;document.getElementById('ct').textContent=clean+'/'+ctgt+' clean';
   var pnl=d.state&&d.state.totalProfit||0;
   document.getElementById('pl').textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);document.getElementById('pl').className='val '+(pnl>=0?'green':'red');
   document.getElementById('wr').textContent=d.allWinPct+'%';document.getElementById('wr').className='val '+(d.allWinPct>=50?'green':'yellow');
@@ -354,6 +355,8 @@ function render(d){
   if(st&&st.nextRebalanceCheck)document.getElementById('sc').textContent=countdown(st.nextRebalanceCheck);
   var krakenOn=d.config&&d.config.KRAKEN_ENABLED,krakenSim=d.config&&d.config.KRAKEN_SYNTHETIC;
   document.getElementById('sk').innerHTML=!krakenOn?'<span class="dim">disabled</span>':krakenSim?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
+  var kb=document.getElementById('kb');
+  if(kb){kb.textContent=krakenSim?'SIM':'LIVE';kb.className=krakenSim?'badge bp':'badge bg';}
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
   var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'],allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
   var skipOKX=st&&st.skipOKX||[],skipBybit=st&&st.skipBybit||[];
@@ -426,8 +429,22 @@ const server = http.createServer(async function(req,res) {
     res.writeHead(200,{'Content-Type':'application/json'});
     try{
       const config=readJSON(CONFIG_FILE)||{};
+      const krakenEnabled=config.KRAKEN_ENABLED||false;
       const [solana,okx,bybit]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
-      res.end(JSON.stringify({solana,okx,bybit,krakenEnabled:config.KRAKEN_ENABLED||false,fetchedAt:new Date().toISOString()}));
+      let kraken=null;
+      if(krakenEnabled){
+        try{
+          const kn=''+Date.now(),kd='nonce='+kn;
+          const kh=crypto.createHash('sha256').update(kn+kd).digest('binary');
+          const km=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+          km.update('/0/private/Balance','binary');km.update(kh,'binary');
+          const ks=km.digest('base64');
+          const kr2=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':ks,'Content-Type':'application/x-www-form-urlencoded'},body:kd});
+          const kj=await kr2.json();
+          kraken=parseFloat(kj.result&&(kj.result.USDT||kj.result.ZUSD)||'0');
+        }catch(e){kraken=0;}
+      }
+      res.end(JSON.stringify({solana,okx,bybit,kraken,krakenEnabled,fetchedAt:new Date().toISOString()}));
     }catch(e){res.end(JSON.stringify({error:e.message}));}
 
   }else if(url==='/api/deploy-status'){

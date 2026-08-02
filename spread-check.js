@@ -1,0 +1,11 @@
+const fs=require('fs');
+const fires=JSON.parse(fs.readFileSync('fires.json','utf8'));
+const since=new Date('2026-07-28T00:00:00Z').getTime();
+const real=fires.filter(function(f){return f.synthetic!==true&&new Date(f.date).getTime()>since;});
+console.log('Real fires last 2 days:',real.length);
+real.forEach(function(f){console.log(f.date.slice(0,16),f.direction,(f.pair||'').replace('/USDT',''),f.outcome,(f.spreadPct||0).toFixed(3)+'%');});
+const sims=JSON.parse(fs.readFileSync('sim-trades.json','utf8'));
+const byHour={};
+sims.forEach(function(s){const h=s.date.slice(11,13)+'h';if(!byHour[h])byHour[h]={count:0,max:0,spreads:[]};byHour[h].count++;byHour[h].spreads.push(s.spreadPct);byHour[h].max=Math.max(byHour[h].max,s.spreadPct);});
+console.log('\nKraken PENGU sim by hour:');
+Object.entries(byHour).sort().forEach(function(e){const avg=e[1].spreads.reduce(function(a,b){return a+b;},0)/e[1].spreads.length;console.log(e[0],'fires:'+e[1].count,'avg:'+avg.toFixed(2)+'%','max:'+e[1].max.toFixed(2)+'%');});

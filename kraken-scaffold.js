@@ -67,7 +67,7 @@ const KRAKEN_PAIRS = [
     lotDecimals: 8,
     minOrder:    100,
     fee:         0.0040,
-    withdrawFee: 50,
+    withdrawFee: 124,
     withdrawChain: 'Solana',
   },
   // USD pairs — viable but require USD→USDT conversion after sell
@@ -182,13 +182,16 @@ async function placeKrakenOrder(side, pair, quoteAmount, logger = null) {
   const start = Date.now();
   try {
     // Lesson: always specify in quote currency to avoid decimal/lot size issues
-    const result = await krakenPrivate('/AddOrder', {
+    // viqc (volume in quote currency) only works for buy orders
+    // sell orders must use token quantity directly
+    const params = {
       pair,
-      type:      side,        // 'buy' or 'sell'
+      type:      side,
       ordertype: 'market',
       volume:    quoteAmount.toString(),
-      oflags:    'viqc',      // viqc = volume in quote currency — key lesson from OKX/Bybit
-    });
+    };
+    if (side === 'buy') params.oflags = 'viqc';
+    const result = await krakenPrivate('/AddOrder', params);
     const latMs = Date.now() - start;
     if (logger) logger.log('API_RESP', `OK ${label} txid:${result.txid?.[0]} latency:${latMs}ms`, { latencyMs: latMs });
     return result;
