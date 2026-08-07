@@ -1,6 +1,7 @@
 require('dotenv').config();
 // ── Version History ───────────────────────────────────────────────────────────
 // v4.14 — DEX atomic lock fix, cross-exchange ranking, balance sync, auto-rebalance
+//          omni-directional rebalance, Bybit equity fix, 5% buffer, auto-execute
 // v4.13 — immediate rebalance after trade completion
 // v4.12 — consecutiveClean resets on restart (session-based)
 // v4.11 — consecutiveClean now persists to state after every trade
@@ -1891,7 +1892,7 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
     // Auto-rebalance if OKX drops below trade minimum
     if (okxHealthy && okxBals.usdt < TRADE_SIZE_USD && !rebalancing) {
       console.log(`⚠️  OKX $${okxBals.usdt.toFixed(0)} below $${TRADE_SIZE_USD} minimum — auto-rebalancing`);
-      checkAndRebalance().catch(err => logCrash('autoRebalance', err));
+      handleRebalanceCommand(true).catch(err => logCrash('autoRebalance', err));
     }
 
     logger.setBalanceBefore({ solana: w.usdc, okx: okxBals.usdt, bybit: bybitBal });
@@ -2557,8 +2558,9 @@ async function handleRebalanceCommand(confirm = false) {
   try {
     const w        = await getWalletBalances();
     const okxBals  = await getOKXBalances();
-    const bybitBal = await getBybitBalance('USDT');
-
+    // Use equity for Bybit (walletBalance can be stale after trades)
+    const bybitBal = await getBybitEquity();
+    
     const solana   = w.usdc;
     const okx      = okxBals.usdt;
     const bybit    = bybitBal;
@@ -2567,7 +2569,7 @@ async function handleRebalanceCommand(confirm = false) {
     const tSolana  = liveConfig.REBALANCE_TARGET_SOLANA ?? 200;
     const tOKX     = liveConfig.REBALANCE_TARGET_OKX    ?? 350;
     const tBybit   = liveConfig.REBALANCE_TARGET_BYBIT  ?? 300;
-    const buffer   = 0.10; // 10% tolerance before rebalancing
+    const buffer   = 0.05; // 5% tolerance before rebalancing
 
     // Calculate excess and shortfall per exchange
     const solanaExcess  = Math.max(0, solana - tSolana * (1 + buffer));
@@ -2846,4 +2848,13 @@ async function main() {
   lastReportTime = Date.now();
 }
 
-main().catch(err => logCrash('main', err));
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
