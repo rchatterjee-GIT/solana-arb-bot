@@ -17,7 +17,7 @@ const FILES = [
   {
     file: 'dashboard.js',
     minLines: 400,
-    required: ['buildHTML','async function refresh','function render(d)',
+    required: ['buildHTML','async function doRefresh','function render(d)',
                'async function loadStatus','function renderToks',
                'server.listen','doRebalance','doResync','doRestart'],
   },
