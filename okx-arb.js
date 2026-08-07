@@ -1,5 +1,7 @@
 require('dotenv').config();
 // ── Version History ───────────────────────────────────────────────────────────
+// v4.14 — DEX atomic lock fix, cross-exchange ranking, balance sync, auto-rebalance
+// v4.13 — immediate rebalance after trade completion
 // v4.12 — consecutiveClean resets on restart (session-based)
 // v4.11 — consecutiveClean now persists to state after every trade
 // v4.10 — Kraken scaffold (KRAKEN_ENABLED/KRAKEN_SYNTHETIC), sim cooldown,
@@ -33,7 +35,7 @@ const wallet     = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.
 console.log('🔑 Wallet loaded:', wallet.publicKey.toString());
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_VERSION            = 'v4.12';
+const BOT_VERSION            = 'v4.14';
 const TRADE_SIZE_USD         = 120;
 const MIN_SPREAD_CEX         = 1.00;
 const MAX_RETRIES            = 3;
@@ -1277,7 +1279,11 @@ async function executeSwapToUSDC(trade, ctx) {
   logger.complete(profit, usdcOut, duration, { fundsRecovered: true });
   await ctx.complete({ profit, usdcOut, tokenAmount, durationMin: duration });
   lastReportTime = 0;
-  await checkAndRebalance();
+  // Immediate rebalance check after trade — restores exchange balance for next opportunity
+  try {
+    const to = new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+    await Promise.race([checkAndRebalance(), to]);
+  } catch(e) { logCrash('post-trade rebalance', e); }
 }
 
 // ── Rebalance ─────────────────────────────────────────────────────────────────
@@ -1813,16 +1819,17 @@ async function checkAndExecute() {
     consecutiveErrors = 0;
     const toFire = [bestDex, bestOkx, bestBybit].filter(Boolean);
     if (toFire.length > 0) {
-      // Claim locks atomically before firing to block concurrent scans
-      if (bestOkx)   okxLock   = true;
-      if (bestBybit) bybitLock = true;
-      if (bestDex)   dexLock   = true;
+      // Claim ALL locks atomically before ANY execution begins
+      // This prevents concurrent scans from firing on the same opportunities
+      if (bestDex)   { dexLock   = true; executingDex   = true; }
+      if (bestOkx)   { okxLock   = true; executingOkx   = true; }
+      if (bestBybit) { bybitLock = true; executingBybit = true; }
       console.log(`\n🚨 Firing ${toFire.length} trade(s): ${toFire.map(t => `${t.direction}:${t.pair.name}`).join(', ')}`);
       await Promise.allSettled(toFire.map(opp => executeArb(opp)));
-      // Release locks — executeArb has set executingOkx/Bybit/Dex flags by now
-      if (bestOkx)   okxLock   = false;
-      if (bestBybit) bybitLock = false;
-      if (bestDex)   dexLock   = false;
+      // Release all locks and executing flags
+      if (bestDex)   { dexLock   = false; executingDex   = false; }
+      if (bestOkx)   { okxLock   = false; executingOkx   = false; }
+      if (bestBybit) { bybitLock = false; executingBybit = false; }
     }
 
     // ── Kraken synthetic simulation (runs alongside real trades) ──────────────
@@ -1879,6 +1886,14 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
     const w        = await getWalletBalances();
     const okxBals  = await getOKXBalances();
     const bybitBal = await getBybitBalance('USDT');
+    const walletUSDC = w.usdc;
+
+    // Auto-rebalance if OKX drops below trade minimum
+    if (okxHealthy && okxBals.usdt < TRADE_SIZE_USD && !rebalancing) {
+      console.log(`⚠️  OKX $${okxBals.usdt.toFixed(0)} below $${TRADE_SIZE_USD} minimum — auto-rebalancing`);
+      checkAndRebalance().catch(err => logCrash('autoRebalance', err));
+    }
+
     logger.setBalanceBefore({ solana: w.usdc, okx: okxBals.usdt, bybit: bybitBal });
     const cexFee   = exchange === 'Bybit' ? BYBIT_FEE : OKX_FEE;
     const estProfit = (spreadPct / 100) * TRADE_SIZE_USD - (cexFee + DEX_FEE) * TRADE_SIZE_USD;
@@ -2753,6 +2768,27 @@ async function main() {
     }
     catch (err) { logCrash('checkAndRebalance', err); }
   }, 30 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
 
   // Background wallet cleaner — every 15 minutes
   setInterval(async () => {

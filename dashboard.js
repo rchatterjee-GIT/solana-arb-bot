@@ -332,7 +332,14 @@ function render(d){
   if(active>0){pill.className='pill pa';pill.textContent=active+' active';}else{pill.className='pill pq';pill.textContent='watching';}
   var latest=d.latest||{},total=latest.total||0,gain=total-(d.startCapital||total);
   var gainPct=d.startCapital?((gain/d.startCapital)*100).toFixed(1):'0';
-  if(!liveBal){document.getElementById('tc').textContent='$'+total.toFixed(2);document.getElementById('ls').textContent='$'+(latest.solana||0).toFixed(2);document.getElementById('lo').textContent='$'+(latest.okx||0).toFixed(2);document.getElementById('lb').textContent='$'+(latest.bybit||0).toFixed(2);}
+  var lb2=d.status&&d.status.liveBalances;
+  if(lb2&&lb2.updatedAt&&(Date.now()-new Date(lb2.updatedAt).getTime())<10*60*1000){
+    document.getElementById('ls').textContent='$'+lb2.solana.toFixed(2);
+    document.getElementById('lo').textContent='$'+lb2.okx.toFixed(2);
+    document.getElementById('lb').textContent='$'+lb2.bybit.toFixed(2);
+    var t2=(lb2.solana||0)+(lb2.okx||0)+(lb2.bybit||0);
+    document.getElementById('tc').textContent='$'+t2.toFixed(2);
+  } else if(!liveBal){document.getElementById('tc').textContent='$'+total.toFixed(2);document.getElementById('ls').textContent='$'+(latest.solana||0).toFixed(2);document.getElementById('lo').textContent='$'+(latest.okx||0).toFixed(2);document.getElementById('lb').textContent='$'+(latest.bybit||0).toFixed(2);}
   document.getElementById('cg').innerHTML='<span class="'+(gain>=0?'green':'red')+'">'+(gain>=0?'+':'')+'$'+gain.toFixed(2)+' ('+gainPct+'%)</span>';
   var okxOk=st&&st.okxHealthy!==false;
   document.getElementById('os').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
