@@ -210,8 +210,8 @@ tr:hover td{background:#14141f}
     <div class="card"><div class="val" id="tc">-</div><div class="lbl">Total Capital</div><div class="sub" id="cg">-</div></div>
     <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div></div>
     <div class="card" id="okx-card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
-    <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div></div>
-    <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken <span class="badge bp" id="kb">SIM</span></div></div>
+    <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div><div class="sub" id="bs">-</div></div>
+    <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken</div><div class="sub" id="ks">-</div></div>
   </div>
 
   <div class="g5">
@@ -367,7 +367,7 @@ async function doLiveBalances(){
     if(d.solana!=null)document.getElementById('ls').textContent=fmt2(d.solana);
     if(d.okx!=null)document.getElementById('lo').textContent=fmt2(d.okx);
     if(d.bybit!=null)document.getElementById('lb').textContent=fmt2(d.bybit);
-    if(d.kraken!=null)document.getElementById('lk').textContent=fmt2(d.kraken);
+    if(d.kraken!=null&&d.kraken>0){document.getElementById('lk').textContent=fmt2(d.kraken);document.getElementById('ks').innerHTML='<span class="green">online</span>';}
     var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0);
     document.getElementById('tc').textContent=fmt2(total);
     // OKX warning
@@ -443,7 +443,7 @@ async function doRebalance(){
 function closeR(){document.getElementById('rm').style.display='none';}
 async function execRebalance(){
   document.getElementById('re').disabled=true;document.getElementById('re').textContent='Sending...';
-  try{await fetch('/api/rebalance-execute',{method:'POST'});document.getElementById('rc').innerHTML='<span class="green">Rebalance command sent. Check Telegram.</span>';}
+  try{await fetch('/api/rebalance-execute',{method:'POST'});document.getElementById('rc').innerHTML='<span class="green">Sent. Check Telegram.</span>';setTimeout(function(){closeR();},1500);}
   catch(e){document.getElementById('rc').innerHTML='<span class="red">'+e.message+'</span>';}
 }
 async function doResync(){
@@ -497,6 +497,13 @@ function render(d){
   var okxOk=st&&st.okxHealthy!==false;
   document.getElementById('os').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
   document.getElementById('so').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
+  // Bybit status - assume online if we have a balance
+  var bybitOk=liveBal&&liveBal.bybit!=null&&liveBal.bybit>0;
+  document.getElementById('bs').innerHTML=bybitOk?'<span class="green">online</span>':'<span class="dim">-</span>';
+  // Kraken status
+  var krakenEnabled2=d.config&&d.config.KRAKEN_ENABLED;
+  var krakenOk=liveBal&&liveBal.kraken!=null&&liveBal.kraken>0;
+  document.getElementById('ks').innerHTML=!krakenEnabled2?'<span class="dim">disabled</span>':krakenOk?'<span class="green">online</span>':'<span class="red">offline</span>';
   var wins=d.state&&d.state.consecutiveWins||0,tgt=10;
   var clean=d.state&&d.state.consecutiveClean||0,ctgt=20;
   var wbar='';for(var i=0;i<tgt;i++)wbar+='<div class="wdot '+(i<wins?'wf':'we')+'"></div>';
@@ -517,8 +524,10 @@ function render(d){
   if(st&&st.nextRebalanceCheck)document.getElementById('sc').textContent=countdown(st.nextRebalanceCheck);
   var krakenOn=d.config&&d.config.KRAKEN_ENABLED,krakenSim=d.config&&d.config.KRAKEN_SYNTHETIC;
   document.getElementById('sk').innerHTML=!krakenOn?'<span class="dim">disabled</span>':krakenSim?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
-  var kb=document.getElementById('kb');if(kb){kb.textContent=krakenSim?'SIM':'LIVE';kb.className=krakenSim?'badge bp':'badge bg';}
-  document.getElementById('lk').textContent='-';
+  // Kraken mode in system status table
+  var krakenOn2=d.config&&d.config.KRAKEN_ENABLED,krakenSim2=d.config&&d.config.KRAKEN_SYNTHETIC;
+  document.getElementById('sk').innerHTML=!krakenOn2?'<span class="dim">disabled</span>':krakenSim2?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
+  // Don't blank Kraken balance on refresh - keep last known value
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
   var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'];
   var allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
