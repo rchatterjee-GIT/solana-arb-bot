@@ -266,8 +266,8 @@ async function doRebalance(){
     h+='<tr><td class="dim">OKX</td><td>$'+d.okx.toFixed(0)+'</td><td class="dim">target $'+d.targetOKX+'</td></tr>';
     h+='<tr><td class="dim">Bybit</td><td>$'+d.bybit.toFixed(0)+'</td><td class="dim">target $'+d.targetBybit+'</td></tr>';
     h+='</table><hr style="border-color:#1e1e30;margin:12px 0">';
-    if(!d.needed){h+='<span class="green">Balances OK</span>';document.getElementById('re').disabled=true;}
-    else{h+='<b style="color:#eab308">Recommended:</b><br>';if(d.toOKX>5)h+='Move $'+d.toOKX+' to OKX<br>';if(d.toBybit>5)h+='Move $'+d.toBybit+' to Bybit<br>';document.getElementById('re').disabled=false;}
+    if(!d.moves||d.moves.length===0){h+='<span class="green">All balances within target range</span>';document.getElementById('re').disabled=true;}
+    else{h+='<b style="color:#eab308">Recommended moves:</b><br>';d.moves.forEach(function(m){h+='&rarr; $'+m.amount+' '+m.from+' &rarr; '+m.to+'<br>';});document.getElementById('re').disabled=false;}
     document.getElementById('rc').innerHTML=h;
   }catch(e){document.getElementById('rc').innerHTML='<span class="red">'+e.message+'</span>';}
 }
@@ -500,11 +500,17 @@ const server = http.createServer(async function(req,res) {
       const cfg=readJSON(CONFIG_FILE)||{};
       const tSol=cfg.REBALANCE_TARGET_SOLANA||200,tOKX=cfg.REBALANCE_TARGET_OKX||350,tBybit=cfg.REBALANCE_TARGET_BYBIT||300;
       const [sol,okx2,bybit2]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
-      const solEx=Math.max(0,(sol||0)-tSol),okxSh=Math.max(0,tOKX-(okx2||0)),bybitSh=Math.max(0,tBybit-(bybit2||0));
-      let toOKX=0,toBybit=0;
-      const budget=Math.min(solEx,okxSh+bybitSh);
-      if(budget>10){if(okxSh>=bybitSh){toOKX=Math.min(okxSh,budget);toBybit=Math.min(bybitSh,budget-toOKX);}else{toBybit=Math.min(bybitSh,budget);toOKX=Math.min(okxSh,budget-toBybit);}}
-      res.end(JSON.stringify({solana:sol,okx:okx2,bybit:bybit2,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,toOKX:Math.round(toOKX),toBybit:Math.round(toBybit),needed:toOKX>5||toBybit>5}));
+      const buf=0.10;
+      const solEx=Math.max(0,(sol||0)-tSol*(1+buf)),okxEx=Math.max(0,(okx2||0)-tOKX*(1+buf)),bybitEx=Math.max(0,(bybit2||0)-tBybit*(1+buf));
+      const solSh=Math.max(0,tSol-(sol||0)),okxSh=Math.max(0,tOKX-(okx2||0)),bybitSh=Math.max(0,tBybit-(bybit2||0));
+      const moves=[];
+      if(bybitEx>20&&okxSh>20)moves.push({from:'Bybit',to:'OKX',amount:Math.round(Math.min(bybitEx,okxSh))});
+      if(bybitEx>20&&solSh>20)moves.push({from:'Bybit',to:'Solana',amount:Math.round(Math.min(bybitEx,solSh))});
+      if(okxEx>20&&bybitSh>20)moves.push({from:'OKX',to:'Bybit',amount:Math.round(Math.min(okxEx,bybitSh))});
+      if(okxEx>20&&solSh>20)moves.push({from:'OKX',to:'Solana',amount:Math.round(Math.min(okxEx,solSh))});
+      if(solEx>20&&okxSh>20)moves.push({from:'Solana',to:'OKX',amount:Math.round(Math.min(solEx,okxSh))});
+      if(solEx>20&&bybitSh>20)moves.push({from:'Solana',to:'Bybit',amount:Math.round(Math.min(solEx,bybitSh))});
+      res.end(JSON.stringify({solana:sol,okx:okx2,bybit:bybit2,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,moves,needed:moves.length>0}));
     }catch(e){res.end(JSON.stringify({error:e.message}));}
 
   }else if(url==='/api/rebalance-execute'&&req.method==='POST'){

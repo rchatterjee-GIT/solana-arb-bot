@@ -2199,7 +2199,7 @@ async function pollTelegramCommands() {
         const staticList  = PAIRS.map(p => p.okxCcy).join(', ');
         const dynamicList = dynamicPairs.map(p => p.okxCcy + ' (dynamic)').join(', ') || 'none';
         await sendAlert('📋 <b>Active pairs</b>\nStatic: ' + staticList + '\nDynamic: ' + dynamicList);
-      } else if (text === '/rebalance' || text === '/rebalance confirm') {
+      } else if (text === '/rb' || text === '/rb confirm' || text === '/rebalance' || text === '/rebalance confirm') {
         const confirm = text.includes('confirm');
         handleRebalanceCommand(confirm).catch(err => logCrash('handleRebalanceCommand', err));
       } else if (text === '/holdings') {
@@ -2552,7 +2552,7 @@ async function handleRemovePair(ccy) {
 }
 
 
-// ── Manual rebalance command ──────────────────────────────────────────────────
+// ── Omni-directional rebalance ───────────────────────────────────────────────
 async function handleRebalanceCommand(confirm = false) {
   try {
     const w        = await getWalletBalances();
@@ -2564,121 +2564,118 @@ async function handleRebalanceCommand(confirm = false) {
     const bybit    = bybitBal;
     const total    = solana + okx + bybit;
 
-    // Targets — configurable via arb-config.json
-    const targetSolana = liveConfig.REBALANCE_TARGET_SOLANA ?? 200;
-    const targetOKX    = liveConfig.REBALANCE_TARGET_OKX    ?? 350;
-    const targetBybit  = liveConfig.REBALANCE_TARGET_BYBIT  ?? 300;
+    const tSolana  = liveConfig.REBALANCE_TARGET_SOLANA ?? 200;
+    const tOKX     = liveConfig.REBALANCE_TARGET_OKX    ?? 350;
+    const tBybit   = liveConfig.REBALANCE_TARGET_BYBIT  ?? 300;
+    const buffer   = 0.10; // 10% tolerance before rebalancing
 
-    const solanaExcess  = Math.max(0, solana - targetSolana);
-    const okxShortfall  = Math.max(0, targetOKX   - okx);
-    const bybitShortfall= Math.max(0, targetBybit - bybit);
-    const totalShortfall= okxShortfall + bybitShortfall;
+    // Calculate excess and shortfall per exchange
+    const solanaExcess  = Math.max(0, solana - tSolana * (1 + buffer));
+    const okxExcess     = Math.max(0, okx    - tOKX   * (1 + buffer));
+    const bybitExcess   = Math.max(0, bybit  - tBybit * (1 + buffer));
+    const solanaShort   = Math.max(0, tSolana - solana);
+    const okxShort      = Math.max(0, tOKX    - okx);
+    const bybitShort    = Math.max(0, tBybit  - bybit);
 
-    // Calculate transfer amounts
-    let toOKX   = 0;
-    let toBybit = 0;
-    if (solanaExcess > 10 && totalShortfall > 10) {
-      const budget = Math.min(solanaExcess, totalShortfall);
-      if (okxShortfall >= bybitShortfall) {
-        toOKX   = Math.min(okxShortfall, budget);
-        toBybit = Math.min(bybitShortfall, Math.max(0, budget - toOKX));
-      } else {
-        toBybit = Math.min(bybitShortfall, budget);
-        toOKX   = Math.min(okxShortfall, Math.max(0, budget - toBybit));
-      }
+    const moves = [];
+
+    // Bybit excess → OKX (via Bybit withdraw to OKX deposit address)
+    if (bybitExcess > 20 && okxShort > 20) {
+      const amt = Math.min(bybitExcess, okxShort);
+      moves.push({ from: 'Bybit', to: 'OKX', amount: Math.round(amt), method: 'bybit-to-okx' });
+    }
+
+    // Bybit excess → Solana (via Bybit withdraw to Solana wallet)
+    if (bybitExcess > 20 && solanaShort > 20) {
+      const amt = Math.min(bybitExcess, solanaShort);
+      moves.push({ from: 'Bybit', to: 'Solana', amount: Math.round(amt), method: 'bybit-to-sol' });
+    }
+
+    // OKX excess → Bybit (via OKX withdraw to Bybit deposit address)
+    if (okxExcess > 20 && bybitShort > 20) {
+      const amt = Math.min(okxExcess, bybitShort);
+      moves.push({ from: 'OKX', to: 'Bybit', amount: Math.round(amt), method: 'okx-to-bybit' });
+    }
+
+    // OKX excess → Solana
+    if (okxExcess > 20 && solanaShort > 20) {
+      const amt = Math.min(okxExcess, solanaShort);
+      moves.push({ from: 'OKX', to: 'Solana', amount: Math.round(amt), method: 'okx-to-sol' });
+    }
+
+    // Solana excess → OKX
+    if (solanaExcess > 20 && okxShort > 20) {
+      const amt = Math.min(solanaExcess, okxShort);
+      moves.push({ from: 'Solana', to: 'OKX', amount: Math.round(amt), method: 'sol-to-okx' });
+    }
+
+    // Solana excess → Bybit
+    if (solanaExcess > 20 && bybitShort > 20) {
+      const amt = Math.min(solanaExcess, bybitShort);
+      moves.push({ from: 'Solana', to: 'Bybit', amount: Math.round(amt), method: 'sol-to-bybit' });
     }
 
     const statusMsg =
       '\u2696\ufe0f <b>Rebalance Check</b>\n' +
-      'Sol: $' + solana.toFixed(0) + ' | OKX: $' + okx.toFixed(0) + ' | By: $' + bybit.toFixed(0) + '\n' +
-      'Total: $' + total.toFixed(0) + '\n\n' +
-      '<b>Targets:</b> Sol:$' + targetSolana + ' OKX:$' + targetOKX + ' By:$' + targetBybit + '\n\n';
+      'Sol: $' + solana.toFixed(0) + ' (target $' + tSolana + ')\n' +
+      'OKX: $' + okx.toFixed(0)    + ' (target $' + tOKX    + ')\n' +
+      'By:  $' + bybit.toFixed(0)  + ' (target $' + tBybit  + ')\n\n';
 
-    if (toOKX < 5 && toBybit < 5) {
-      await sendAlert(statusMsg + '\u2705 Balances within target range — no action needed');
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
       return;
     }
 
-    const planMsg = statusMsg +
-      '<b>Plan:</b>\n' +
-      (toOKX   > 5 ? '\u2192 Move $' + toOKX.toFixed(0)   + ' Solana \u2192 OKX\n'   : '') +
-      (toBybit > 5 ? '\u2192 Move $' + toBybit.toFixed(0) + ' Solana \u2192 Bybit\n' : '') +
-      '\n';
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
 
     if (!confirm) {
-      await sendAlert(planMsg + 'Reply /rebalance confirm to execute');
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
       return;
     }
 
-    // Pause scanning during rebalance to avoid Jupiter rate limits
     rebalancing = true;
     await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
-    await new Promise(r => setTimeout(r, 2000)); // let any in-flight scan finish
+    await new Promise(r => setTimeout(r, 2000));
 
-    // Transfer to OKX: USDC→USDT on Solana, send to OKX deposit address
-    if (toOKX > 5) {
+    for (const move of moves) {
       try {
-        const usdtOut     = await swapUSDCtoUSDT(toOKX);
-        await new Promise(r => setTimeout(r, 3000));
-        const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
-        const rawUSDT     = Math.floor(usdtOut * 1e6);
-        const usdtMintPk  = new PublicKey(USDT_MINT);
-        const destPubkey  = new PublicKey(depositAddr);
-        const fromAta     = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
-        const toAta       = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
-        // Create dest ATA in separate tx first if needed
-        try { await getAccount(connection, toAta); }
-        catch {
-          const createTx = new Transaction();
-          createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
-          const cs = await connection.sendTransaction(createTx, [wallet]);
-          await connection.confirmTransaction(cs, 'confirmed');
-          await new Promise(r => setTimeout(r, 2000));
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
         }
-        // Transfer in separate tx
-        const transferTx = new Transaction();
-        transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
-        const sig = await connection.sendTransaction(transferTx, [wallet]);
-        await connection.confirmTransaction(sig, 'confirmed');
-        await sendAlert('\u2705 Sent $' + toOKX.toFixed(0) + ' USDT to OKX\nArrives in 5-15min');
       } catch (err) {
-        logCrash('manualRebalance:OKX', err);
-        await sendAlert('\u26a0\ufe0f OKX transfer failed: ' + err.message.slice(0, 80));
+        logCrash('rebalance:' + move.method, err);
+        await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
       }
     }
 
-    // Transfer to Bybit: USDC→USDT on Solana, send to Bybit deposit address
-    if (toBybit > 5) {
-      try {
-        const usdtOut     = await swapUSDCtoUSDT(toBybit);
-        await new Promise(r => setTimeout(r, 3000));
-        const depositAddr = await getBybitDepositAddress('USDT');
-        if (!depositAddr) throw new Error('No Bybit USDT deposit address');
-        const rawUSDT     = Math.floor(usdtOut * 1e6);
-        const usdtMintPk  = new PublicKey(USDT_MINT);
-        const destPubkey  = new PublicKey(depositAddr);
-        const fromAta     = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
-        const toAta       = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
-        // Create dest ATA in separate tx first if needed
-        try { await getAccount(connection, toAta); }
-        catch {
-          const createTx = new Transaction();
-          createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
-          const cs = await connection.sendTransaction(createTx, [wallet]);
-          await connection.confirmTransaction(cs, 'confirmed');
-          await new Promise(r => setTimeout(r, 2000));
-        }
-        // Transfer in separate tx
-        const transferTx = new Transaction();
-        transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
-        const sig = await connection.sendTransaction(transferTx, [wallet]);
-        await connection.confirmTransaction(sig, 'confirmed');
-        await sendAlert('\u2705 Sent $' + toBybit.toFixed(0) + ' USDT to Bybit\nArrives in 5-15min');
-      } catch (err) {
-        logCrash('manualRebalance:Bybit', err);
-        await sendAlert('\u26a0\ufe0f Bybit transfer failed: ' + err.message.slice(0, 80));
-      }
-    }
+    await sendAlert('\u2705 Rebalance complete');
 
   } catch (err) {
     logCrash('handleRebalanceCommand', err);
@@ -2688,6 +2685,55 @@ async function handleRebalanceCommand(confirm = false) {
     console.log('Rebalancing complete — scanning resumed');
   }
 }
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
