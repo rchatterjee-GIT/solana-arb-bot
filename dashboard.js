@@ -691,6 +691,6 @@ server.on('error',function(err){
   else throw err;
 });
 
-server.listen(PORT,function(){
+server.listen(PORT,'0.0.0.0',function(){
   console.log('Dashboard '+VERSION+' running at http://localhost:'+PORT);
 });
