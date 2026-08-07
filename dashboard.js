@@ -5,7 +5,7 @@ const path   = require('path');
 const crypto = require('crypto');
 
 const PORT        = 3001;
-const VERSION     = 'v5.0';
+const VERSION     = 'v5.1';
 const STATE_FILE  = path.join(__dirname, 'arb-state.json');
 const TRADES_FILE = path.join(__dirname, 'trades.json');
 const FIRES_FILE  = path.join(__dirname, 'fires.json');
@@ -18,23 +18,28 @@ function readJSON(f) { try { return JSON.parse(fs.readFileSync(f,'utf8')); } cat
 
 async function fetchOKX() {
   try {
-    const ts = new Date().toISOString();
-    const sig = crypto.createHmac('sha256',process.env.OKX_API_SECRET).update(ts+'GET'+'/api/v5/account/balance').digest('base64');
-    const r = await fetch('https://www.okx.com/api/v5/account/balance',{headers:{'OK-ACCESS-KEY':process.env.OKX_API_KEY,'OK-ACCESS-SIGN':sig,'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':process.env.OKX_PASSPHRASE}});
-    const j = await r.json();
-    return parseFloat(j.data?.[0]?.details?.find(d=>d.ccy==='USDT')?.availBal||'0');
-  } catch { return null; }
+    const ts=new Date().toISOString();
+    const sig=crypto.createHmac('sha256',process.env.OKX_API_SECRET).update(ts+'GET'+'/api/v5/account/balance').digest('base64');
+    const r=await fetch('https://www.okx.com/api/v5/account/balance',{headers:{'OK-ACCESS-KEY':process.env.OKX_API_KEY,'OK-ACCESS-SIGN':sig,'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':process.env.OKX_PASSPHRASE}});
+    const j=await r.json();
+    const details=j.data?.[0]?.details||[];
+    const usdt=details.find(d=>d.ccy==='USDT');
+    const tokens=details.filter(d=>d.ccy!=='USDT'&&parseFloat(d.eqUsd||0)>0.01).map(d=>({sym:d.ccy,bal:parseFloat(d.availBal),usd:parseFloat(d.eqUsd||0)}));
+    return {usdt:parseFloat(usdt?.availBal||0),tokens};
+  } catch(e){return {usdt:null,tokens:[]};}
 }
 
 async function fetchBybit() {
   try {
-    const ts=''+Date.now(),rw='5000',qs='accountType=UNIFIED&coin=USDT';
+    const ts=''+Date.now(),rw='5000',qs='accountType=UNIFIED';
     const sig=crypto.createHmac('sha256',process.env.BYBIT_API_SECRET).update(ts+process.env.BYBIT_API_KEY+rw+qs).digest('hex');
     const r=await fetch('https://api.bybit.com/v5/account/wallet-balance?'+qs,{headers:{'X-BAPI-API-KEY':process.env.BYBIT_API_KEY,'X-BAPI-TIMESTAMP':ts,'X-BAPI-SIGN':sig,'X-BAPI-RECV-WINDOW':rw}});
     const j=await r.json();
-    const coin=j.result?.list?.[0]?.coin?.find(c=>c.coin==='USDT');
-    return Math.max(parseFloat(coin?.equity||'0'),parseFloat(coin?.walletBalance||'0')*0.95);
-  } catch { return null; }
+    const coins=j.result?.list?.[0]?.coin||[];
+    const usdt=coins.find(c=>c.coin==='USDT');
+    const tokens=coins.filter(c=>c.coin!=='USDT'&&parseFloat(c.usdValue||0)>0.01).map(c=>({sym:c.coin,bal:parseFloat(c.walletBalance),usd:parseFloat(c.usdValue||0)}));
+    return {usdt:parseFloat(usdt?.equity||0),tokens};
+  } catch(e){return {usdt:null,tokens:[]};}
 }
 
 async function fetchSolana() {
@@ -46,8 +51,26 @@ async function fetchSolana() {
     const USDC=new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
     const ata=await getAssociatedTokenAddress(USDC,wallet.publicKey);
     const acc=await getAccount(conn,ata);
-    return parseFloat((Number(acc.amount)/1e6).toFixed(2));
-  } catch { return null; }
+    const usdc=parseFloat((Number(acc.amount)/1e6).toFixed(2));
+    const r=await fetch(process.env.RPC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',params:[wallet.publicKey.toString(),{programId:'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'},{encoding:'jsonParsed'}]})});
+    const j=await r.json();
+    const SYMS={'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL':'JTO','EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm':'WIF','85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ':'W','2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump':'PNUT','CzLSujWBLFsSjncfkh59rUFqvafWcY5tzedWJSuypump':'GOAT','2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv':'PENGU','4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R':'RAY','Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB':'USDT'};
+    const tokens=(j.result?.value||[]).filter(a=>{const info=a.account.data.parsed?.info;return parseFloat(info?.tokenAmount?.uiAmount||0)>0.001&&info?.mint!=='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';}).map(a=>{const info=a.account.data.parsed?.info;return {sym:SYMS[info.mint]||info.mint.slice(0,8),bal:parseFloat(info.tokenAmount.uiAmount),mint:info.mint};});
+    return {usdc,tokens};
+  } catch(e){return {usdc:null,tokens:[]};}
+}
+
+async function fetchKraken() {
+  try {
+    const nonce=''+Date.now(),data='nonce='+nonce;
+    const hash=crypto.createHash('sha256').update(nonce+data).digest('binary');
+    const hmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+    hmac.update('/0/private/Balance','binary');hmac.update(hash,'binary');
+    const sig=hmac.digest('base64');
+    const r=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':sig,'Content-Type':'application/x-www-form-urlencoded'},body:data});
+    const j=await r.json();
+    return parseFloat(j.result?.USDT||j.result?.ZUSD||0);
+  } catch(e){return null;}
 }
 
 async function sendTG(text) {
@@ -64,8 +87,8 @@ function getData() {
   const live=readJSON(LIVE_FILE)||null;
   const status=readJSON(STATUS_FILE)||null;
   const config=readJSON(CONFIG_FILE)||{};
-  const recentTrades=trades.slice(-10).reverse();
-  const recentFires=fires.slice(-20).reverse();
+  const recentTrades=trades.slice(-20).reverse();
+  const recentFires=fires.slice(-30).reverse();
   const pairStats={};
   for(const t of trades){if(!pairStats[t.pair])pairStats[t.pair]={fires:0,wins:0,pnl:0};pairStats[t.pair].fires++;if(t.profit>0)pairStats[t.pair].wins++;pairStats[t.pair].pnl+=t.profit||0;}
   const balHistory=[];
@@ -94,12 +117,26 @@ function buildHTML() {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:monospace;background:#08080f;color:#e0e0e0;padding:12px;font-size:13px}
+body{font-family:monospace;background:#08080f;color:#e0e0e0;font-size:13px}
+.topbar{position:sticky;top:0;z-index:100;background:#0a0a14;border-bottom:1px solid #1e1e30;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.content{padding:12px}
+.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid #1e1e30}
+.tab{padding:7px 16px;cursor:pointer;font-size:.75rem;color:#555;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:#a78bfa}
+.tab.active{color:#a78bfa;border-bottom-color:#7c3aed}
+.panel{display:none}
+.panel.active{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .card{background:#11111c;border:1px solid #1e1e30;border-radius:8px;padding:12px}
+.card.warn{border-color:#eab308}
+.card.danger{border-color:#ef4444}
 .val{font-size:1.3rem;font-weight:700;color:#7c3aed}
+.val.ok{color:#22c55e}
+.val.warn{color:#eab308}
+.val.bad{color:#ef4444}
 .lbl{font-size:.68rem;color:#555;margin-top:2px}
 .sub{font-size:.72rem;color:#888;margin-top:4px}
 .green{color:#22c55e}.red{color:#ef4444}.yellow{color:#eab308}.purple{color:#a78bfa}.dim{color:#444}
@@ -108,178 +145,310 @@ body{font-family:monospace;background:#08080f;color:#e0e0e0;padding:12px;font-si
 .by{background:#422006;color:#eab308}.bp{background:#2e1065;color:#a78bfa}.bn{background:#1e1e30;color:#666}
 .wdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:2px}
 .wf{background:#22c55e}.we{background:#2a2a3f}
-.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
 .ver{background:#1e1e30;color:#a78bfa;border:1px solid #4c1d95;border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:bold}
 .pill{border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:bold}
 .pa{background:#14532d;color:#22c55e}.pq{background:#1e1e30;color:#666}
-.btn{background:#1e1e30;border:1px solid #4c1d95;color:#a78bfa;border-radius:5px;padding:5px 12px;font-size:.72rem;cursor:pointer}
+.btn{background:#1e1e30;border:1px solid #4c1d95;color:#a78bfa;border-radius:5px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap}
 .btn:hover{background:#2e1065;color:#fff}
+.btn.ok{border-color:#22c55e;color:#22c55e}
+.btn.warn{border-color:#eab308;color:#eab308}
+.btn.danger{border-color:#ef4444;color:#ef4444}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
 .dg{background:#22c55e}.dr{background:#ef4444}
 .pulse{animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .prog{height:6px;background:#1e1e30;border-radius:3px;overflow:hidden;margin-top:4px}
 .pf{height:100%;border-radius:3px}
-.sec{color:#a78bfa;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px;border-bottom:1px solid #1e1e30;padding-bottom:3px}
+.sec{color:#a78bfa;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px;border-bottom:1px solid #1e1e30;padding-bottom:3px}
 table{width:100%;border-collapse:collapse;font-size:.72rem}
 th{padding:4px 6px;color:#444;border-bottom:1px solid #1e1e30;text-align:left;font-weight:normal}
 td{padding:4px 6px;border-bottom:1px solid #0f0f1a}
 tr:hover td{background:#14141f}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center}
-.mbox{background:#11111c;border:1px solid #eab308;border-radius:10px;padding:24px;max-width:400px;width:90%}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center}
+.mbox{background:#11111c;border:1px solid #eab308;border-radius:10px;padding:24px;max-width:440px;width:90%}
+.tok-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.tok{background:#11111c;border:1px solid #1e1e30;border-radius:6px;padding:6px 10px;font-size:.72rem}
+.tok b{color:#a78bfa}
+.tok span{color:#22c55e}
+.alert-row{background:#1a0a0a;border:1px solid #ef4444;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:.72rem}
 </style>
 </head>
 <body>
-<div class="hdr">
-  <div style="display:flex;align-items:center;gap:12px">
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span class="ver" id="vb">${VERSION}</span>
     <span class="pill" id="sp">loading...</span>
     <span style="font-size:.68rem;color:#444"><span class="dot dg pulse" id="ld"></span><span id="la">-</span></span>
+    <span style="font-size:.68rem;color:#555">v<span id="bv" style="color:#a78bfa">-</span> up <span id="du" style="color:#888">-</span> trades:<span id="dt" style="color:#888">-</span> p&l:<span id="dp" style="color:#888">-</span></span>
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
-    <button class="btn" onclick="doBalances()">Refresh</button>
-    <button class="btn" style="border-color:#eab308;color:#eab308" onclick="doRebalance()">Rebalance</button>
-    <button class="btn" style="border-color:#22c55e;color:#22c55e" onclick="doResync()">Resync</button>
-    <button class="btn" style="border-color:#ef4444;color:#ef4444" onclick="doRestart()">Restart</button>
+    <button class="btn" onclick="doRefresh()">Refresh</button>
+    <button class="btn warn" onclick="doRebalance()">Rebalance</button>
+    <button class="btn ok" onclick="doResync()">Resync</button>
+    <button class="btn danger" onclick="doRestart()">Restart</button>
+    <span id="dbk" style="display:none"><button class="btn" style="border-color:#666;color:#666" onclick="doRollback()">Rollback</button></span>
   </div>
 </div>
 
-<div style="background:#0f0f1a;border:1px solid #1e1e30;border-radius:6px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:.72rem">
-  <span>
-    <span style="color:#555">Version: </span><span id="dv" style="color:#a78bfa;font-weight:bold">-</span>
-    <span style="color:#555;margin-left:12px">Uptime: </span><span id="du" style="color:#888">-</span>
-    <span style="color:#555;margin-left:12px">Trades: </span><span id="dt" style="color:#888">-</span>
-    <span style="color:#555;margin-left:12px">P&L: </span><span id="dp" style="color:#888">-</span>
-  </span>
-  <span id="dbk" style="display:none">
-    <button class="btn" style="border-color:#666;color:#666;font-size:.65rem" onclick="doRollback()">Rollback</button>
-  </span>
+<div class="content">
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('status')">Status</div>
+  <div class="tab" onclick="switchTab('wallets')">Wallets</div>
+  <div class="tab" onclick="switchTab('market')">Market</div>
+  <div class="tab" onclick="switchTab('trades')">Trades</div>
 </div>
 
-<div class="g5">
-  <div class="card"><div class="val" id="tc">-</div><div class="lbl">Total Capital</div><div class="sub" id="cg">-</div></div>
-  <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div></div>
-  <div class="card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
-  <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div></div>
-  <div class="card" id="kc" style="display:none"><div class="val" id="lk">-</div><div class="lbl">Kraken <span class="badge bp" style="font-size:.6rem" id="kb">SIM</span></div></div>
+<!-- STATUS TAB -->
+<div id="tab-status" class="panel active">
+
+  <div id="alerts-box"></div>
+
+  <div class="g5">
+    <div class="card"><div class="val" id="tc">-</div><div class="lbl">Total Capital</div><div class="sub" id="cg">-</div></div>
+    <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div></div>
+    <div class="card" id="okx-card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
+    <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div></div>
+    <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken <span class="badge bp" id="kb">SIM</span></div></div>
+  </div>
+
+  <div class="g5">
+    <div class="card"><div class="lbl" style="margin-bottom:5px">Consecutive Wins</div><div id="wb" style="display:flex;gap:2px;flex-wrap:wrap"></div><div class="sub" id="wt">-</div></div>
+    <div class="card"><div class="lbl" style="margin-bottom:5px">Consecutive Clean</div><div id="cb" style="display:flex;gap:2px;flex-wrap:wrap"></div><div class="sub" id="ct">-</div></div>
+    <div class="card"><div class="val" id="pl">-</div><div class="lbl">Trading P&L</div></div>
+    <div class="card"><div class="val" id="wr">-</div><div class="lbl">Win Rate</div><div class="sub" id="wd">-</div></div>
+    <div class="card"><div class="val" id="ri">-</div><div class="lbl">Return on Capital</div><div class="prog"><div class="pf" id="rb" style="background:linear-gradient(90deg,#7c3aed,#22c55e)"></div></div></div>
+  </div>
+
+  <div id="ifsec" style="display:none;margin-bottom:10px">
+    <div class="sec">In-flight Trades <span id="ifc"></span></div>
+    <div id="ifl"></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sec" style="margin-top:0">System Status</div>
+      <table>
+        <tr><td class="dim">Bot version</td><td id="sv">-</td></tr>
+        <tr><td class="dim">OKX WS</td><td id="so">-</td></tr>
+        <tr><td class="dim">Kraken</td><td id="sk">-</td></tr>
+        <tr><td class="dim">Smart sell</td><td id="ss">-</td></tr>
+        <tr><td class="dim">Trade size</td><td id="sz">-</td></tr>
+        <tr><td class="dim">Next rebalance</td><td id="sc">-</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">Capital Chart</div>
+      <canvas id="ch" height="120"></canvas>
+    </div>
+  </div>
 </div>
 
-<div class="g5">
-  <div class="card"><div class="lbl" style="margin-bottom:5px">Consecutive Wins</div><div id="wb" style="display:flex;gap:2px"></div><div class="sub" id="wt">-</div></div>
-  <div class="card"><div class="lbl" style="margin-bottom:5px">Consecutive Clean</div><div id="cb" style="display:flex;gap:2px"></div><div class="sub" id="ct">-</div></div>
-  <div class="card"><div class="val" id="pl">-</div><div class="lbl">Trading P&L</div></div>
-  <div class="card"><div class="val" id="wr">-</div><div class="lbl">Win Rate</div><div class="sub" id="wd">-</div></div>
-  <div class="card"><div class="val" id="ri">-</div><div class="lbl">Return on Capital</div><div class="prog"><div class="pf" id="rb" style="background:linear-gradient(90deg,#7c3aed,#22c55e)"></div></div></div>
-</div>
+<!-- WALLETS TAB -->
+<div id="tab-wallets" class="panel">
+  <div class="sec" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">
+    Exchange Balances
+    <button class="btn ok" style="font-size:.65rem;padding:3px 8px" onclick="doLiveBalances()">Live Refresh</button>
+  </div>
+  <div class="g4" style="margin-bottom:10px">
+    <div class="card" id="w-sol-card">
+      <div class="val" id="w-sol">-</div>
+      <div class="lbl">Solana USDC</div>
+      <div id="w-sol-toks" class="tok-grid"></div>
+    </div>
+    <div class="card" id="w-okx-card">
+      <div class="val" id="w-okx">-</div>
+      <div class="lbl">OKX USDT</div>
+      <div id="w-okx-toks" class="tok-grid"></div>
+    </div>
+    <div class="card" id="w-bybit-card">
+      <div class="val" id="w-bybit">-</div>
+      <div class="lbl">Bybit USDT</div>
+      <div id="w-bybit-toks" class="tok-grid"></div>
+    </div>
+    <div class="card">
+      <div class="val" id="w-kraken">-</div>
+      <div class="lbl">Kraken USDT</div>
+    </div>
+  </div>
 
-<div id="ifsec" style="display:none;margin-bottom:10px">
-  <div class="sec">In-flight Trades <span id="ifc"></span></div>
-  <div id="ifl"></div>
-</div>
-
-<div class="g2">
-  <div class="card">
-    <div class="sec" style="margin-top:0">System Status</div>
+  <div class="sec">Rebalance Targets</div>
+  <div class="card" style="margin-bottom:10px">
     <table>
-      <tr><td class="dim">Version</td><td id="sv">-</td></tr>
-      <tr><td class="dim">OKX</td><td id="so">-</td></tr>
-      <tr><td class="dim">Kraken</td><td id="sk">-</td></tr>
-      <tr><td class="dim">Smart sell</td><td id="ss">-</td></tr>
-      <tr><td class="dim">Volatile</td><td id="sv2">-</td></tr>
-      <tr><td class="dim">Next clean</td><td id="sc">-</td></tr>
-      <tr><td class="dim">Trade size</td><td id="sz">-</td></tr>
+      <thead><tr><th>Exchange</th><th>Current</th><th>Target</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="rebal-table"></tbody>
     </table>
   </div>
+
+  <div class="sec">Pair Viability</div>
   <div class="card">
-    <div class="sec" style="margin-top:0">Pair Viability</div>
-    <div style="margin-bottom:6px"><span class="dim">OKX: </span><span id="ov"></span></div>
-    <div style="margin-bottom:6px"><span class="dim">Bybit: </span><span id="bv"></span></div>
-    <div id="kvr" style="display:none;margin-top:6px"><span class="dim">Kraken: </span><span id="kv"></span></div>
+    <div style="margin-bottom:8px"><span class="dim">OKX: </span><span id="ov"></span></div>
+    <div style="margin-bottom:8px"><span class="dim">Bybit: </span><span id="bv"></span></div>
+    <div id="kvr" style="display:none"><span class="dim">Kraken: </span><span id="kv"></span></div>
   </div>
 </div>
 
-<div class="sec">Live Spreads</div>
-<div class="card" style="margin-bottom:10px">
-  <table><thead><tr><th>Pair</th><th>OKX bid</th><th>Bybit bid</th><th style="text-align:right">OKX%</th><th style="text-align:right">Bybit%</th><th style="text-align:right">DEX%</th><th>Status</th></tr></thead>
-  <tbody id="lt"></tbody></table>
-</div>
-
-<div class="sec">Solana Wallet</div>
-<div class="card" style="margin-bottom:10px"><div id="tk" style="color:#444;font-size:.72rem">Loading...</div></div>
-
-<div class="g2">
-  <div class="card"><div class="sec" style="margin-top:0">Capital 7d</div><canvas id="ch" height="100"></canvas></div>
-  <div class="card"><div class="sec" style="margin-top:0">Recent Fires</div>
-    <table><thead><tr><th>Time</th><th>Pair</th><th>Dir</th><th>Result</th></tr></thead><tbody id="ft"></tbody></table>
+<!-- MARKET TAB -->
+<div id="tab-market" class="panel">
+  <div class="sec" style="margin-top:0">Live Spreads</div>
+  <div class="card" style="margin-bottom:10px">
+    <table>
+      <thead><tr><th>Pair</th><th>OKX bid</th><th>Bybit bid</th><th style="text-align:right">OKX%</th><th style="text-align:right">Bybit%</th><th style="text-align:right">DEX%</th><th>Status</th></tr></thead>
+      <tbody id="lt"></tbody>
+    </table>
+  </div>
+  <div class="sec">Recent Fires</div>
+  <div class="card">
+    <table><thead><tr><th>Time</th><th>Pair</th><th>Dir</th><th>Spread</th><th>Result</th><th>Reason</th></tr></thead>
+    <tbody id="ft"></tbody></table>
   </div>
 </div>
 
-<div class="g2">
-  <div class="card"><div class="sec" style="margin-top:0">Recent Trades</div>
-    <table><thead><tr><th>Time</th><th>Pair</th><th>Dir</th><th>Spread</th><th>P&L</th></tr></thead><tbody id="tt"></tbody></table>
+<!-- TRADES TAB -->
+<div id="tab-trades" class="panel">
+  <div class="g3" style="margin-bottom:10px">
+    <div class="card"><div class="val" id="t-total">-</div><div class="lbl">Total Trades</div></div>
+    <div class="card"><div class="val" id="t-wins">-</div><div class="lbl">Win Rate</div></div>
+    <div class="card"><div class="val" id="t-pnl">-</div><div class="lbl">Total P&L</div></div>
   </div>
-  <div class="card"><div class="sec" style="margin-top:0">Pair Stats</div>
-    <table><thead><tr><th>Pair</th><th>Fires</th><th>Win%</th><th>P&L</th></tr></thead><tbody id="pt"></tbody></table>
+  <div class="sec" style="margin-top:0">Recent Trades</div>
+  <div class="card" style="margin-bottom:10px">
+    <table><thead><tr><th>Date</th><th>Pair</th><th>Dir</th><th>Spread</th><th>Duration</th><th>P&L</th></tr></thead>
+    <tbody id="tt"></tbody></table>
+  </div>
+  <div class="sec">Pair Statistics</div>
+  <div class="card">
+    <table><thead><tr><th>Pair</th><th>Fires</th><th>Win%</th><th>Avg spread</th><th>P&L</th></tr></thead>
+    <tbody id="pt"></tbody></table>
   </div>
 </div>
 
+</div><!-- end content -->
+
+<!-- REBALANCE MODAL -->
 <div id="rm" class="modal">
   <div class="mbox">
     <h3 style="color:#eab308;margin-bottom:16px">Rebalance Capital</h3>
     <div id="rc" style="color:#e0e0e0;font-size:.8rem;margin-bottom:16px">Loading...</div>
     <div style="display:flex;gap:8px">
-      <button onclick="execRebalance()" id="re" class="btn" style="border-color:#22c55e;color:#22c55e;flex:1">Execute</button>
+      <button onclick="execRebalance()" id="re" class="btn ok" style="flex:1">Execute</button>
       <button onclick="closeR()" class="btn" style="flex:1">Cancel</button>
     </div>
   </div>
 </div>
 
 <script>
-var chart=null,tokCache=null,tokTime=0,liveBal=null;
+var chart=null,liveBal=null,activeTab='status';
+
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['status','wallets','market','trades'][i]===t);});
+  document.querySelectorAll('.panel').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='wallets')doLiveBalances();
+}
+
 function sc(v,t){var p=v/t;if(p>=1)return'#eab308';if(p>=.8)return'#f97316';if(p>=.5)return'#a78bfa';if(v>0)return'#22c55e';return'#ef4444';}
 function countdown(ms){var s=Math.round((ms-Date.now())/1000);if(s<=0)return'now';if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
-async function doBalances(){
-  var btn=document.querySelector('[onclick="doBalances()"]');btn.disabled=true;btn.textContent='Loading...';
-  try{var r=await fetch('/api/live-balances');var d=await r.json();liveBal=d;renderBal(d);}catch(e){}
-  btn.textContent='Refresh';btn.disabled=false;
+function fmt2(n){return n!=null?'$'+parseFloat(n).toFixed(2):'-';}
+
+async function doRefresh(){
+  try{var r=await fetch('/api/data');var d=await r.json();render(d);loadStatus();}catch(e){console.error(e);}
 }
-function renderBal(d){
-  if(!d)return;
-  var k=d.krakenEnabled&&d.kraken?d.kraken:0;
-  var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+k;
-  document.getElementById('ls').textContent=d.solana!=null?'$'+d.solana.toFixed(2):'?';
-  document.getElementById('lo').textContent=d.okx!=null?'$'+d.okx.toFixed(2):'?';
-  document.getElementById('lb').textContent=d.bybit!=null?'$'+d.bybit.toFixed(2):'?';
-  document.getElementById('tc').textContent='$'+total.toFixed(2);
-  if(d.krakenEnabled){document.getElementById('kc').style.display='';document.getElementById('lk').textContent=d.kraken!=null?'$'+d.kraken.toFixed(2):'?';}
+
+async function doLiveBalances(){
+  try{
+    var r=await fetch('/api/live-balances');var d=await r.json();
+    liveBal=d;
+    renderWallets(d);
+    // Also update status tab balances
+    if(d.solana!=null)document.getElementById('ls').textContent=fmt2(d.solana);
+    if(d.okx!=null)document.getElementById('lo').textContent=fmt2(d.okx);
+    if(d.bybit!=null)document.getElementById('lb').textContent=fmt2(d.bybit);
+    if(d.kraken!=null)document.getElementById('lk').textContent=fmt2(d.kraken);
+    var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0);
+    document.getElementById('tc').textContent=fmt2(total);
+    // OKX warning
+    var okxCard=document.getElementById('okx-card');
+    if(d.okx!=null&&d.okx<120){okxCard.className='card danger';}
+    else{okxCard.className='card';}
+    // Alerts
+    var alerts=[];
+    if(d.okx!=null&&d.okx<120)alerts.push('OKX balance $'+d.okx.toFixed(0)+' is below minimum $120 - bot cannot trade on OKX');
+    if(d.bybit!=null&&d.bybit>400)alerts.push('Bybit balance $'+d.bybit.toFixed(0)+' is significantly above target $300 - rebalance recommended');
+    var ab=document.getElementById('alerts-box');
+    ab.innerHTML=alerts.map(function(a){return '<div class="alert-row"><span style="color:#ef4444">! </span>'+a+'</div>';}).join('');
+  }catch(e){console.error(e);}
 }
+
+function renderWallets(d){
+  document.getElementById('w-sol').textContent=fmt2(d.solana);
+  document.getElementById('w-okx').textContent=fmt2(d.okx);
+  document.getElementById('w-bybit').textContent=fmt2(d.bybit);
+  document.getElementById('w-kraken').textContent=d.kraken!=null?fmt2(d.kraken):'-';
+  // Tokens
+  function renderToks(elId,toks){
+    var el=document.getElementById(elId);
+    el.innerHTML=(toks||[]).map(function(t){return '<div class="tok"><b>'+t.sym+'</b> '+t.bal.toFixed(2)+' <span>$'+t.usd.toFixed(2)+'</span></div>';}).join('');
+  }
+  renderToks('w-sol-toks',d.solanaTokens);
+  renderToks('w-okx-toks',d.okxTokens);
+  renderToks('w-bybit-toks',d.bybitTokens);
+  // Rebalance table
+  var cfg=readConfig||{};
+  var tSol=cfg.REBALANCE_TARGET_SOLANA||200,tOKX=cfg.REBALANCE_TARGET_OKX||350,tBybit=cfg.REBALANCE_TARGET_BYBIT||300;
+  var rows=[
+    {ex:'Solana',cur:d.solana,tgt:tSol},
+    {ex:'OKX',cur:d.okx,tgt:tOKX},
+    {ex:'Bybit',cur:d.bybit,tgt:tBybit},
+    {ex:'Kraken',cur:d.kraken,tgt:cfg.REBALANCE_TARGET_KRAKEN||300}
+  ];
+  document.getElementById('rebal-table').innerHTML=rows.map(function(r){
+    if(r.cur==null)return '<tr><td>'+r.ex+'</td><td class="dim">-</td><td>$'+r.tgt+'</td><td class="dim">-</td><td></td></tr>';
+    var diff=r.cur-r.tgt;
+    var pct=Math.abs(diff)/r.tgt*100;
+    var status=pct<5?'<span class="green">OK</span>':diff>0?'<span class="yellow">+$'+Math.abs(diff).toFixed(0)+' excess</span>':'<span class="red">-$'+Math.abs(diff).toFixed(0)+' short</span>';
+    var action=pct>=10?(diff>0?'<span class="dim">move out</span>':'<span class="red">top up</span>'):'';
+    return '<tr><td><b>'+r.ex+'</b></td><td>$'+r.cur.toFixed(0)+'</td><td>$'+r.tgt+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
+  }).join('');
+}
+
+var readConfig=null;
+
 async function doRebalance(){
   document.getElementById('rm').style.display='flex';
-  document.getElementById('rc').textContent='Fetching...';
+  document.getElementById('rc').textContent='Fetching balances...';
   document.getElementById('re').disabled=true;
   try{
     var r=await fetch('/api/rebalance-check');var d=await r.json();
     if(d.error){document.getElementById('rc').innerHTML='<span class="red">'+d.error+'</span>';return;}
-    var h='<table style="width:100%;border-collapse:collapse">';
+    var h='<table style="width:100%;border-collapse:collapse;margin-bottom:12px">';
     h+='<tr><td class="dim">Solana</td><td>$'+d.solana.toFixed(0)+'</td><td class="dim">target $'+d.targetSolana+'</td></tr>';
     h+='<tr><td class="dim">OKX</td><td>$'+d.okx.toFixed(0)+'</td><td class="dim">target $'+d.targetOKX+'</td></tr>';
     h+='<tr><td class="dim">Bybit</td><td>$'+d.bybit.toFixed(0)+'</td><td class="dim">target $'+d.targetBybit+'</td></tr>';
-    h+='</table><hr style="border-color:#1e1e30;margin:12px 0">';
-    if(!d.moves||d.moves.length===0){h+='<span class="green">All balances within target range</span>';document.getElementById('re').disabled=true;}
-    else{h+='<b style="color:#eab308">Recommended moves:</b><br>';d.moves.forEach(function(m){h+='&rarr; $'+m.amount+' '+m.from+' &rarr; '+m.to+'<br>';});document.getElementById('re').disabled=false;}
+    h+='</table>';
+    if(!d.moves||d.moves.length===0){
+      h+='<span class="green">All balances within target range</span>';
+      document.getElementById('re').disabled=true;
+    } else {
+      h+='<b style="color:#eab308">Recommended:</b><br>';
+      d.moves.forEach(function(m){h+='&rarr; $'+m.amount+' '+m.from+' &rarr; '+m.to+'<br>';});
+      document.getElementById('re').disabled=false;
+    }
     document.getElementById('rc').innerHTML=h;
   }catch(e){document.getElementById('rc').innerHTML='<span class="red">'+e.message+'</span>';}
 }
 function closeR(){document.getElementById('rm').style.display='none';}
 async function execRebalance(){
   document.getElementById('re').disabled=true;document.getElementById('re').textContent='Sending...';
-  try{await fetch('/api/rebalance-execute',{method:'POST'});document.getElementById('rc').innerHTML='<span class="green">Sent. Check Telegram.</span>';}
+  try{await fetch('/api/rebalance-execute',{method:'POST'});document.getElementById('rc').innerHTML='<span class="green">Rebalance command sent. Check Telegram.</span>';}
   catch(e){document.getElementById('rc').innerHTML='<span class="red">'+e.message+'</span>';}
 }
 async function doResync(){
   if(!confirm('Resync state from trades.json?'))return;
-  try{var r=await fetch('/api/resync',{method:'POST'});var d=await r.json();if(d.ok)refresh();else alert('Failed: '+d.error);}catch(e){alert(e.message);}
+  try{var r=await fetch('/api/resync',{method:'POST'});var d=await r.json();if(d.ok)doRefresh();else alert('Failed: '+d.error);}catch(e){alert(e.message);}
 }
 async function doRestart(){
   if(!confirm('Restart the bot?'))return;
@@ -289,89 +458,80 @@ async function doRollback(){
   if(!confirm('Rollback state to pre-deploy backup?'))return;
   try{var r=await fetch('/api/rollback',{method:'POST'});var d=await r.json();if(d.ok)alert('Done: '+d.restored.join(', '));else alert('Failed: '+d.error);}catch(e){alert(e.message);}
 }
-async function loadToks(){
-  if(Date.now()-tokTime<15000&&tokCache)return tokCache;
-  try{var r=await fetch('/api/tokens');tokCache=await r.json();tokTime=Date.now();}catch(e){tokCache=null;}
-  return tokCache;
-}
+
 async function loadStatus(){
   try{
     var r=await fetch('/api/deploy-status');var d=await r.json();
-    document.getElementById('dv').textContent=d.version||'-';
+    document.getElementById('bv').textContent=d.version||'-';
     var u=d.uptime;document.getElementById('du').textContent=u?(u<60?u+'s':u<3600?Math.floor(u/60)+'m':Math.floor(u/3600)+'h '+Math.floor((u%3600)/60)+'m'):'-';
     document.getElementById('dt').textContent=d.trades||0;
     var p=d.pnl||0;document.getElementById('dp').innerHTML='<span class="'+(p>=0?'green':'red')+'">'+(p>=0?'+':'')+'$'+p.toFixed(2)+'</span>';
     if(d.hasBackup)document.getElementById('dbk').style.display='';
   }catch(e){}
 }
-async function refresh(){
-  try{
-    var td=await loadToks();
-    var r=await fetch('/api/data');var d=await r.json();
-    render(d);renderToks(td);loadStatus();
-    if(liveBal)renderBal(liveBal);
-  }catch(e){console.error(e);}
-}
-function renderToks(data){
-  var el=document.getElementById('tk');
-  if(!data||data.error){el.innerHTML='<span class="dim">'+(data&&data.error||'Unable to fetch')+'</span>';return;}
-  var SYMS={'So11111111111111111111111111111111111111112':'SOL','EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v':'USDC','Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB':'USDT','jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL':'JTO','EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm':'WIF','2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump':'PNUT','CzLSujWBLFsSjncfkh59rUFqvafWcY5tzedWJSuypump':'GOAT','2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv':'PENGU'};
-  var rows=[];
-  for(var mint in data.toks){var sym=SYMS[mint]||mint.slice(0,6);var bal=data.toks[mint];var price=parseFloat(data.prices&&data.prices[mint]&&data.prices[mint].price||0);rows.push({sym,bal,usd:bal*price});}
-  rows.sort(function(a,b){return b.usd-a.usd;});
-  el.innerHTML=rows.map(function(r){return '<span style="display:inline-block;min-width:100px;margin:3px 6px 3px 0"><b class="purple">'+r.sym+'</b><br>'+(r.bal<1?r.bal.toFixed(4):r.bal.toFixed(2))+' <span class="green">'+(r.usd>0?'$'+r.usd.toFixed(2):'-')+'</span></span>';}).join('');
-}
+
 function render(d){
   var st=d.status;
-  var ver=st&&st.version||'v5.0';
+  var ver=st&&st.version||'${VERSION}';
   document.getElementById('vb').textContent=ver;
   document.getElementById('sv').textContent=ver;
-  if(st&&st.timestamp){var age=Math.round((Date.now()-new Date(st.timestamp).getTime())/1000);document.getElementById('la').textContent=age<5?'live':age+'s ago';document.getElementById('ld').className='dot '+(age>30?'dr pulse':'dg pulse');}
+  readConfig=d.config;
+  if(st&&st.timestamp){
+    var age=Math.round((Date.now()-new Date(st.timestamp).getTime())/1000);
+    document.getElementById('la').textContent=age<5?'live':age+'s ago';
+    document.getElementById('ld').className='dot '+(age>30?'dr pulse':'dg pulse');
+  }
   var active=st&&st.activeTradeCount||0;
   var pill=document.getElementById('sp');
   if(active>0){pill.className='pill pa';pill.textContent=active+' active';}else{pill.className='pill pq';pill.textContent='watching';}
-  var latest=d.latest||{},total=latest.total||0,gain=total-(d.startCapital||total);
+  if(!liveBal){
+    var latest=d.latest||{};
+    document.getElementById('ls').textContent='$'+(latest.solana||0).toFixed(2);
+    document.getElementById('lo').textContent='$'+(latest.okx||0).toFixed(2);
+    document.getElementById('lb').textContent='$'+(latest.bybit||0).toFixed(2);
+    document.getElementById('tc').textContent='$'+(latest.total||0).toFixed(2);
+  }
+  var gain=(d.tradingProfit||0);
   var gainPct=d.startCapital?((gain/d.startCapital)*100).toFixed(1):'0';
-  var lb2=d.status&&d.status.liveBalances;
-  if(lb2&&lb2.updatedAt&&(Date.now()-new Date(lb2.updatedAt).getTime())<10*60*1000){
-    document.getElementById('ls').textContent='$'+lb2.solana.toFixed(2);
-    document.getElementById('lo').textContent='$'+lb2.okx.toFixed(2);
-    document.getElementById('lb').textContent='$'+lb2.bybit.toFixed(2);
-    var t2=(lb2.solana||0)+(lb2.okx||0)+(lb2.bybit||0);
-    document.getElementById('tc').textContent='$'+t2.toFixed(2);
-  } else if(!liveBal){document.getElementById('tc').textContent='$'+total.toFixed(2);document.getElementById('ls').textContent='$'+(latest.solana||0).toFixed(2);document.getElementById('lo').textContent='$'+(latest.okx||0).toFixed(2);document.getElementById('lb').textContent='$'+(latest.bybit||0).toFixed(2);}
   document.getElementById('cg').innerHTML='<span class="'+(gain>=0?'green':'red')+'">'+(gain>=0?'+':'')+'$'+gain.toFixed(2)+' ('+gainPct+'%)</span>';
   var okxOk=st&&st.okxHealthy!==false;
   document.getElementById('os').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
   document.getElementById('so').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
-  var wins=d.state&&d.state.consecutiveWins||0,tgt=10,clean=d.state&&d.state.consecutiveClean||0;
+  var wins=d.state&&d.state.consecutiveWins||0,tgt=10;
+  var clean=d.state&&d.state.consecutiveClean||0,ctgt=20;
   var wbar='';for(var i=0;i<tgt;i++)wbar+='<div class="wdot '+(i<wins?'wf':'we')+'"></div>';
-  document.getElementById('wb').innerHTML=wbar;document.getElementById('wt').textContent=wins+'/'+tgt+' wins';
-  var ctgt=20;
+  document.getElementById('wb').innerHTML=wbar;document.getElementById('wt').textContent=wins+'/'+tgt+' consecutive';
   var cbar='';for(var i=0;i<ctgt;i++)cbar+='<div class="wdot" style="background:'+(i<clean?'#22c55e':'#1e1e30')+'"></div>';
   document.getElementById('cb').innerHTML=cbar;document.getElementById('ct').textContent=clean+'/'+ctgt+' clean';
   var pnl=d.state&&d.state.totalProfit||0;
-  document.getElementById('pl').textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);document.getElementById('pl').className='val '+(pnl>=0?'green':'red');
-  document.getElementById('wr').textContent=d.allWinPct+'%';document.getElementById('wr').className='val '+(d.allWinPct>=50?'green':'yellow');
-  document.getElementById('wd').textContent=d.allWins+'W / '+(d.allTrades-d.allWins)+'L';
-  document.getElementById('ri').textContent=d.injRatio.toFixed(1)+'%';document.getElementById('ri').className='val '+(d.injRatio>=0?'green':'red');
+  document.getElementById('pl').textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);
+  document.getElementById('pl').className='val '+(pnl>=0?'green':'red');
+  document.getElementById('wr').textContent=d.allWinPct+'%';
+  document.getElementById('wr').className='val '+(d.allWinPct>=50?'green':'yellow');
+  document.getElementById('wd').textContent=d.allWins+'W / '+(d.allTrades-d.allWins)+'L ('+d.allTrades+' total)';
+  document.getElementById('ri').textContent=d.injRatio.toFixed(1)+'%';
+  document.getElementById('ri').className='val '+(d.injRatio>=0?'green':'red');
   document.getElementById('rb').style.width=Math.min(100,Math.max(0,d.injRatio))+'%';
   document.getElementById('ss').textContent=st&&st.smartSell?'ON':'OFF';
-  document.getElementById('sv2').textContent=st&&st.volatileMode?'ON':'OFF';
   document.getElementById('sz').textContent='$'+(d.config&&d.config.TRADE_SIZE_USD||120);
   if(st&&st.nextRebalanceCheck)document.getElementById('sc').textContent=countdown(st.nextRebalanceCheck);
   var krakenOn=d.config&&d.config.KRAKEN_ENABLED,krakenSim=d.config&&d.config.KRAKEN_SYNTHETIC;
   document.getElementById('sk').innerHTML=!krakenOn?'<span class="dim">disabled</span>':krakenSim?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
-  var kb=document.getElementById('kb');
-  if(kb){kb.textContent=krakenSim?'SIM':'LIVE';kb.className=krakenSim?'badge bp':'badge bg';}
+  var kb=document.getElementById('kb');if(kb){kb.textContent=krakenSim?'SIM':'LIVE';kb.className=krakenSim?'badge bp':'badge bg';}
+  document.getElementById('lk').textContent='-';
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
-  var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'],allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
+  var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'];
+  var allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
   var skipOKX=st&&st.skipOKX||[],skipBybit=st&&st.skipBybit||[];
   document.getElementById('ov').innerHTML=allOKX.map(function(t){return '<span class="badge '+(skipOKX.indexOf(t)<0?'bg':'br')+'">'+t+'</span>';}).join('');
   document.getElementById('bv').innerHTML=allBybit.map(function(t){return '<span class="badge '+(skipBybit.indexOf(t)<0?'bg':'br')+'">'+t+'</span>';}).join('');
   var pend=(st&&st.pendingDex||[]).concat(st&&st.pendingOkx||[]).concat(st&&st.pendingBybit||[]);
-  if(pend.length>0){document.getElementById('ifsec').style.display='';document.getElementById('ifc').textContent=pend.length+' trade(s)';document.getElementById('ifl').innerHTML=pend.map(function(t){var el=Math.round((Date.now()-t.startTime)/60000);return '<div style="display:flex;justify-content:space-between;padding:6px 0"><span><b class="purple">'+t.symbol+'</b></span><span style="color:#eab308">'+el+'min</span></div>';}).join('');}
-  else document.getElementById('ifsec').style.display='none';
+  if(pend.length>0){
+    document.getElementById('ifsec').style.display='';
+    document.getElementById('ifc').textContent=pend.length+' trade(s)';
+    document.getElementById('ifl').innerHTML=pend.map(function(t){var el=Math.round((Date.now()-t.startTime)/60000);var pct=Math.min(100,Math.round(el/120*100));return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #0f0f1a"><span><b class="purple">'+t.symbol+'</b> <span class="dim">'+t.direction+'</span></span><span style="color:#eab308">'+el+'min ('+pct+'%)</span></div>';}).join('');
+  }else document.getElementById('ifsec').style.display='none';
+  // Spreads
   var lb=document.getElementById('lt');
   if(d.live&&d.live.pairs&&d.live.pairs.length>0){
     lb.innerHTML=d.live.pairs.map(function(p){
@@ -381,29 +541,40 @@ function render(d){
       var fire=Math.max(p.spreadOKX,p.spreadBybit||0,p.spreadDex)>=1.0?'<span class="badge by">FIRE</span>':'';
       return '<tr><td><b>'+p.name.replace('/USDT','')+'</b></td><td class="dim">'+(p.okxBid?'$'+p.okxBid:'--')+'</td><td class="dim">'+(p.bybitBid?'$'+p.bybitBid:'--')+'</td><td style="text-align:right">'+oc+'</td><td style="text-align:right">'+bc+'</td><td style="text-align:right">'+dc+'</td><td>'+fire+'</td></tr>';
     }).join('');
-  }else lb.innerHTML='<tr><td colspan="7" class="dim" style="padding:12px;text-align:center">Waiting...</td></tr>';
+  }else lb.innerHTML='<tr><td colspan="7" class="dim" style="padding:12px;text-align:center">Waiting for price feeds...</td></tr>';
+  // Fires
   document.getElementById('ft').innerHTML=d.recentFires.map(function(f){
     var time=new Date(f.date).toLocaleString('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     var oc=f.outcome==='success'?'<span class="badge bg">WIN</span>':f.outcome==='loss'?'<span class="badge br">LOSS</span>':f.outcome==='fired'?'<span class="badge by">FIRED</span>':'<span class="badge br">FAIL</span>';
-    return '<tr><td class="dim">'+time+'</td><td>'+(f.pair||'').replace('/USDT','')+'</td><td><span class="badge bn">'+(f.direction||'').replace('BUY_','')+'</span></td><td>'+oc+'</td></tr>';
+    return '<tr><td class="dim" style="white-space:nowrap">'+time+'</td><td>'+(f.pair||'').replace('/USDT','')+'</td><td><span class="badge bn">'+(f.direction||'').replace('BUY_','')+'</span></td><td class="dim">'+(f.spreadPct?f.spreadPct.toFixed(2)+'%':'--')+'</td><td>'+oc+'</td><td class="dim" style="font-size:.65rem">'+(f.reason||'').slice(0,40)+'</td></tr>';
   }).join('');
+  // Trades tab
+  document.getElementById('t-total').textContent=d.allTrades;
+  document.getElementById('t-wins').textContent=d.allWinPct+'%';
+  document.getElementById('t-pnl').textContent=(d.tradingProfit>=0?'+':'')+'$'+d.tradingProfit.toFixed(2);
+  document.getElementById('t-pnl').className='val '+(d.tradingProfit>=0?'green':'red');
   document.getElementById('tt').innerHTML=d.recentTrades.map(function(t){
-    var profit=t.profit||0,date=new Date(t.date).toLocaleString('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return '<tr><td class="dim">'+date+'</td><td>'+(t.pair||'').replace('/USDT','')+'</td><td><span class="badge bn">'+(t.direction||'').replace('BUY_','')+'</span></td><td>'+(t.spreadPct||0).toFixed(2)+'%</td><td class="'+(profit>=0?'green':'red')+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</td></tr>';
+    var profit=t.profit||0;
+    var date=new Date(t.date).toLocaleString('en-GB',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return '<tr><td class="dim" style="white-space:nowrap">'+date+'</td><td>'+(t.pair||'').replace('/USDT','')+'</td><td><span class="badge bn">'+(t.direction||'').replace('BUY_','')+'</span></td><td>'+(t.spreadPct||0).toFixed(2)+'%</td><td class="dim">'+(t.durationMin||0)+'min</td><td class="'+(profit>=0?'green':'red')+'">'+(profit>=0?'+':'')+'$'+profit.toFixed(2)+'</td></tr>';
   }).join('');
   document.getElementById('pt').innerHTML=Object.entries(d.pairStats).sort(function(a,b){return b[1].fires-a[1].fires;}).map(function(e){
     var p=e[0],s=e[1],wr=s.fires?Math.round(s.wins/s.fires*100):0;
-    return '<tr><td>'+p.replace('/USDT','')+'</td><td>'+s.fires+'</td><td class="'+(wr>=50?'green':wr>0?'yellow':'red')+'">'+wr+'%</td><td class="'+(s.pnl>=0?'green':'red')+'">'+(s.pnl>=0?'+':'')+'$'+s.pnl.toFixed(2)+'</td></tr>';
+    return '<tr><td>'+p.replace('/USDT','')+'</td><td>'+s.fires+'</td><td class="'+(wr>=50?'green':wr>0?'yellow':'red')+'">'+wr+'%</td><td class="dim">-</td><td class="'+(s.pnl>=0?'green':'red')+'">'+(s.pnl>=0?'+':'')+'$'+s.pnl.toFixed(2)+'</td></tr>';
   }).join('');
+  // Chart
   var labels=d.balHistory.map(function(b){return b.time.slice(5,16);});
   var totals=d.balHistory.map(function(b){return b.total;});
   var ctx=document.getElementById('ch').getContext('2d');
   if(chart)chart.destroy();
-  if(typeof Chart!=='undefined'){chart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Total',data:totals,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,0.1)',borderWidth:2,pointRadius:1,fill:true,tension:0.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#333',maxTicksLimit:6,font:{size:9}},grid:{color:'#0f0f1a'}},y:{ticks:{color:'#555',font:{size:9},callback:function(v){return'$'+v.toFixed(0);}},grid:{color:'#0f0f1a'}}}}});}
+  if(typeof Chart!=='undefined'){chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Total',data:totals,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,0.1)',borderWidth:2,pointRadius:1,fill:true,tension:0.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#333',maxTicksLimit:5,font:{size:9}},grid:{color:'#0f0f1a'}},y:{ticks:{color:'#555',font:{size:9},callback:function(v){return'$'+v.toFixed(0);}},grid:{color:'#0f0f1a'}}}}});}
 }
-refresh();
-setInterval(refresh,3000);
+
+doRefresh();
+doLiveBalances();
+setInterval(doRefresh,3000);
 setInterval(loadStatus,30000);
+setInterval(doLiveBalances,60000);
 </script>
 </body>
 </html>`;
@@ -417,41 +588,23 @@ const server = http.createServer(async function(req,res) {
     res.writeHead(200,{'Content-Type':'application/json'});
     res.end(JSON.stringify(getData()));
 
-  }else if(url==='/api/tokens'){
-    res.writeHead(200,{'Content-Type':'application/json'});
-    try{
-      const rpc=process.env.RPC_URL||'https://api.mainnet-beta.solana.com';
-      const wallet='wSyZPy2NrfFtUFqzwmDvurDrqw5JXysZ22uLnq1AQaa';
-      const r1=await fetch(rpc,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',params:[wallet,{programId:'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'},{encoding:'jsonParsed'}]})});
-      const j1=await r1.json();
-      const toks={};
-      for(const a of(j1.result?.value||[])){const info=a.account.data.parsed?.info;if(info?.mint&&parseFloat(info?.tokenAmount?.uiAmount||0)>0)toks[info.mint]=parseFloat(info.tokenAmount.uiAmount);}
-      const mints=Object.keys(toks).join(',');
-      let prices={};
-      if(mints){try{const r2=await fetch('https://api.jup.ag/price/v2?ids='+mints);const j2=await r2.json();prices=j2.data||{};}catch{}}
-      res.end(JSON.stringify({toks,prices}));
-    }catch(e){res.end(JSON.stringify({toks:{},prices:{},error:e.message}));}
-
   }else if(url==='/api/live-balances'){
     res.writeHead(200,{'Content-Type':'application/json'});
     try{
       const config=readJSON(CONFIG_FILE)||{};
       const krakenEnabled=config.KRAKEN_ENABLED||false;
-      const [solana,okx,bybit]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
+      const [sol,okxData,bybitData]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
       let kraken=null;
       if(krakenEnabled){
-        try{
-          const kn=''+Date.now(),kd='nonce='+kn;
-          const kh=crypto.createHash('sha256').update(kn+kd).digest('binary');
-          const km=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
-          km.update('/0/private/Balance','binary');km.update(kh,'binary');
-          const ks=km.digest('base64');
-          const kr2=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':ks,'Content-Type':'application/x-www-form-urlencoded'},body:kd});
-          const kj=await kr2.json();
-          kraken=parseFloat(kj.result&&(kj.result.USDT||kj.result.ZUSD)||'0');
-        }catch(e){kraken=0;}
+        try{kraken=await fetchKraken();}catch{kraken=0;}
       }
-      res.end(JSON.stringify({solana,okx,bybit,kraken,krakenEnabled,fetchedAt:new Date().toISOString()}));
+      res.end(JSON.stringify({
+        solana:sol.usdc,solanaTokens:sol.tokens,
+        okx:okxData.usdt,okxTokens:okxData.tokens,
+        bybit:bybitData.usdt,bybitTokens:bybitData.tokens,
+        kraken,krakenEnabled,
+        fetchedAt:new Date().toISOString()
+      }));
     }catch(e){res.end(JSON.stringify({error:e.message}));}
 
   }else if(url==='/api/deploy-status'){
@@ -472,7 +625,6 @@ const server = http.createServer(async function(req,res) {
       let c=0;for(let i=real.length-1;i>=0;i--){if(real[i].profit>0)c++;else break;}
       const corrected={...s3,totalTrades:real.length,winningTrades:wins,totalProfit:pnl,consecutiveWins:c,lastResync:new Date().toISOString()};
       fs.writeFileSync(STATE_FILE,JSON.stringify(corrected,null,2));
-      fs.writeFileSync(STATE_FILE+'.bak',JSON.stringify(corrected,null,2));
       await sendTG('Resynced from dashboard. Trades:'+real.length+' Wins:'+wins+' P&L:'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2));
       res.end(JSON.stringify({ok:true,trades:real.length,wins,pnl,consec:c}));
     }catch(e){res.end(JSON.stringify({ok:false,error:e.message}));}
@@ -499,10 +651,11 @@ const server = http.createServer(async function(req,res) {
     try{
       const cfg=readJSON(CONFIG_FILE)||{};
       const tSol=cfg.REBALANCE_TARGET_SOLANA||200,tOKX=cfg.REBALANCE_TARGET_OKX||350,tBybit=cfg.REBALANCE_TARGET_BYBIT||300;
-      const [sol,okx2,bybit2]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
-      const buf=0.10;
-      const solEx=Math.max(0,(sol||0)-tSol*(1+buf)),okxEx=Math.max(0,(okx2||0)-tOKX*(1+buf)),bybitEx=Math.max(0,(bybit2||0)-tBybit*(1+buf));
-      const solSh=Math.max(0,tSol-(sol||0)),okxSh=Math.max(0,tOKX-(okx2||0)),bybitSh=Math.max(0,tBybit-(bybit2||0));
+      const [sol,okxData,bybitData]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
+      const solana=sol.usdc||0,okx=okxData.usdt||0,bybit=bybitData.usdt||0;
+      const buf=0.05;
+      const solEx=Math.max(0,solana-tSol*(1+buf)),okxEx=Math.max(0,okx-tOKX*(1+buf)),bybitEx=Math.max(0,bybit-tBybit*(1+buf));
+      const solSh=Math.max(0,tSol-solana),okxSh=Math.max(0,tOKX-okx),bybitSh=Math.max(0,tBybit-bybit);
       const moves=[];
       if(bybitEx>20&&okxSh>20)moves.push({from:'Bybit',to:'OKX',amount:Math.round(Math.min(bybitEx,okxSh))});
       if(bybitEx>20&&solSh>20)moves.push({from:'Bybit',to:'Solana',amount:Math.round(Math.min(bybitEx,solSh))});
@@ -510,12 +663,12 @@ const server = http.createServer(async function(req,res) {
       if(okxEx>20&&solSh>20)moves.push({from:'OKX',to:'Solana',amount:Math.round(Math.min(okxEx,solSh))});
       if(solEx>20&&okxSh>20)moves.push({from:'Solana',to:'OKX',amount:Math.round(Math.min(solEx,okxSh))});
       if(solEx>20&&bybitSh>20)moves.push({from:'Solana',to:'Bybit',amount:Math.round(Math.min(solEx,bybitSh))});
-      res.end(JSON.stringify({solana:sol,okx:okx2,bybit:bybit2,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,moves,needed:moves.length>0}));
+      res.end(JSON.stringify({solana,okx,bybit,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,moves,needed:moves.length>0}));
     }catch(e){res.end(JSON.stringify({error:e.message}));}
 
   }else if(url==='/api/rebalance-execute'&&req.method==='POST'){
     res.writeHead(200,{'Content-Type':'application/json'});
-    await sendTG('/rebalance confirm');
+    await sendTG('/rb confirm');
     res.end(JSON.stringify({ok:true}));
 
   }else{
