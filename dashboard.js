@@ -38,7 +38,14 @@ async function fetchBybit() {
     const coins=j.result?.list?.[0]?.coin||[];
     const usdt=coins.find(c=>c.coin==='USDT');
     const tokens=coins.filter(c=>c.coin!=='USDT'&&parseFloat(c.usdValue||0)>0.01).map(c=>({sym:c.coin,bal:parseFloat(c.walletBalance),usd:parseFloat(c.usdValue||0)}));
-    return {usdt:parseFloat(usdt?.equity||0),tokens};
+    // Also fetch FUND account balance
+    const ts2=''+Date.now(),qs2='accountType=FUND&coin=USDT';
+    const sig2=crypto.createHmac('sha256',process.env.BYBIT_API_SECRET).update(ts2+process.env.BYBIT_API_KEY+rw+qs2).digest('hex');
+    const r2=await fetch('https://api.bybit.com/v5/asset/transfer/query-account-coins-balance?'+qs2,{headers:{'X-BAPI-API-KEY':process.env.BYBIT_API_KEY,'X-BAPI-TIMESTAMP':ts2,'X-BAPI-SIGN':sig2,'X-BAPI-RECV-WINDOW':rw}});
+    const j2=await r2.json();
+    const fundUsdt=parseFloat(j2.result?.balance?.[0]?.walletBalance||'0');
+    const unifiedUsdt=parseFloat(usdt?.equity||0);
+    return {usdt:unifiedUsdt+fundUsdt,tokens,unified:unifiedUsdt,fund:fundUsdt};
   } catch(e){return {usdt:null,tokens:[]};}
 }
 
