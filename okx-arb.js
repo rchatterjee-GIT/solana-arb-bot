@@ -1809,14 +1809,20 @@ async function checkAndExecute() {
         if (!bestDex || r.spreadDex > bestDex.spreadPct)
           bestDex = { pair: r.pair, direction: 'BUY_DEX', spreadPct: r.spreadDex, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: r.bestBidCex };
       }
-      const spreadBuffer = (liveConfig.MIN_SPREAD_BUFFER_PCT ?? 0) / 100;
-      const okxThresh   = MIN_SPREAD_CEX * (1 + spreadBuffer);
-      const bybitThresh = MIN_SPREAD_CEX * (1 + spreadBuffer);
-      if (canOkx && r.okxViable && r.spreadOKX > okxThresh && r.netOKX > 0 && r.estOKX >= MIN_PROFIT) {
+      const spreadBuffer  = (liveConfig.MIN_SPREAD_BUFFER_PCT ?? 0) / 100;
+      const cexBase       = liveConfig.MIN_SPREAD_CEX ?? MIN_SPREAD_CEX;
+      const okxThresh     = cexBase * (1 + spreadBuffer);
+      const bybitThresh   = cexBase * (1 + spreadBuffer);
+      // Per-pair minimum spread override (for known drifters)
+      const pairMinSpreads = liveConfig.PAIR_MIN_SPREAD || {};
+      const pairMin        = pairMinSpreads[r.pair.okxCcy] || 0;
+      const okxThreshFinal   = Math.max(okxThresh,   pairMin);
+      const bybitThreshFinal = Math.max(bybitThresh, pairMin);
+      if (canOkx && r.okxViable && r.spreadOKX > okxThreshFinal && r.netOKX > 0 && r.estOKX >= MIN_PROFIT) {
         if (!bestOkx || r.spreadOKX > bestOkx.spreadPct)
           bestOkx = { pair: r.pair, direction: 'BUY_OKX', spreadPct: r.spreadOKX, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'OKX' };
       }
-      if (canBybit && r.bybit && r.bybitViable && r.spreadBybit > bybitThresh && r.netBybit > 0 && r.estBybit >= MIN_PROFIT) {
+      if (canBybit && r.bybit && r.bybitViable && r.spreadBybit > bybitThreshFinal && r.netBybit > 0 && r.estBybit >= MIN_PROFIT) {
         if (!bestBybit || r.spreadBybit > bestBybit.spreadPct)
           bestBybit = { pair: r.pair, direction: 'BUY_BYBIT', spreadPct: r.spreadBybit, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Bybit' };
       }
