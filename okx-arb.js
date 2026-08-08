@@ -1801,7 +1801,7 @@ async function checkAndExecute() {
       if (result.status !== 'fulfilled' || !result.value) continue;
       const r = result.value;
       if (isPairInFlight(r.pair.okxCcy)) continue;
-      if (canDex && r.dexEnabled && r.spreadDex > r.dexThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT) {
+      if (canDex && r.dexEnabled && r.spreadDex > r.dexThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT && w.usdc >= TRADE_SIZE_USD * 1.005) {
         if (!bestDex || r.spreadDex > bestDex.spreadPct)
           bestDex = { pair: r.pair, direction: 'BUY_DEX', spreadPct: r.spreadDex, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: r.bestBidCex };
       }
