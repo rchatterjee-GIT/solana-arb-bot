@@ -32,6 +32,11 @@ const FILES = [
     minLines: 50,
     required: ['spawn','restart'],
   },
+  {
+    file: 'hygiene.js',
+    minLines: 150,
+    required: ['runHygiene','cleanOKXTrading','cleanBybitUnified','maintainBybitFund'],
+  },
 ];
 
 let allOk = true;

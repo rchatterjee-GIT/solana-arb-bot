@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { runHygiene } = require('./hygiene');
 // ── Version History ───────────────────────────────────────────────────────────
 // v4.14 — DEX atomic lock fix, checkAndExecute concurrency guard, cross-exchange ranking, balance sync, auto-rebalance
 //          omni-directional rebalance, Bybit equity fix, 5% buffer, auto-execute
@@ -926,7 +927,20 @@ async function placeBybitOrder(side, qty, symbol, quoteQty = null) {
 async function withdrawFromBybit(ccy, chain, grossAmount) {
   const fee    = getBybitFee(ccy);
   const netAmt = fmtBybit(parseFloat(grossAmount) - parseFloat(fee), ccy);
-  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', { coin: ccy, chain, address: wallet.publicKey.toString(), amount: netAmt, timestamp: Date.now() });
+
+  // Bybit UNIFIED account cannot withdraw directly — must transfer to FUND first
+  const transferId = crypto.randomUUID();
+  const transfer = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: ccy, amount: grossAmount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (transfer.retCode !== 0) throw new Error(`Bybit UNIFIED->FUND transfer failed: ${transfer.retMsg}`);
+  await new Promise(r => setTimeout(r, 3000)); // wait for transfer to settle
+
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: ccy, chain, address: wallet.publicKey.toString(),
+    amount: netAmt, timestamp: Date.now(), accountType: 'FUND',
+  });
   if (r.retCode !== 0) throw new Error(`Bybit withdrawal error: ${r.retMsg}`);
   return r.result?.id;
 }
@@ -2829,6 +2843,12 @@ async function main() {
     }
     catch (err) { logCrash('checkAndRebalance', err); }
   }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
 
   // Balance sync every 5 minutes — keeps dashboard accurate
   setInterval(async () => {

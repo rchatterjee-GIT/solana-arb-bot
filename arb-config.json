@@ -20,11 +20,11 @@
     "SOL"
   ],
   "TRADE_SIZE_USD": 120,
-  "MIN_SPREAD_CEX": 1,
+  "MIN_SPREAD_CEX": 1.5,
   "WINS_TARGET": 10,
   "SMART_SELL": true,
   "HOLD_MIN_SPREAD_PCT": 0.4,
-  "HOLD_MAX_HOURS": 2,
+  "HOLD_MAX_HOURS": 0.5,
   "HOLD_STOP_LOSS_PCT": 5,
   "HOLD_CHECK_SECS": 30,
   "APPROACH_BANDS": [
@@ -60,5 +60,11 @@
     "passed": 95,
     "failed": 5,
     "warned": 2
+  },
+  "MIN_SPREAD_DEX": 1,
+  "PAIR_MIN_SPREAD": {
+    "GOAT": 2.5,
+    "PENGU": 2.5,
+    "W": 2.5
   }
 }
