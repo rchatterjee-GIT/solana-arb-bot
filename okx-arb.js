@@ -1,6 +1,6 @@
 require('dotenv').config();
 // ── Version History ───────────────────────────────────────────────────────────
-// v4.14 — DEX atomic lock fix, cross-exchange ranking, balance sync, auto-rebalance
+// v4.14 — DEX atomic lock fix, checkAndExecute concurrency guard, cross-exchange ranking, balance sync, auto-rebalance
 //          omni-directional rebalance, Bybit equity fix, 5% buffer, auto-execute
 // v4.13 — immediate rebalance after trade completion
 // v4.12 — consecutiveClean resets on restart (session-based)
@@ -1704,8 +1704,12 @@ function resumePendingTrades() {
 }
 
 // ── Main scan ─────────────────────────────────────────────────────────────────
+let checkAndExecuteRunning = false;
 async function checkAndExecute() {
   if (testRunning || rebalancing) return; // pause during exchange tests or rebalance
+  if (checkAndExecuteRunning) return; // prevent concurrent execution
+  checkAndExecuteRunning = true;
+  try {
   loadLiveConfig();
 
   // ── OKX WebSocket watchdog ─────────────────────────────────────────────────
@@ -1801,7 +1805,7 @@ async function checkAndExecute() {
       if (result.status !== 'fulfilled' || !result.value) continue;
       const r = result.value;
       if (isPairInFlight(r.pair.okxCcy)) continue;
-      if (canDex && r.dexEnabled && r.spreadDex > r.dexThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT && w.usdc >= TRADE_SIZE_USD * 1.005) {
+      if (canDex && r.dexEnabled && r.spreadDex > r.dexThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT) {
         if (!bestDex || r.spreadDex > bestDex.spreadPct)
           bestDex = { pair: r.pair, direction: 'BUY_DEX', spreadPct: r.spreadDex, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: r.bestBidCex };
       }
@@ -1869,6 +1873,9 @@ async function checkAndExecute() {
     consecutiveErrors++;
     logCrash('checkAndExecute', err);
     await new Promise(r => setTimeout(r, Math.min(consecutiveErrors * 10000, 300000)));
+  }
+  } finally {
+    checkAndExecuteRunning = false;
   }
 }
 
