@@ -2230,6 +2230,14 @@ async function pollTelegramCommands() {
       } else if (text === '/rb' || text === '/rb confirm' || text === '/rebalance' || text === '/rebalance confirm') {
         const confirm = text.includes('confirm');
         handleRebalanceCommand(confirm).catch(err => logCrash('handleRebalanceCommand', err));
+      } else if (text.startsWith('/agent')) {
+        // Relay /agent commands to agent.js via file
+        try {
+          const cmdFile = path.join(__dirname, 'agent-cmd.json');
+          const existing = fs.existsSync(cmdFile) ? JSON.parse(fs.readFileSync(cmdFile,'utf8')) : [];
+          existing.push({ text, time: new Date().toISOString() });
+          fs.writeFileSync(cmdFile, JSON.stringify(existing));
+        } catch(e) { logCrash('agent relay', e); }
       } else if (text === '/holdings') {
         const held = [...pendingOkx, ...pendingBybit].filter(t => t.entryPrice);
         if (held.length === 0) {
