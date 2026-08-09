@@ -79,11 +79,19 @@
         "Active window: PYTH showing high scores"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-09T14:57:37.901Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 0,
-  "lastRun": "2026-08-09T14:56:37.828Z",
-  "actionsToday": 10,
+  "lastRun": "2026-08-09T14:57:38.043Z",
+  "actionsToday": 11,
   "lastActionDate": "2026-08-09",
   "lastSentiment": "bullish"
 }
