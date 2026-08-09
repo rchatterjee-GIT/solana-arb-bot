@@ -182,10 +182,20 @@ async function runCycle(agentState) {
   let configChanged = false;
   const allChanges = [];
 
+  const now = Date.now();
   for (const rule of rules) {
     try {
+      // Cooldown: info rules max once per hour, warn once per 30min, critical always
+      const lastFired = agentState.ruleCooldowns?.[rule.id] || 0;
+      const cooldown = rule.severity === 'critical' ? 0 : rule.severity === 'warn' ? 30*60*1000 : 60*60*1000;
+      if (cooldown > 0 && now - lastFired < cooldown) continue;
+
       const issues = rule.detect(ctx);
       if (!issues) continue;
+
+      // Record fire time
+      if (!agentState.ruleCooldowns) agentState.ruleCooldowns = {};
+      agentState.ruleCooldowns[rule.id] = now;
 
       agentLog(`Rule triggered: ${rule.name} (${rule.severity})`, rule.severity === 'critical' ? 'WARN' : 'INFO');
       const changes = await rule.action(ctx, issues);

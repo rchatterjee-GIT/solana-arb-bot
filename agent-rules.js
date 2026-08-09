@@ -358,9 +358,20 @@ module.exports = [
     detect(ctx) {
       if (!ctx.marketData) return null;
       const { isActiveWindow, getBestOpportunities } = require('./market-data');
-      if (!isActiveWindow()) return null;
-      const opps = getBestOpportunities(3);
-      const highScore = opps.filter(p => p.score > 6);
+      if (!isActiveWindow()) {
+        // Reset flag when window closes so next window fires again
+        if (ctx.agentState.activeWindowAlerted) ctx.agentState.activeWindowAlerted = false;
+        return null;
+      }
+      // Only alert once per active window session
+      if (ctx.agentState.activeWindowAlerted) return null;
+      const skipOKX   = ctx.config.POLICY_SKIP_OKX   || [];
+      const skipBybit = ctx.config.POLICY_SKIP_BYBIT || [];
+      const allSkipped = [...new Set([...skipOKX, ...skipBybit])];
+      const opps = getBestOpportunities(5).filter(function(p) {
+        return !allSkipped.includes(p.symbol) && p.symbol !== 'PYTH';
+      });
+      const highScore = opps.filter(function(p) { return p.score > 6; });
       if (highScore.length > 0) return [{ opps: highScore }];
       return null;
     },
@@ -368,6 +379,7 @@ module.exports = [
       const opps = issues[0].opps;
       const lines = opps.map(function(p){return p.symbol+': score '+p.score.toFixed(1)+', vol '+(p.volatility||0).toFixed(1)+', 24h '+(p.change24h||0).toFixed(1)+'%';});
       await ctx.sendTG('Active Window Alert\nHigh opportunity pairs:\n' + lines.join('\n') + '\nBot is scanning - opportunities likely.');
+      ctx.agentState.activeWindowAlerted = true;
       return ['Active window: ' + opps.map(function(p){return p.symbol;}).join(', ') + ' showing high scores'];
     }
   },
@@ -380,13 +392,16 @@ module.exports = [
       if (!ctx.marketData) return null;
       const conditions = ctx.marketData.marketConditions;
       const lastSentiment = ctx.agentState.lastSentiment;
-      // Only fire if sentiment changed
+      const lastSentimentTime = ctx.agentState.lastSentimentTime || 0;
+      // Only fire if sentiment changed AND at least 6hrs since last alert
       if (lastSentiment === conditions.sentiment) return null;
+      if (Date.now() - lastSentimentTime < 6 * 60 * 60 * 1000) return null;
       return [{ conditions, lastSentiment }];
     },
     async action(ctx, issues) {
       const { conditions } = issues[0];
       ctx.agentState.lastSentiment = conditions.sentiment;
+      ctx.agentState.lastSentimentTime = Date.now();
       const emoji = conditions.sentiment === 'bullish' ? '🟢' : conditions.sentiment === 'bearish' ? '🔴' : '🟡';
       await ctx.sendTG(emoji + ' <b>Market Sentiment: ' + conditions.sentiment.toUpperCase() + '</b>\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs);
       return ['Sentiment changed to ' + conditions.sentiment];

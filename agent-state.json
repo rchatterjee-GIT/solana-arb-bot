@@ -87,11 +87,123 @@
         "Active window: PYTH showing high scores"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-09T14:58:37.911Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T14:59:14.046Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:00:19.128Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:01:19.144Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:02:19.255Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:03:19.350Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:04:19.446Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:05:16.451Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:06:16.496Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:07:16.573Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:08:16.736Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:09:16.731Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:10:16.815Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-09T15:11:16.836Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PYTH showing high scores"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 0,
-  "lastRun": "2026-08-09T14:57:38.043Z",
-  "actionsToday": 11,
+  "lastRun": "2026-08-09T15:11:16.915Z",
+  "actionsToday": 25,
   "lastActionDate": "2026-08-09",
   "lastSentiment": "bullish"
 }
