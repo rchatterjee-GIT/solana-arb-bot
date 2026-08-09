@@ -1,0 +1,16 @@
+{
+  "history": [
+    {
+      "time": "2026-08-09T14:37:32.627Z",
+      "rule": "pair-threshold-too-low",
+      "changes": [
+        "W PAIR_MIN_SPREAD raised: 2.5% → 3.2% (losses at high spread)"
+      ],
+      "severity": "info"
+    }
+  ],
+  "lastDailyReport": 0,
+  "lastRun": "2026-08-09T14:48:36.853Z",
+  "actionsToday": 1,
+  "lastActionDate": "2026-08-09"
+}

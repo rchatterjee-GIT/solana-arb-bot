@@ -314,4 +314,84 @@ module.exports = [
     }
   },
 
+  // ── MARKET DATA RULES ─────────────────────────────────────────────────────
+
+  {
+    id: 'market-avoid-signal',
+    name: 'Market signal: avoid pair',
+    severity: 'warn',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const { getPairSignal } = require('./market-data');
+      const pairs = Object.keys(ctx.config.PAIR_MIN_SPREAD || {}).concat(['JTO','PENGU','GOAT','W','RENDER','RAY','PNUT']);
+      const avoids = [];
+      for (const sym of [...new Set(pairs)]) {
+        const signal = getPairSignal(sym);
+        if (signal?.signal === 'avoid') {
+          avoids.push({ sym, reason: signal.reason });
+        }
+      }
+      return avoids.length ? avoids : null;
+    },
+    async action(ctx, avoids) {
+      const changes = [];
+      for (const { sym, reason } of avoids) {
+        // Temporarily raise threshold for this pair
+        if (!ctx.config.PAIR_MIN_SPREAD) ctx.config.PAIR_MIN_SPREAD = {};
+        const current = ctx.config.PAIR_MIN_SPREAD[sym] || ctx.config.MIN_SPREAD_CEX || 1.5;
+        const raised = parseFloat((current + 1.0).toFixed(1));
+        if (raised > current) {
+          ctx.config.PAIR_MIN_SPREAD[sym] = raised;
+          if (!ctx.config.TEMP_SKIPS) ctx.config.TEMP_SKIPS = {};
+          ctx.config.TEMP_SKIPS[`${sym}:threshold`] = Date.now() + 4 * 60 * 60 * 1000; // 4hr
+          changes.push(`${sym} threshold raised ${current}% → ${raised}% (market: ${reason})`);
+        }
+      }
+      return changes;
+    }
+  },
+
+  {
+    id: 'market-active-window',
+    name: 'Market: active trading window detected',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const { isActiveWindow, getBestOpportunities } = require('./market-data');
+      if (!isActiveWindow()) return null;
+      const opps = getBestOpportunities(3);
+      const highScore = opps.filter(p => p.score > 6);
+      if (highScore.length > 0) return [{ opps: highScore }];
+      return null;
+    },
+    async action(ctx, issues) {
+      const opps = issues[0].opps;
+      const lines = opps.map(function(p){return p.symbol+': score '+p.score.toFixed(1)+', vol '+(p.volatility||0).toFixed(1)+', 24h '+(p.change24h||0).toFixed(1)+'%';});
+      await ctx.sendTG('Active Window Alert\nHigh opportunity pairs:\n' + lines.join('\n') + '\nBot is scanning - opportunities likely.');
+      return ['Active window: ' + opps.map(function(p){return p.symbol;}).join(', ') + ' showing high scores'];
+    }
+  },
+
+  {
+    id: 'market-sentiment-report',
+    name: 'Market sentiment update',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const conditions = ctx.marketData.marketConditions;
+      const lastSentiment = ctx.agentState.lastSentiment;
+      // Only fire if sentiment changed
+      if (lastSentiment === conditions.sentiment) return null;
+      return [{ conditions, lastSentiment }];
+    },
+    async action(ctx, issues) {
+      const { conditions } = issues[0];
+      ctx.agentState.lastSentiment = conditions.sentiment;
+      const emoji = conditions.sentiment === 'bullish' ? '🟢' : conditions.sentiment === 'bearish' ? '🔴' : '🟡';
+      await ctx.sendTG(emoji + ' <b>Market Sentiment: ' + conditions.sentiment.toUpperCase() + '</b>\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs);
+      return ['Sentiment changed to ' + conditions.sentiment];
+    }
+  },
+
+
 ];

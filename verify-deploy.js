@@ -47,6 +47,11 @@ const FILES = [
     minLines: 100,
     required: ['pair-consecutive-losses','daily-performance-report','okx-critically-low'],
   },
+  {
+    file: 'market-data.js',
+    minLines: 150,
+    required: ['fetchMarketData','getMarketData','getPairSignal','getBestOpportunities'],
+  },
 ];
 
 let allOk = true;

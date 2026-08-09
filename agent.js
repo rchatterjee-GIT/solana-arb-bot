@@ -7,6 +7,7 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const rules  = require('./agent-rules');
+const { fetchMarketData, getMarketData } = require('./market-data');
 
 const CONFIG_FILE    = path.join(__dirname, 'arb-config.json');
 const STATE_FILE     = path.join(__dirname, 'arb-state.json');
@@ -164,9 +165,16 @@ async function runCycle(agentState) {
   const pending   = [...(botStatus.pendingDex||[]), ...(botStatus.pendingOkx||[]), ...(botStatus.pendingBybit||[])];
   const recentCrashLines = getRecentCrashLines();
 
+  // Get market data (cached, refreshes every 30min)
+  let marketData = getMarketData();
+  if (!marketData) {
+    agentLog('Refreshing market data...');
+    marketData = await fetchMarketData(config.TRADE_SIZE_USD || 120);
+  }
+
   const ctx = {
     config, state, trades, fires, pairStats, balances, pending,
-    botStatus, agentState, recentCrashLines,
+    botStatus, agentState, recentCrashLines, marketData,
     realTradeCount: real.length,
     sendTG, resyncState,
   };
