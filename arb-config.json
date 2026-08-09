@@ -5,7 +5,8 @@
     "JUP",
     "POPCAT",
     "RENDER",
-    "TRUMP"
+    "TRUMP",
+    "GOAT"
   ],
   "POLICY_SKIP_BYBIT": [
     "BOME",
@@ -55,10 +56,10 @@
   "REBALANCE_TARGET_BYBIT": 300,
   "REBALANCE_TARGET_KRAKEN": 300,
   "KRAKEN_SYNTHETIC": false,
-  "lastTestDate": "2026-08-02T06:02:24.863Z",
+  "lastTestDate": "2026-08-09T06:02:38.653Z",
   "lastTestSummary": {
-    "passed": 95,
-    "failed": 5,
+    "passed": 96,
+    "failed": 4,
     "warned": 2
   },
   "MIN_SPREAD_DEX": 1,

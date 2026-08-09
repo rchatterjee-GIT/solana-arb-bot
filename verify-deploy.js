@@ -37,6 +37,16 @@ const FILES = [
     minLines: 150,
     required: ['runHygiene','cleanOKXTrading','cleanBybitUnified','maintainBybitFund'],
   },
+  {
+    file: 'agent.js',
+    minLines: 150,
+    required: ['runCycle','buildPairStats','pollTelegram','agent-rules'],
+  },
+  {
+    file: 'agent-rules.js',
+    minLines: 100,
+    required: ['pair-consecutive-losses','daily-performance-report','okx-critically-low'],
+  },
 ];
 
 let allOk = true;
