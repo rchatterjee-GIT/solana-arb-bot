@@ -40,7 +40,7 @@ const FILES = [
   {
     file: 'agent.js',
     minLines: 150,
-    required: ['runCycle','buildPairStats','pollTelegram','agent-rules'],
+    required: ['runCycle','buildPairStats','checkCommands','agent-rules'],
   },
   {
     file: 'agent-rules.js',
