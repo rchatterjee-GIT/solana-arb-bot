@@ -11,6 +11,8 @@ const CACHE_TTL  = 30 * 60 * 1000; // 30 minutes
 
 // Pair → CoinGecko ID mapping
 const COINGECKO_IDS = {
+  'BTC':    'bitcoin',
+  'ETH':    'ethereum',
   'SOL':    'solana',
   'JTO':    'jito-governance-token',
   'WIF':    'dogwifcoin',
@@ -143,19 +145,36 @@ async function fetchMarketData(tradeSize = 120) {
 
   // Overall market conditions
   const prices = Object.values(result.pairs);
+  const btc = result.pairs['BTC'];
+  const eth = result.pairs['ETH'];
   if (prices.length > 0) {
-    const avg24h  = prices.reduce((a,p) => a + p.change24h, 0) / prices.length;
-    const avgVol  = prices.reduce((a,p) => a + p.volatility, 0) / prices.length;
-    const bullish = prices.filter(p => p.change24h > 2).length;
-    const bearish = prices.filter(p => p.change24h < -2).length;
+    const altPrices = prices.filter(p => p !== btc && p !== eth);
+    const avg24h  = altPrices.reduce((a,p) => a + p.change24h, 0) / Math.max(altPrices.length, 1);
+    const avgVol  = altPrices.reduce((a,p) => a + p.volatility, 0) / Math.max(altPrices.length, 1);
+    const bullish = altPrices.filter(p => p.change24h > 2).length;
+    const bearish = altPrices.filter(p => p.change24h < -2).length;
+
+    // Macro conditions from BTC/ETH
+    const btc1h  = btc?.change1h  || 0;
+    const eth1h  = eth?.change1h  || 0;
+    const btc24h = btc?.change24h || 0;
+    const eth24h = eth?.change24h || 0;
+    const macroAlert = Math.abs(btc1h) > 3 || Math.abs(eth1h) > 3;
+    const macroSentiment = btc24h > 2 ? 'bullish' : btc24h < -2 ? 'bearish' : 'neutral';
 
     result.marketConditions = {
-      avg24hChange:   parseFloat(avg24h.toFixed(2)),
-      avgVolatility:  parseFloat(avgVol.toFixed(2)),
-      bullishPairs:   bullish,
-      bearishPairs:   bearish,
-      sentiment:      avg24h > 1 ? 'bullish' : avg24h < -1 ? 'bearish' : 'neutral',
-      activeWindow:   isActiveWindow(),
+      avg24hChange:    parseFloat(avg24h.toFixed(2)),
+      avgVolatility:   parseFloat(avgVol.toFixed(2)),
+      bullishPairs:    bullish,
+      bearishPairs:    bearish,
+      sentiment:       avg24h > 1 ? 'bullish' : avg24h < -1 ? 'bearish' : 'neutral',
+      activeWindow:    isActiveWindow(),
+      btc1h:           parseFloat(btc1h.toFixed(2)),
+      btc24h:          parseFloat(btc24h.toFixed(2)),
+      eth1h:           parseFloat(eth1h.toFixed(2)),
+      eth24h:          parseFloat(eth24h.toFixed(2)),
+      macroAlert:      macroAlert,
+      macroSentiment:  macroSentiment,
     };
   }
 

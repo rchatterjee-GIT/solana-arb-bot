@@ -266,17 +266,17 @@
     }
   ],
   "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T07:35:20.393Z",
+  "lastRun": "2026-08-10T09:05:12.255Z",
   "actionsToday": 4,
   "lastActionDate": "2026-08-10",
   "lastSentiment": "bullish",
   "ruleCooldowns": {
     "market-active-window": 1786320048126,
     "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786344833006,
+    "temp-skip-expiry": 1786352052170,
     "market-sentiment-report": 1786342613066,
     "daily-performance-report": 1786341652574
   },
-  "activeWindowAlerted": true,
+  "activeWindowAlerted": false,
   "lastSentimentTime": 1786342613075
 }

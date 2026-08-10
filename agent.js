@@ -8,6 +8,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const rules  = require('./agent-rules');
 const { fetchMarketData, getMarketData } = require('./market-data');
+const { run: runListingMonitor } = require('./listing-monitor');
 
 const CONFIG_FILE    = path.join(__dirname, 'arb-config.json');
 const STATE_FILE     = path.join(__dirname, 'arb-state.json');
@@ -244,11 +245,26 @@ async function main() {
   // Run first cycle immediately
   await runCycle(agentState);
 
+  // Check commands every 10 seconds for fast response
+  setInterval(async () => {
+    try { await checkCommands(agentState); }
+    catch(e) { agentLog('Command check error: '+e.message, 'ERROR'); }
+  }, 10 * 1000);
+
+  // Scan for new listings and news every 5 minutes
   setInterval(async () => {
     try {
-      await checkCommands(agentState);
-      await runCycle(agentState);
-    } catch(e) { agentLog('Cycle error: '+e.message, 'ERROR'); }
+      const result = await runListingMonitor();
+      if (result.newOKX > 0 || result.newBybit > 0) {
+        agentLog('New listings: OKX +' + result.newOKX + ' Bybit +' + result.newBybit);
+      }
+    } catch(e) { agentLog('Listing scan error: '+e.message, 'ERROR'); }
+  }, 5 * 60 * 1000);
+
+  // Run full analysis cycle every 60 seconds
+  setInterval(async () => {
+    try { await runCycle(agentState); }
+    catch(e) { agentLog('Cycle error: '+e.message, 'ERROR'); }
   }, CYCLE_MS);
 }
 

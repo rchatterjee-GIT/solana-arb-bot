@@ -52,6 +52,11 @@ const FILES = [
     minLines: 150,
     required: ['fetchMarketData','getMarketData','getPairSignal','getBestOpportunities'],
   },
+  {
+    file: 'listing-monitor.js',
+    minLines: 150,
+    required: ['scanNewListings','checkNews','processNewListing','checkOKXWithdrawal'],
+  },
 ];
 
 let allOk = true;

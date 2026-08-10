@@ -592,4 +592,59 @@ module.exports = [
   },
 
 
+  {
+    id: 'macro-btc-eth-alert',
+    name: 'BTC/ETH macro move detected',
+    severity: 'warn',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const mc = ctx.marketData.marketConditions;
+      if (!mc.macroAlert) return null;
+      const lastMacro = ctx.agentState.lastMacroAlert || 0;
+      if (Date.now() - lastMacro < 2 * 60 * 60 * 1000) return null; // 2hr cooldown
+      return [{ btc1h: mc.btc1h, eth1h: mc.eth1h, btc24h: mc.btc24h, sentiment: mc.macroSentiment }];
+    },
+    async action(ctx, issues) {
+      const { btc1h, eth1h, btc24h, sentiment } = issues[0];
+      ctx.agentState.lastMacroAlert = Date.now();
+      const direction = Math.abs(btc1h) > 3 ? (btc1h > 0 ? 'pumping' : 'dumping') : 'moving';
+      await ctx.sendTG(
+        'Macro alert: BTC ' + direction + ' ' + btc1h.toFixed(1) + '% (1h)\n' +
+        'ETH 1h: ' + eth1h.toFixed(1) + '% | BTC 24h: ' + btc24h.toFixed(1) + '%\n' +
+        'Sentiment: ' + sentiment + '\n' +
+        (Math.abs(btc1h) > 5 ? 'HIGH VOLATILITY - alt spread opportunities likely in next 15-30min' :
+         'Monitor pairs for spread opening')
+      );
+      // If BTC moving hard, lower CEX threshold temporarily to catch spread windows
+      if (Math.abs(btc1h) > 5) {
+        const current = ctx.config.MIN_SPREAD_CEX || 1.5;
+        ctx.config.MIN_SPREAD_CEX = Math.max(1.2, current - 0.3);
+        if (!ctx.agentState.thresholdRestore) ctx.agentState.thresholdRestore = {};
+        ctx.agentState.thresholdRestore.cex = { original: current, restoreAt: Date.now() + 30 * 60 * 1000 };
+        return ['Macro BTC move ' + btc1h.toFixed(1) + '% - CEX threshold lowered to ' + ctx.config.MIN_SPREAD_CEX + '%'];
+      }
+      return ['Macro alert: BTC ' + btc1h.toFixed(1) + '% 1h'];
+    }
+  },
+
+  {
+    id: 'restore-macro-threshold',
+    name: 'Restore threshold after macro window',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.agentState.thresholdRestore) return null;
+      const restore = ctx.agentState.thresholdRestore.cex;
+      if (!restore || Date.now() < restore.restoreAt) return null;
+      return [restore];
+    },
+    async action(ctx, issues) {
+      const { original } = issues[0];
+      ctx.config.MIN_SPREAD_CEX = original;
+      delete ctx.agentState.thresholdRestore;
+      await ctx.sendTG('Macro window closed - CEX threshold restored to ' + original + '%');
+      return ['CEX threshold restored to ' + original + '%'];
+    }
+  },
+
+
 ];

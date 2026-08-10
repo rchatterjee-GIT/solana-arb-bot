@@ -1,471 +1,299 @@
+// listing-monitor.js — new token listing detection and news monitoring
+// Scans OKX, Bybit for new listings every 5 minutes
+// Checks withdrawal availability, DEX liquidity, then alerts + optionally adds to bot
+
 require('dotenv').config();
-const fs     = require('fs');
-const path   = require('path');
+const fs   = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 
-// ── Config ────────────────────────────────────────────────────────────────────
-const CHECK_INTERVAL_MS      = 60_000;       // check every 60 seconds
-const NEW_PAIR_MONITOR_HOURS = 24;           // monitor new pairs for 24hrs
-const MAX_WITHDRAWAL_FEE_PCT = 5.0;
-const TRADE_SIZE_USD         = 40;
-const KNOWN_PAIRS_FILE       = path.join(__dirname, 'known-pairs.json');
-const NEW_PAIRS_FILE         = path.join(__dirname, 'new-pairs.json');
-const CRASH_LOG              = path.join(__dirname, 'crash.log');
+const KNOWN_FILE  = path.join(__dirname, 'known-pairs.json');
+const NEW_FILE    = path.join(__dirname, 'new-pairs.json');
+const LOG_FILE    = path.join(__dirname, 'listing.log');
+const CONFIG_FILE = path.join(__dirname, 'arb-config.json');
 
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const LISTING_THRESHOLD = 5.0;   // % spread required to add new token
+const LISTING_TRADE_SIZE = 60;   // smaller size for new/unknown tokens ($60 vs $120)
+const LISTING_MAX_AGE_HRS = 4;   // remove new listing pairs after 4hrs if no opportunity
+const MIN_DEX_LIQUIDITY = 50000; // minimum $50k DEX liquidity to consider
 
-// ── Tokens to always ignore ───────────────────────────────────────────────────
-const IGNORE_LIST = new Set([
-  // Stablecoins
-  'USDT','USDC','BUSD','TUSD','USDP','GUSD','FRAX','LUSD','SUSD','DAI',
-  // Wrapped/bridged
-  'WBTC','WETH','WBNB','WMATIC','WAVAX',
-  // Non-Solana tokens we already know aren't on Solana
-  'BTC','ETH','BNB','XRP','ADA','MATIC','DOT','AVAX','LINK','UNI',
-  'LTC','BCH','ATOM','FIL','VET','THETA','XLM','ALGO','ICP','FTM',
-  'SAND','MANA','AXS','ENJ','CHZ','BAT','ZRX','COMP','AAVE','MKR',
-  'SNX','YFI','SUSHI','CRV','BAL','DYDX','GRT','LRC','OMG','ZEC',
-  // Leveraged/synthetic tokens
-  'BTCUP','BTCDOWN','ETHUP','ETHDOWN',
-  // Fiat-backed
-  'EURT','GBPT','JPYT',
-  // Already in bot
-  'SOL','JTO','WIF','BONK','JUP','PYTH','RAY','W','POPCAT','MEW',
-  'BOME','TRUMP','ZEUS','RENDER','PNUT','GOAT','PENGU',
-]);
-
-// ── Telegram ──────────────────────────────────────────────────────────────────
-async function tgSend(text) {
+function log(msg) {
+  const line = `[${new Date().toISOString().slice(0,19)}] ${msg}`;
+  console.log(`📡 ${line}`);
   try {
-    const token  = process.env.TELEGRAM_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    if (!token || !chatId) return;
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    const existing = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE,'utf8') : '';
+    const lines = existing.split('\n').filter(Boolean);
+    lines.push(line);
+    fs.writeFileSync(LOG_FILE, lines.slice(-500).join('\n') + '\n');
+  } catch {}
+}
+
+function readJSON(f) { try { return JSON.parse(fs.readFileSync(f,'utf8')); } catch { return null; } }
+function writeJSON(f, d) { fs.writeFileSync(f, JSON.stringify(d, null, 2)); }
+
+async function sendTG(text) {
+  try {
+    await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_TOKEN+'/sendMessage', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text, parse_mode:'HTML'})
     });
-  } catch (e) { /* ignore */ }
+  } catch(e) { log('TG error: '+e.message); }
 }
 
-function logCrash(context, err) {
-  const msg = `${new Date().toISOString()} [LISTING-MONITOR:${context}] ${err?.message || err}\n${err?.stack || ''}\n\n`;
-  try { fs.appendFileSync(CRASH_LOG, msg); } catch (e) {}
-  console.error(`💥 [${context}]`, err?.message || err);
+// ── OKX helpers ───────────────────────────────────────────────────────────────
+function okxSign(ts, m, p) {
+  return crypto.createHmac('sha256', process.env.OKX_API_SECRET).update(ts+m+p).digest('base64');
 }
-
-// ── OKX signing ───────────────────────────────────────────────────────────────
-function okxHeaders(method, path, body = '') {
-  const timestamp = new Date().toISOString();
-  const sign      = crypto.createHmac('sha256', process.env.OKX_API_SECRET)
-    .update(timestamp + method + path + body).digest('base64');
-  return {
-    'Content-Type':         'application/json',
-    'OK-ACCESS-KEY':        process.env.OKX_API_KEY,
-    'OK-ACCESS-SIGN':       sign,
-    'OK-ACCESS-TIMESTAMP':  timestamp,
-    'OK-ACCESS-PASSPHRASE': process.env.OKX_PASSPHRASE,
-  };
-}
-
-async function okxPrivate(method, path) {
-  const res = await fetch(`https://www.okx.com${path}`, {
-    method, headers: okxHeaders(method, path),
+async function okxGet(ep) {
+  const ts = new Date().toISOString();
+  const r = await fetch('https://www.okx.com'+ep, {
+    headers: {'OK-ACCESS-KEY':process.env.OKX_API_KEY,'OK-ACCESS-SIGN':okxSign(ts,'GET',ep),'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':process.env.OKX_PASSPHRASE}
   });
-  return res.json();
+  return r.json();
 }
 
-// ── Load/save known pairs ─────────────────────────────────────────────────────
-function loadKnownPairs() {
+// ── Bybit helpers ─────────────────────────────────────────────────────────────
+async function bybitGet(ep, qs) {
+  const r = await fetch('https://api.bybit.com'+ep+'?'+qs);
+  return r.json();
+}
+
+// ── Fetch all OKX spot pairs ──────────────────────────────────────────────────
+async function getOKXPairs() {
   try {
-    if (fs.existsSync(KNOWN_PAIRS_FILE)) {
-      return JSON.parse(fs.readFileSync(KNOWN_PAIRS_FILE, 'utf8'));
-    }
-  } catch (e) { /* ignore */ }
-  return { okx: [], bybit: [], lastUpdated: null };
+    const j = await fetch('https://www.okx.com/api/v5/public/instruments?instType=SPOT').then(r=>r.json());
+    return (j.data||[])
+      .filter(p => p.quoteCcy === 'USDT' && p.state === 'live')
+      .map(p => ({ symbol: p.baseCcy, instId: p.instId, listTime: parseInt(p.listTime||'0') }));
+  } catch(e) { log('OKX pairs error: '+e.message); return []; }
 }
 
-function saveKnownPairs(data) {
+// ── Fetch all Bybit spot pairs ────────────────────────────────────────────────
+async function getBybitPairs() {
   try {
-    fs.writeFileSync(KNOWN_PAIRS_FILE, JSON.stringify({ ...data, lastUpdated: new Date().toISOString() }, null, 2));
-  } catch (e) { /* ignore */ }
+    const j = await bybitGet('/v5/market/instruments-info', 'category=spot&status=Trading');
+    return (j.result?.list||[])
+      .filter(p => p.quoteCoin === 'USDT')
+      .map(p => ({ symbol: p.baseCoin, instId: p.symbol }));
+  } catch(e) { log('Bybit pairs error: '+e.message); return []; }
 }
 
-// ── Load/save new pairs ───────────────────────────────────────────────────────
-function loadNewPairs() {
-  try {
-    if (fs.existsSync(NEW_PAIRS_FILE)) {
-      return JSON.parse(fs.readFileSync(NEW_PAIRS_FILE, 'utf8'));
-    }
-  } catch (e) { /* ignore */ }
-  return [];
-}
-
-function saveNewPairs(pairs) {
-  try {
-    fs.writeFileSync(NEW_PAIRS_FILE, JSON.stringify(pairs, null, 2));
-  } catch (e) { /* ignore */ }
-}
-
-// ── Fetch all OKX SPOT pairs ──────────────────────────────────────────────────
-async function fetchOKXPairs() {
-  try {
-    const r = await fetch('https://www.okx.com/api/v5/market/tickers?instType=SPOT');
-    const j = await r.json();
-    return new Set(
-      (j.data || [])
-        .filter(t => t.instId.endsWith('-USDT'))
-        .map(t => t.instId.replace('-USDT', ''))
-    );
-  } catch (err) {
-    logCrash('fetchOKXPairs', err);
-    return new Set();
-  }
-}
-
-// ── Fetch all Bybit SPOT pairs ────────────────────────────────────────────────
-async function fetchBybitPairs() {
-  try {
-    const r = await fetch('https://api.bybit.com/v5/market/tickers?category=spot');
-    const j = await r.json();
-    return new Set(
-      (j.result?.list || [])
-        .filter(t => t.symbol.endsWith('USDT') && !t.symbol.includes('X'))
-        .map(t => t.symbol.replace('USDT', ''))
-    );
-  } catch (err) {
-    logCrash('fetchBybitPairs', err);
-    return new Set();
-  }
-}
-
-// ── Check OKX Solana withdrawal ───────────────────────────────────────────────
+// ── Check OKX withdrawal status ───────────────────────────────────────────────
 async function checkOKXWithdrawal(ccy) {
   try {
-    const path = `/api/v5/asset/currencies?ccy=${ccy}`;
-    const r    = await okxPrivate('GET', path);
-    const sol  = (r.data || []).find(d => d.chain?.includes('Solana'));
-    if (!sol) return null;
-
-    const priceR = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${ccy}-USDT`);
-    const priceJ = await priceR.json();
-    const price  = parseFloat(priceJ.data?.[0]?.last || '0');
-    if (!price) return null;
-
-    const fee       = parseFloat(sol.minFee);
-    const minWd     = parseFloat(sol.minWd);
-    const precision = parseInt(sol.wdTickSz) || 8;
-    const bought    = TRADE_SIZE_USD / price;
-    const feePct    = (fee / bought) * 100;
-
+    const ep = `/api/v5/asset/currencies?ccy=${ccy}`;
+    const j = await okxGet(ep);
+    const chain = (j.data||[]).find(c => c.chain && c.chain.includes('Solana'));
+    if (!chain) return { canWithdraw: false, reason: 'No Solana chain' };
     return {
-      chain: sol.chain,
-      fee:   sol.minFee,
-      minWd,
-      precision,
-      feePct: parseFloat(feePct.toFixed(2)),
-      viable: bought >= minWd && feePct <= MAX_WITHDRAWAL_FEE_PCT,
-      price,
+      canWithdraw: chain.canWd === true || chain.canWd === '1',
+      minWithdraw: parseFloat(chain.minWd || '0'),
+      fee: parseFloat(chain.minFee || '0'),
+      chain: chain.chain,
     };
-  } catch (err) {
-    return null;
-  }
+  } catch(e) { return { canWithdraw: false, reason: e.message }; }
 }
 
-// ── Check Bybit Solana withdrawal ─────────────────────────────────────────────
-async function checkBybitWithdrawal(ccy) {
+// ── Check DEX liquidity via Jupiter ──────────────────────────────────────────
+async function checkDEXLiquidity(mint, tradeSize) {
   try {
-    const r      = await fetch(`https://api.bybit.com/v5/asset/coin/query-info?coin=${ccy}`);
-    const j      = await r.json();
-    const chains = j.result?.rows?.[0]?.chains || [];
-    const sol    = chains.find(c => c.chain === 'SOL' || c.chainType?.includes('Solana'));
-    if (!sol) return null;
-
-    const priceR = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${ccy}USDT`);
-    const priceJ = await priceR.json();
-    const price  = parseFloat(priceJ.result?.list?.[0]?.lastPrice || '0');
-    if (!price) return null;
-
-    const fee    = parseFloat(sol.withdrawFee || '0');
-    const minWd  = parseFloat(sol.minWithdraw || '0');
-    const bought = TRADE_SIZE_USD / price;
-    const feePct = (fee / bought) * 100;
-
-    return {
-      chain:  sol.chain,
-      fee:    sol.withdrawFee,
-      minWd,
-      feePct: parseFloat(feePct.toFixed(2)),
-      viable: bought >= minWd && feePct <= MAX_WITHDRAWAL_FEE_PCT,
-      price,
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
-// ── Check Jupiter liquidity ───────────────────────────────────────────────────
-async function checkJupiterLiquidity(mint, decimals) {
-  try {
-    const r = await fetch(
-      `https://api.jup.ag/swap/v1/quote?inputMint=${USDC_MINT}&outputMint=${mint}&amount=40000000&slippageBps=100`,
-      { headers: { 'x-api-key': process.env.JUPITER_API_KEY } }
-    );
+    const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+    const amount = Math.floor(tradeSize * 1e6);
+    const r = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${USDC}&outputMint=${mint}&amount=${amount}&slippageBps=200`);
     const j = await r.json();
-    if (!j.outAmount) return null;
+    if (j.error) return { liquid: false, reason: j.error };
+    const impact = parseFloat(j.priceImpactPct || 0) * 100;
     return {
-      outAmount: j.outAmount,
-      tokens:    j.outAmount / Math.pow(10, decimals),
+      liquid: impact < 2.0,
+      priceImpact: impact,
+      outAmount: parseInt(j.outAmount || '0'),
     };
-  } catch (err) {
-    return null;
-  }
+  } catch(e) { return { liquid: false, reason: e.message }; }
 }
 
-// ── Lookup token mint from Jupiter token list ─────────────────────────────────
-async function lookupMint(ccy) {
+// ── Find Solana mint for a token ──────────────────────────────────────────────
+async function findMint(symbol) {
   try {
-    // Try Jupiter token list
-    const r = await fetch(`https://tokens.jup.ag/token/${ccy}`);
-    if (r.ok) {
-      const j = await r.json();
-      if (j.address) return { mint: j.address, decimals: j.decimals || 6 };
-    }
-
-    // Try Jupiter search
-    const r2 = await fetch(`https://tokens.jup.ag/tokens?tags=verified`);
-    const j2 = await r2.json();
-    const match = (j2 || []).find(t =>
-      t.symbol?.toUpperCase() === ccy.toUpperCase() &&
-      t.chainId === 101  // Solana mainnet
+    const r = await fetch(`https://api.jup.ag/tokens/v1/search?query=${symbol}&limit=5`);
+    const j = await r.json();
+    const tokens = j.tokens || j || [];
+    // Find best match — prefer tokens with high liquidity
+    const match = tokens.find(t =>
+      t.symbol?.toUpperCase() === symbol.toUpperCase() &&
+      t.chainId === 101 // Solana mainnet
     );
-    if (match) return { mint: match.address, decimals: match.decimals || 6 };
-
-    return null;
-  } catch (err) {
-    return null;
-  }
+    return match?.address || null;
+  } catch { return null; }
 }
 
-// ── Process a newly detected token ───────────────────────────────────────────
-async function processNewToken(ccy, sources) {
-  console.log(`\n🆕 New token detected: ${ccy} on ${sources.join(', ')}`);
-
+// ── Check current spread for a new pair ──────────────────────────────────────
+async function checkSpread(symbol, exchange) {
   try {
-    // Step 1 — find mint address
-    const mintInfo = await lookupMint(ccy);
-    if (!mintInfo) {
-      console.log(`  ❌ ${ccy}: Could not find Solana mint address`);
-      return null;
+    if (exchange === 'OKX') {
+      const j = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${symbol}-USDT`).then(r=>r.json());
+      const ticker = j.data?.[0];
+      if (!ticker) return null;
+      return { bid: parseFloat(ticker.bidPx), ask: parseFloat(ticker.askPx) };
+    } else if (exchange === 'Bybit') {
+      const j = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${symbol}USDT`).then(r=>r.json());
+      const ticker = j.result?.list?.[0];
+      if (!ticker) return null;
+      return { bid: parseFloat(ticker.bid1Price), ask: parseFloat(ticker.ask1Price) };
     }
-    console.log(`  ✅ Mint: ${mintInfo.mint} (${mintInfo.decimals} decimals)`);
+  } catch { return null; }
+}
 
-    // Step 2 — check Jupiter liquidity
-    const jup = await checkJupiterLiquidity(mintInfo.mint, mintInfo.decimals);
-    if (!jup) {
-      console.log(`  ❌ ${ccy}: No Jupiter liquidity`);
-      return null;
+// ── Main scan ─────────────────────────────────────────────────────────────────
+async function scanNewListings() {
+  const known = readJSON(KNOWN_FILE) || { okx: [], bybit: [], lastScan: null };
+  const newPairs = readJSON(NEW_FILE) || [];
+  const config = readJSON(CONFIG_FILE) || {};
+
+  // Get current pair lists
+  const [okxPairs, bybitPairs] = await Promise.all([getOKXPairs(), getBybitPairs()]);
+
+  const okxSymbols  = new Set(okxPairs.map(p => p.symbol));
+  const bybitSymbols = new Set(bybitPairs.map(p => p.symbol));
+
+  // Find new OKX listings
+  const newOKX = okxPairs.filter(p => !known.okx.includes(p.symbol));
+  // Find new Bybit listings
+  const newBybit = bybitPairs.filter(p => !known.bybit.includes(p.symbol));
+
+  // Process new OKX listings
+  for (const pair of newOKX) {
+    log(`New OKX listing detected: ${pair.symbol}`);
+    await processNewListing(pair.symbol, 'OKX', okxSymbols, bybitSymbols, config, newPairs);
+  }
+
+  // Process new Bybit listings
+  for (const pair of newBybit) {
+    log(`New Bybit listing detected: ${pair.symbol}`);
+    await processNewListing(pair.symbol, 'Bybit', okxSymbols, bybitSymbols, config, newPairs);
+  }
+
+  // Clean up expired new pairs (older than LISTING_MAX_AGE_HRS)
+  const cutoff = Date.now() - LISTING_MAX_AGE_HRS * 60 * 60 * 1000;
+  const expired = newPairs.filter(p => p.addedAt < cutoff);
+  if (expired.length > 0) {
+    for (const p of expired) {
+      log(`Removing expired new listing: ${p.symbol} (added ${Math.round((Date.now()-p.addedAt)/3600000)}hrs ago)`);
+      // Remove from bot skip lists / special handling
     }
-    console.log(`  ✅ Jupiter: $40 buys ${jup.tokens.toFixed(4)} tokens`);
+  }
 
-    // Step 3 — check OKX withdrawal
-    let okxInfo   = null;
-    let bybitInfo = null;
+  // Update known pairs
+  known.okx   = okxPairs.map(p => p.symbol);
+  known.bybit  = bybitPairs.map(p => p.symbol);
+  known.lastScan = new Date().toISOString();
+  writeJSON(KNOWN_FILE, known);
+  writeJSON(NEW_FILE, newPairs.filter(p => p.addedAt >= cutoff));
 
-    if (sources.includes('OKX')) {
-      okxInfo = await checkOKXWithdrawal(ccy);
-      if (okxInfo) {
-        console.log(`  ${okxInfo.viable ? '✅' : '⚠️ '} OKX: chain=${okxInfo.chain} fee=${okxInfo.feePct}% ${okxInfo.viable ? 'viable' : 'HIGH FEE'}`);
-      } else {
-        console.log(`  ❌ OKX: No Solana withdrawal`);
-      }
+  return { newOKX: newOKX.length, newBybit: newBybit.length };
+}
+
+async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, config, newPairs) {
+  try {
+    // 1. Check withdrawal availability
+    const wd = exchange === 'OKX' ? await checkOKXWithdrawal(symbol) : { canWithdraw: true }; // Bybit check TBD
+    log(`${symbol} withdrawal: ${wd.canWithdraw ? 'enabled' : 'disabled'}`);
+
+    // 2. Find Solana mint
+    const mint = await findMint(symbol);
+    log(`${symbol} mint: ${mint || 'not found'}`);
+
+    // 3. Check DEX liquidity
+    const dex = mint ? await checkDEXLiquidity(mint, LISTING_TRADE_SIZE) : { liquid: false, reason: 'No mint' };
+    log(`${symbol} DEX: ${dex.liquid ? 'liquid (impact '+dex.priceImpact?.toFixed(2)+'%)' : 'illiquid ('+dex.reason+')'}`);
+
+    // 4. Check current spread
+    const cexTicker = await checkSpread(symbol, exchange);
+    let spreadInfo = 'spread unknown';
+    if (cexTicker && dex.outAmount && dex.liquid) {
+      const dexPrice = (LISTING_TRADE_SIZE * 1e6) / dex.outAmount; // USDC per token
+      const spreadPct = ((cexTicker.bid - dexPrice) / dexPrice) * 100;
+      spreadInfo = `spread ${spreadPct.toFixed(2)}%`;
     }
 
-    if (sources.includes('Bybit')) {
-      bybitInfo = await checkBybitWithdrawal(ccy);
-      if (bybitInfo) {
-        console.log(`  ${bybitInfo.viable ? '✅' : '⚠️ '} Bybit: chain=${bybitInfo.chain} fee=${bybitInfo.feePct}% ${bybitInfo.viable ? 'viable' : 'HIGH FEE'}`);
-      } else {
-        console.log(`  ❌ Bybit: No Solana withdrawal`);
-      }
+    // 5. Build alert
+    const viable = wd.canWithdraw && dex.liquid;
+    const emoji = viable ? '🚀' : '⚠️';
+
+    const alertMsg =
+      `${emoji} <b>New ${exchange} Listing: ${symbol}</b>\n` +
+      `Withdrawal: ${wd.canWithdraw ? '✅ enabled' : '❌ disabled'}\n` +
+      `DEX liquidity: ${dex.liquid ? '✅ liquid' : '❌ '+dex.reason}\n` +
+      `Mint: ${mint ? mint.slice(0,8)+'...' : 'not found'}\n` +
+      `${spreadInfo}\n` +
+      (viable ? '→ Adding to bot scan list (threshold '+LISTING_THRESHOLD+'%)' : '→ Monitor only - not adding to bot');
+
+    await sendTG(alertMsg);
+    log(`${symbol} alert sent. Viable: ${viable}`);
+
+    // 6. Add to bot if viable
+    if (viable && mint) {
+      // Add to new pairs tracking
+      newPairs.push({
+        symbol, exchange, mint, addedAt: Date.now(),
+        wd: wd.canWithdraw, dexLiquid: dex.liquid,
+      });
+
+      // Add threshold config for this pair
+      if (!config.PAIR_MIN_SPREAD) config.PAIR_MIN_SPREAD = {};
+      config.PAIR_MIN_SPREAD[symbol] = LISTING_THRESHOLD;
+      writeJSON(CONFIG_FILE, config);
+      log(`${symbol} added to PAIR_MIN_SPREAD at ${LISTING_THRESHOLD}%`);
     }
 
-    // At least one exchange must have viable withdrawal
-    const okxViable   = okxInfo?.viable === true;
-    const bybitViable = bybitInfo?.viable === true;
+  } catch(e) { log(`Error processing ${symbol}: ${e.message}`); }
+}
 
-    if (!okxViable && !bybitViable) {
-      console.log(`  ❌ ${ccy}: No viable withdrawal on any exchange`);
-      return null;
-    }
+// ── News monitoring via CryptoPanic ──────────────────────────────────────────
+async function checkNews() {
+  try {
+    // CryptoPanic public API - no key needed for basic access
+    const r = await fetch('https://cryptopanic.com/api/free/v1/posts/?auth_token=public&filter=hot&currencies=BTC,ETH,SOL,JTO,PENGU&kind=news');
+    const j = await r.json();
+    const results = j.results || [];
 
-    const newPair = {
-      ccy,
-      mint:          mintInfo.mint,
-      decimals:      mintInfo.decimals,
-      detectedAt:    new Date().toISOString(),
-      expiresAt:     new Date(Date.now() + NEW_PAIR_MONITOR_HOURS * 60 * 60 * 1000).toISOString(),
-      sources,
-      okx:           okxInfo,
-      bybit:         bybitInfo,
-      okxViable,
-      bybitViable,
-      okxInstId:     `${ccy}-USDT`,
-      bybitInstId:   bybitInfo ? `${ccy}USDT` : null,
-      okxChain:      okxInfo?.chain || null,
-      bybitChain:    bybitInfo ? 'SOL' : null,
-    };
+    const recent = results.filter(n => {
+      const age = Date.now() - new Date(n.published_at).getTime();
+      return age < 30 * 60 * 1000; // last 30 minutes
+    });
 
-    // Alert Telegram
-    const exchangeStr = [
-      okxViable   ? `OKX (fee=${okxInfo.feePct}%)`   : null,
-      bybitViable ? `Bybit (fee=${bybitInfo.feePct}%)` : null,
-    ].filter(Boolean).join(', ');
+    if (recent.length === 0) return;
 
-    await tgSend(
-      `🆕 <b>New listing detected: ${ccy}/USDT</b>\n\n` +
-      `Price: $${okxInfo?.price || bybitInfo?.price}\n` +
-      `Mint: <code>${mintInfo.mint}</code>\n` +
-      `Jupiter: ✅ $40 buys ${jup.tokens.toFixed(2)} tokens\n` +
-      `Exchanges: ${exchangeStr}\n\n` +
-      `<b>Bot now monitoring for ${NEW_PAIR_MONITOR_HOURS}hrs</b>\n` +
-      `BUY_CEX threshold: ≥1.2%\n` +
-      `BUY_DEX threshold: ≥3.0%`
+    // Check for high-impact news
+    const highImpact = recent.filter(n =>
+      n.votes?.negative > 10 ||
+      n.votes?.positive > 20 ||
+      (n.title || '').toLowerCase().match(/hack|exploit|launch|listing|partnership|sec|ban|crash|surge|pump/)
     );
 
-    console.log(`  ✅ ${ccy} added to monitoring for ${NEW_PAIR_MONITOR_HOURS}hrs`);
-    return newPair;
+    if (highImpact.length > 0) {
+      const headlines = highImpact.slice(0,3).map(n =>
+        `• ${n.title?.slice(0,80)}`
+      ).join('\n');
 
-  } catch (err) {
-    logCrash(`processNewToken:${ccy}`, err);
-    return null;
-  }
-}
-
-// ── Write new pairs to shared file for bot to read ───────────────────────────
-function updateSharedPairsFile(activePairs) {
-  try {
-    const botPairs = activePairs.map(p => ({
-      name:        `${p.ccy}/USDT`,
-      okxInstId:   p.okxInstId,
-      bybitInstId: p.bybitInstId,
-      outputMint:  p.mint,
-      decimals:    p.decimals,
-      dex:         null,
-      isNative:    false,
-      okxCcy:      p.ccy,
-      okxChain:    p.okxChain,
-      bybitCcy:    p.bybitViable ? p.ccy : null,
-      bybitChain:  p.bybitChain,
-      isNew:       true,
-      expiresAt:   p.expiresAt,
-    }));
-    fs.writeFileSync(NEW_PAIRS_FILE, JSON.stringify(botPairs, null, 2));
-    console.log(`  📝 Shared pairs file updated: ${botPairs.length} new pairs`);
-  } catch (err) {
-    logCrash('updateSharedPairsFile', err);
-  }
-}
-
-// ── Main check loop ───────────────────────────────────────────────────────────
-async function check() {
-  try {
-    const [okxPairs, bybitPairs] = await Promise.all([
-      fetchOKXPairs(),
-      fetchBybitPairs(),
-    ]);
-
-    const known    = loadKnownPairs();
-    const newPairs = loadNewPairs();
-
-    // First run — just save known pairs, don't alert
-    const isFirstRun = !known.lastUpdated;
-    if (isFirstRun) {
-      console.log(`📋 First run — recording ${okxPairs.size} OKX + ${bybitPairs.size} Bybit pairs as baseline`);
-      saveKnownPairs({ okx: [...okxPairs], bybit: [...bybitPairs] });
-      await tgSend(
-        `👁️ <b>Listing monitor started</b>\n` +
-        `Watching ${okxPairs.size} OKX pairs + ${bybitPairs.size} Bybit pairs\n` +
-        `Checking every 60 seconds for new Solana listings`
+      await sendTG(
+        '📰 <b>Crypto News Alert</b>\n' +
+        headlines + '\n' +
+        'Source: CryptoPanic | Monitor for spread opportunities'
       );
-      return;
+      log(`News alert sent: ${highImpact.length} high-impact items`);
     }
-
-    const knownOKX   = new Set(known.okx || []);
-    const knownBybit = new Set(known.bybit || []);
-
-    // Find new tokens
-    const newOnOKX   = [...okxPairs].filter(t => !knownOKX.has(t) && !IGNORE_LIST.has(t));
-    const newOnBybit = [...bybitPairs].filter(t => !knownBybit.has(t) && !IGNORE_LIST.has(t));
-
-    // Combine — token may appear on one or both
-    const newTokens = new Map();
-    for (const t of newOnOKX)   newTokens.set(t, [...(newTokens.get(t) || []), 'OKX']);
-    for (const t of newOnBybit) newTokens.set(t, [...(newTokens.get(t) || []), 'Bybit']);
-
-    if (newTokens.size > 0) {
-      console.log(`\n🔔 ${newTokens.size} new token(s) detected: ${[...newTokens.keys()].join(', ')}`);
-    }
-
-    // Process each new token
-    const updatedNewPairs = [...newPairs];
-    for (const [ccy, sources] of newTokens.entries()) {
-      // Skip if already being monitored
-      if (updatedNewPairs.find(p => p.okxCcy === ccy)) {
-        console.log(`  ⏭️  ${ccy} already monitored`);
-        continue;
-      }
-
-      await new Promise(r => setTimeout(r, 1000));
-      const result = await processNewToken(ccy, sources);
-      if (result) {
-        updatedNewPairs.push(result);
-      }
-    }
-
-    // Remove expired pairs
-    const now     = Date.now();
-    const expired = updatedNewPairs.filter(p => new Date(p.expiresAt).getTime() < now);
-    if (expired.length > 0) {
-      console.log(`\n⏰ Expiring ${expired.length} pair(s): ${expired.map(p => p.ccy).join(', ')}`);
-      for (const p of expired) {
-        await tgSend(`⏰ <b>${p.ccy}/USDT monitoring expired</b>\nRemoved after ${NEW_PAIR_MONITOR_HOURS}hrs`);
-        IGNORE_LIST.add(p.ccy);
-      }
-    }
-    const activePairs = updatedNewPairs.filter(p => new Date(p.expiresAt).getTime() >= now);
-
-    // Save state
-    saveNewPairs(activePairs);
-    updateSharedPairsFile(activePairs);
-    saveKnownPairs({ okx: [...okxPairs], bybit: [...bybitPairs] });
-
-    const ts = new Date().toLocaleTimeString();
-    console.log(`[${ts}] ✅ Check complete — OKX: ${okxPairs.size} pairs | Bybit: ${bybitPairs.size} pairs | Monitoring: ${activePairs.length} new`);
-
-  } catch (err) {
-    logCrash('check', err);
-  }
+  } catch(e) { log('News check error: '+e.message); }
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-process.on('uncaughtException', (err) => {
-  const msg = `${new Date().toISOString()} LISTING-MONITOR CRASH: ${err.message}\n${err.stack}\n\n`;
-  console.error('💥 Listing monitor crash:', err.message);
-  try { fs.appendFileSync(CRASH_LOG, msg); } catch (e) {}
-});
+// ── Run ───────────────────────────────────────────────────────────────────────
+async function run() {
+  const result = await scanNewListings();
+  await checkNews();
+  return result;
+}
 
-process.on('unhandledRejection', (reason) => {
-  const msg = `${new Date().toISOString()} LISTING-MONITOR REJECTION: ${reason}\n\n`;
-  console.error('💥 Listing monitor rejection:', reason);
-  try { fs.appendFileSync(CRASH_LOG, msg); } catch (e) {}
-});
+module.exports = { run, scanNewListings, checkNews };
 
-console.log('👁️  Listing monitor started');
-console.log(`   Check interval:  ${CHECK_INTERVAL_MS / 1000}s`);
-console.log(`   Monitor period:  ${NEW_PAIR_MONITOR_HOURS}hrs per new listing`);
-console.log(`   Max fee:         ${MAX_WITHDRAWAL_FEE_PCT}%`);
-console.log(`   Ignore list:     ${IGNORE_LIST.size} tokens\n`);
-
-check();
-setInterval(check, CHECK_INTERVAL_MS);
+if (require.main === module) {
+  run().then(r => console.log('Scan complete:', r)).catch(e => console.error(e.message));
+}
