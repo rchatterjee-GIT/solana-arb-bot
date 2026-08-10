@@ -263,11 +263,19 @@
         "Sentiment changed to bullish"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-10T09:18:43.406Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T09:17:19.793Z",
-  "actionsToday": 4,
+  "lastRun": "2026-08-10T09:20:43.564Z",
+  "actionsToday": 5,
   "lastActionDate": "2026-08-10",
   "lastSentiment": "bullish",
   "ruleCooldowns": {
@@ -275,8 +283,10 @@
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786352052170,
     "market-sentiment-report": 1786342613066,
-    "daily-performance-report": 1786341652574
+    "daily-performance-report": 1786341652574,
+    "spread-duration-analysis": 1786353523273
   },
   "activeWindowAlerted": false,
-  "lastSentimentTime": 1786342613075
+  "lastSentimentTime": 1786342613075,
+  "lastSpreadAnalysis": 1786353523284
 }

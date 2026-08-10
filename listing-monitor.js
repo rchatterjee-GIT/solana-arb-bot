@@ -78,6 +78,30 @@ async function getBybitPairs() {
   } catch(e) { log('Bybit pairs error: '+e.message); return []; }
 }
 
+// ── Fetch all Kraken spot pairs ───────────────────────────────────────────────
+async function getKrakenPairs() {
+  try {
+    const r = await fetch('https://api.kraken.com/0/public/AssetPairs');
+    const j = await r.json();
+    const pairs = j.result || {};
+    return Object.entries(pairs)
+      .filter(([,v]) => v.quote === 'ZUSD' || v.quote === 'USDT')
+      .map(([key, v]) => ({ symbol: v.base.replace(/^[XZ]/, ''), instId: key }));
+  } catch(e) { log('Kraken pairs error: '+e.message); return []; }
+}
+
+// ── Fetch all Gate.io spot pairs (scaffolded — ready when API keys added) ────
+async function getGatePairs() {
+  if (!process.env.GATE_API_KEY) return []; // not configured yet
+  try {
+    const r = await fetch('https://api.gateio.ws/api/v4/spot/currency_pairs');
+    const j = await r.json();
+    return (j||[])
+      .filter(p => p.quote === 'USDT' && p.trade_status === 'tradable')
+      .map(p => ({ symbol: p.base, instId: p.id }));
+  } catch(e) { log('Gate.io pairs error: '+e.message); return []; }
+}
+
 // ── Check OKX withdrawal status ───────────────────────────────────────────────
 async function checkOKXWithdrawal(ccy) {
   try {
@@ -150,26 +174,38 @@ async function scanNewListings() {
   const config = readJSON(CONFIG_FILE) || {};
 
   // Get current pair lists
-  const [okxPairs, bybitPairs] = await Promise.all([getOKXPairs(), getBybitPairs()]);
+  const [okxPairs, bybitPairs, krakenPairs, gatePairs] = await Promise.all([
+    getOKXPairs(), getBybitPairs(), getKrakenPairs(), getGatePairs()
+  ]);
 
-  const okxSymbols  = new Set(okxPairs.map(p => p.symbol));
-  const bybitSymbols = new Set(bybitPairs.map(p => p.symbol));
+  const okxSymbols    = new Set(okxPairs.map(p => p.symbol));
+  const bybitSymbols  = new Set(bybitPairs.map(p => p.symbol));
+  const krakenSymbols = new Set(krakenPairs.map(p => p.symbol));
+  const gateSymbols   = new Set(gatePairs.map(p => p.symbol));
 
-  // Find new OKX listings
-  const newOKX = okxPairs.filter(p => !known.okx.includes(p.symbol));
-  // Find new Bybit listings
-  const newBybit = bybitPairs.filter(p => !known.bybit.includes(p.symbol));
+  // Find new listings on each exchange
+  const newOKX    = okxPairs.filter(p => !(known.okx||[]).includes(p.symbol));
+  const newBybit  = bybitPairs.filter(p => !(known.bybit||[]).includes(p.symbol));
+  const newKraken = krakenPairs.filter(p => !(known.kraken||[]).includes(p.symbol));
+  const newGate   = gatePairs.filter(p => !(known.gate||[]).includes(p.symbol));
 
-  // Process new OKX listings
+  // Process new listings
   for (const pair of newOKX) {
-    log(`New OKX listing detected: ${pair.symbol}`);
+    log('New OKX listing: ' + pair.symbol);
     await processNewListing(pair.symbol, 'OKX', okxSymbols, bybitSymbols, config, newPairs);
   }
-
-  // Process new Bybit listings
   for (const pair of newBybit) {
-    log(`New Bybit listing detected: ${pair.symbol}`);
+    log('New Bybit listing: ' + pair.symbol);
     await processNewListing(pair.symbol, 'Bybit', okxSymbols, bybitSymbols, config, newPairs);
+  }
+  for (const pair of newKraken) {
+    log('New Kraken listing: ' + pair.symbol);
+    // Alert only — Kraken has different arb mechanic
+    await sendTG('New Kraken listing: ' + pair.symbol + ' — check if available on OKX/Bybit for arb');
+  }
+  for (const pair of newGate) {
+    log('New Gate.io listing: ' + pair.symbol);
+    await sendTG('New Gate.io listing: ' + pair.symbol + ' — check if available on OKX/Bybit/DEX for arb');
   }
 
   // Clean up expired new pairs (older than LISTING_MAX_AGE_HRS)
@@ -182,14 +218,16 @@ async function scanNewListings() {
     }
   }
 
-  // Update known pairs
-  known.okx   = okxPairs.map(p => p.symbol);
+  // Update known pairs for all exchanges
+  known.okx    = okxPairs.map(p => p.symbol);
   known.bybit  = bybitPairs.map(p => p.symbol);
+  known.kraken = krakenPairs.map(p => p.symbol);
+  known.gate   = gatePairs.map(p => p.symbol);
   known.lastScan = new Date().toISOString();
   writeJSON(KNOWN_FILE, known);
   writeJSON(NEW_FILE, newPairs.filter(p => p.addedAt >= cutoff));
 
-  return { newOKX: newOKX.length, newBybit: newBybit.length };
+  return { newOKX: newOKX.length, newBybit: newBybit.length, newKraken: newKraken.length, newGate: newGate.length };
 }
 
 async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, config, newPairs) {
