@@ -398,7 +398,11 @@ function renderWallets(d){
   // Tokens
   function renderToks(elId,toks){
     var el=document.getElementById(elId);
-    el.innerHTML=(toks||[]).map(function(t){return '<div class="tok"><b>'+t.sym+'</b> '+t.bal.toFixed(2)+' <span>$'+t.usd.toFixed(2)+'</span></div>';}).join('');
+    el.innerHTML=(toks||[]).filter(function(t){return t.bal>0.001;}).map(function(t){
+      var usdStr=t.usd!=null?'$'+t.usd.toFixed(2):'';
+      var balStr=t.bal<1?t.bal.toFixed(4):t.bal.toFixed(2);
+      return '<div class="tok"><b>'+t.sym+'</b> '+balStr+(usdStr?' <span>'+usdStr+'</span>':'')+'</div>';
+    }).join('');
   }
   renderToks('w-sol-toks',d.solanaTokens);
   renderToks('w-okx-toks',d.okxTokens);
