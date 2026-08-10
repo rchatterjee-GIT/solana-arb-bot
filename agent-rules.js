@@ -647,4 +647,63 @@ module.exports = [
   },
 
 
+  {
+    id: 'spread-duration-analysis',
+    name: 'Weekly spread duration analysis',
+    severity: 'info',
+    detect(ctx) {
+      // Run when we have 5+ trades and haven't run in 7 days
+      // Also run after any new loss to immediately diagnose
+      const lastAnalysis = ctx.agentState.lastSpreadAnalysis || 0;
+      const tradeCount = ctx.realTradeCount || 0;
+      if (tradeCount < 5) return null;
+      const recentLoss = ctx.trades.slice(-1)[0]?.profit < 0;
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      if (!recentLoss && Date.now() - lastAnalysis < weekAgo) return null;
+      if (recentLoss && Date.now() - lastAnalysis < 60 * 60 * 1000) return null; // 1hr cooldown on loss trigger
+      return [{ trigger: recentLoss ? 'loss' : 'weekly', tradeCount }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastSpreadAnalysis = Date.now();
+      const { analyseSpreadDuration } = require('./spread-analysis');
+      const results = analyseSpreadDuration();
+      const o = results.overall;
+
+      // Build summary message
+      let msg = 'Spread Duration Analysis\n';
+      msg += 'Trades: ' + o.totalAnalysed + ' | Avg withdrawal: ' + o.avgWithdrawSec + 's\n';
+      msg += 'Win rate <2min: ' + Math.round(o.winRateFast*100) + '% vs >2min: ' + Math.round(o.winRateSlow*100) + '%\n';
+
+
+
+      // Apply recommendations autonomously
+      const changes = [];
+      for (const warning of results.warnings) {
+        const ccy = warning.pair;
+        if (warning.type === 'persistent-loser') {
+          // Add to skip list if not already there
+          if (!ctx.config.POLICY_SKIP_OKX?.includes(ccy) && !ctx.config.POLICY_SKIP_BYBIT?.includes(ccy)) {
+            if (!ctx.config.PAIR_MIN_SPREAD) ctx.config.PAIR_MIN_SPREAD = {};
+            const recommended = parseFloat((results.byPair[ccy + '/USDT']?.avgLossSpread * 2 || 3.0).toFixed(1));
+            ctx.config.PAIR_MIN_SPREAD[ccy] = recommended;
+            changes.push(ccy + ' threshold raised to ' + recommended + '% (persistent loser)');
+            msg += 'Action: ' + ccy + ' threshold raised to ' + recommended + '%\n';
+          }
+        }
+      }
+
+      for (const insight of results.insights) {
+        msg += 'Insight [' + insight.pair + ']: ' + insight.message + '\n';
+      }
+
+      if (issues[0].trigger === 'loss') {
+        msg = 'Post-loss analysis:\n' + msg;
+      }
+
+      await ctx.sendTG(msg);
+      return changes.length ? changes : ['Spread analysis complete - ' + results.insights.length + ' insights'];
+    }
+  },
+
+
 ];

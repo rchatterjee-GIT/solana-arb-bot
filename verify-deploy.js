@@ -57,6 +57,11 @@ const FILES = [
     minLines: 150,
     required: ['scanNewListings','checkNews','processNewListing','checkOKXWithdrawal'],
   },
+  {
+    file: 'spread-analysis.js',
+    minLines: 100,
+    required: ['analyseSpreadDuration','printReport'],
+  },
 ];
 
 let allOk = true;
