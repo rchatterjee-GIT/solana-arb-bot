@@ -189,23 +189,40 @@ async function scanNewListings() {
   const newKraken = krakenPairs.filter(p => !(known.kraken||[]).includes(p.symbol));
   const newGate   = gatePairs.filter(p => !(known.gate||[]).includes(p.symbol));
 
-  // Process new listings
-  for (const pair of newOKX) {
-    log('New OKX listing: ' + pair.symbol);
-    await processNewListing(pair.symbol, 'OKX', okxSymbols, bybitSymbols, config, newPairs);
+  // Process new listings — only if we have a previous baseline
+  if (known.okx && known.okx.length > 0) {
+    for (const pair of newOKX) {
+      log('New OKX listing: ' + pair.symbol);
+      await processNewListing(pair.symbol, 'OKX', okxSymbols, bybitSymbols, config, newPairs);
+    }
+  } else {
+    log('First OKX scan — baseline set (' + okxPairs.length + ' pairs, no alerts)');
   }
-  for (const pair of newBybit) {
-    log('New Bybit listing: ' + pair.symbol);
-    await processNewListing(pair.symbol, 'Bybit', okxSymbols, bybitSymbols, config, newPairs);
+  if (known.bybit && known.bybit.length > 0) {
+    for (const pair of newBybit) {
+      log('New Bybit listing: ' + pair.symbol);
+      await processNewListing(pair.symbol, 'Bybit', okxSymbols, bybitSymbols, config, newPairs);
+    }
+  } else {
+    log('First Bybit scan — baseline set (' + bybitPairs.length + ' pairs, no alerts)');
   }
-  for (const pair of newKraken) {
-    log('New Kraken listing: ' + pair.symbol);
-    // Alert only — Kraken has different arb mechanic
-    await sendTG('New Kraken listing: ' + pair.symbol + ' — check if available on OKX/Bybit for arb');
+  // Only alert on Kraken new listings if we had a previous scan (not first run)
+  if (known.kraken && known.kraken.length > 0 && newKraken.length > 0 && newKraken.length < 10) {
+    for (const pair of newKraken) {
+      log('New Kraken listing: ' + pair.symbol);
+      await sendTG('New Kraken listing: ' + pair.symbol + ' — check if available on OKX/Bybit for arb');
+    }
+  } else if (newKraken.length >= 10) {
+    log('First Kraken scan — baseline set (' + krakenPairs.length + ' pairs, no alerts)');
   }
-  for (const pair of newGate) {
-    log('New Gate.io listing: ' + pair.symbol);
-    await sendTG('New Gate.io listing: ' + pair.symbol + ' — check if available on OKX/Bybit/DEX for arb');
+  // Only alert on Gate.io if we had a previous scan
+  if (known.gate && known.gate.length > 0 && newGate.length > 0 && newGate.length < 10) {
+    for (const pair of newGate) {
+      log('New Gate.io listing: ' + pair.symbol);
+      await sendTG('New Gate.io listing: ' + pair.symbol + ' — check if available on OKX/Bybit/DEX for arb');
+    }
+  } else if (newGate.length >= 10) {
+    log('First Gate.io scan — baseline set (' + gatePairs.length + ' pairs, no alerts)');
   }
 
   // Clean up expired new pairs (older than LISTING_MAX_AGE_HRS)
