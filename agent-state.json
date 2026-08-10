@@ -295,24 +295,66 @@
         "Dry spell alert sent — Market conditions OK. Spreads not crossing threshold. Consider lowering CEX threshold to 1.5%."
       ],
       "severity": "warn"
+    },
+    {
+      "time": "2026-08-10T12:19:46.662Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T12:30:46.790Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - JTO 9.6, PENGU 7.1, PNUT 5.7"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T13:00:47.031Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: JTO, PENGU showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T13:19:47.128Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T14:19:47.576Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T11:55:20.075Z",
-  "actionsToday": 8,
+  "lastRun": "2026-08-10T14:44:47.683Z",
+  "actionsToday": 13,
   "lastActionDate": "2026-08-10",
   "lastSentiment": "bullish",
   "ruleCooldowns": {
-    "market-active-window": 1786320048126,
+    "market-active-window": 1786366846863,
     "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786362920053,
+    "temp-skip-expiry": 1786370147268,
     "market-sentiment-report": 1786342613066,
     "daily-performance-report": 1786341652574,
-    "spread-duration-analysis": 1786360753867,
-    "dry-spell-analysis": 1786361713985
+    "spread-duration-analysis": 1786371587448,
+    "dry-spell-analysis": 1786361713985,
+    "pre-session-threshold-optimisation": 1786365046597
   },
-  "activeWindowAlerted": false,
+  "activeWindowAlerted": true,
   "lastSentimentTime": 1786342613075,
-  "lastSpreadAnalysis": 1786360753877,
-  "lastDrySpellAlert": 1786361713996
+  "lastSpreadAnalysis": 1786371587458,
+  "lastDrySpellAlert": 1786361713996,
+  "lastPreSessionOpt": 1786365046607
 }

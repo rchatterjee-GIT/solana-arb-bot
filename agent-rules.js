@@ -706,4 +706,81 @@ module.exports = [
   },
 
 
+  {
+    id: 'burst-event-monitor',
+    name: 'Burst firing event detected and diagnosed',
+    severity: 'warn',
+    detect(ctx) {
+      // Look for 3+ fires within a 5-second window in recent fires
+      const recent = ctx.fires.slice(-50);
+      if (recent.length < 3) return null;
+      // Group by second
+      const bySecond = {};
+      recent.forEach(function(f) {
+        const sec = f.date ? f.date.slice(0,19) : null;
+        if (!sec) return;
+        if (!bySecond[sec]) bySecond[sec] = [];
+        bySecond[sec].push(f);
+      });
+      // Find seconds with 3+ fires
+      const bursts = Object.entries(bySecond).filter(function(e) { return e[1].length >= 3; });
+      if (bursts.length === 0) return null;
+      // Only alert on bursts we haven't seen
+      const lastBurst = ctx.agentState.lastBurstAlert || '';
+      const latestBurst = bursts[bursts.length-1];
+      if (latestBurst[0] === lastBurst) return null;
+      return [{ time: latestBurst[0], fires: latestBurst[1] }];
+    },
+    async action(ctx, issues) {
+      const { time, fires } = issues[0];
+      ctx.agentState.lastBurstAlert = time;
+
+      // Diagnose the burst
+      const pairs    = fires.map(function(f) { return (f.pair||'').replace('/USDT',''); });
+      const outcomes = { fired:0, success:0, failed:0, loss:0 };
+      fires.forEach(function(f) { outcomes[f.outcome] = (outcomes[f.outcome]||0)+1; });
+      const exchanges = [...new Set(fires.map(function(f) { return (f.direction||'').replace('BUY_',''); }))];
+
+      // Check for race condition (same pair firing multiple times)
+      const pairCounts = {};
+      pairs.forEach(function(p) { pairCounts[p] = (pairCounts[p]||0)+1; });
+      const duplicates = Object.entries(pairCounts).filter(function(e) { return e[1]>1; });
+
+      // Check resulting trades
+      const tradelog = require('fs').existsSync(require('path').join(__dirname,'trade-log.json')) ?
+        JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'trade-log.json'),'utf8')) : [];
+      const burstTrades = tradelog.filter(function(t) {
+        return t.events && t.events[0] && t.events[0].t && t.events[0].t.slice(0,19) === time;
+      });
+
+      // Check OKX/Solana impact
+      const balBefore = burstTrades[0]?.balanceBefore || null;
+
+      // Build diagnosis
+      let diagnosis = 'Burst Event at ' + time + ' UTC\n';
+      diagnosis += 'Pairs fired: ' + pairs.join(', ') + '\n';
+      diagnosis += 'Exchanges: ' + exchanges.join(', ') + '\n';
+      diagnosis += 'Outcomes: fired:' + (outcomes.fired||0) + ' success:' + (outcomes.success||0) + ' failed:' + (outcomes.failed||0) + '\n';
+
+      if (duplicates.length > 0) {
+        diagnosis += 'RACE CONDITION: ' + duplicates.map(function(d){return d[0]+'x'+d[1];}).join(', ') + '\n';
+      } else {
+        diagnosis += 'No duplicate pairs - concurrency guard held\n';
+      }
+
+      const failReasons = [...new Set(fires.filter(function(f){return f.reason;}).map(function(f){return f.reason.slice(0,50);}))];
+      if (failReasons.length > 0) {
+        diagnosis += 'Fail reasons: ' + failReasons.join(' | ') + '\n';
+      }
+
+      if (balBefore) {
+        diagnosis += 'Balances at fire: Sol:$' + (balBefore.solana||0).toFixed(0) + ' OKX:$' + (balBefore.okx||0).toFixed(0) + ' By:$' + (balBefore.bybit||0).toFixed(0);
+      }
+
+      await ctx.sendTG('Burst event diagnosed:\n' + diagnosis);
+      return ['Burst event at ' + time + ': ' + fires.length + ' fires, ' + duplicates.length + ' duplicates'];
+    }
+  },
+
+
 ];
