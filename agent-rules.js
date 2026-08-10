@@ -106,7 +106,7 @@ module.exports = [
     name: 'Re-enable temporarily skipped pairs',
     severity: 'info',
     detect(ctx) {
-      if (!ctx.config.TEMP_SKIPS) return null;
+      if (!ctx.config.TEMP_SKIPS || Object.keys(ctx.config.TEMP_SKIPS).length === 0) return null;
       const expired = Object.entries(ctx.config.TEMP_SKIPS).filter(([,t]) => Date.now() > t);
       return expired.length ? expired : null;
     },

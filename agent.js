@@ -130,25 +130,27 @@ function handleTelegramCommand(text, agentState) {
   return null;
 }
 
-async function pollTelegram(agentState, offset) {
+const AGENT_CMD_FILE = path.join(__dirname, 'agent-cmd.json');
+
+async function checkCommands(agentState) {
   try {
-    const r = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/getUpdates?offset=${offset}&timeout=5`);
-    const j = await r.json();
-    let newOffset = offset;
-    for (const update of (j.result||[])) {
-      newOffset = update.update_id + 1;
-      const text = update.message?.text;
-      if (!text || !text.startsWith('/agent')) continue;
-      const response = handleTelegramCommand(text, agentState);
+    if (!fs.existsSync(AGENT_CMD_FILE)) return;
+    const cmds = JSON.parse(fs.readFileSync(AGENT_CMD_FILE,'utf8'));
+    if (!cmds.length) return;
+    // Process each command
+    for (const cmd of cmds) {
+      agentLog('Command received: ' + cmd.text);
+      const response = handleTelegramCommand(cmd.text, agentState);
       if (response === '__FORCE_REPORT__') {
-        agentState.lastDailyReport = 0; // force report on next cycle
-        await sendTG('🤖 Forcing report on next cycle...');
+        agentState.lastDailyReport = 0;
+        await sendTG('Forcing report on next cycle...');
       } else if (response) {
         await sendTG(response);
       }
     }
-    return newOffset;
-  } catch { return offset; }
+    // Clear processed commands
+    fs.writeFileSync(AGENT_CMD_FILE, '[]');
+  } catch(e) { agentLog('Command check error: ' + e.message, 'WARN'); }
 }
 
 async function runCycle(agentState) {
@@ -236,14 +238,15 @@ async function main() {
   await sendTG(`🤖 <b>Agent ${AGENT_VERSION} online</b>\nMonitoring: pairs, balances, state, crashes\nCommands: /agent status | history | pause | resume | report`);
 
   let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
-  let tgOffset = 0;
+  // Initialise command file
+  if (!fs.existsSync(AGENT_CMD_FILE)) fs.writeFileSync(AGENT_CMD_FILE, '[]');
 
   // Run first cycle immediately
   await runCycle(agentState);
 
   setInterval(async () => {
     try {
-      tgOffset = await pollTelegram(agentState, tgOffset);
+      await checkCommands(agentState);
       await runCycle(agentState);
     } catch(e) { agentLog('Cycle error: '+e.message, 'ERROR'); }
   }, CYCLE_MS);

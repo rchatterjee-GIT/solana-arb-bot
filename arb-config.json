@@ -65,7 +65,10 @@
   "MIN_SPREAD_DEX": 1,
   "PAIR_MIN_SPREAD": {
     "GOAT": 2.5,
-    "PENGU": 2.5,
+    "PENGU": 4.5,
     "W": 3.2
+  },
+  "TEMP_SKIPS": {
+    "PENGU:threshold": 1786312425640
   }
 }
