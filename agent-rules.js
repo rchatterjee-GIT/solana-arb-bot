@@ -409,4 +409,187 @@ module.exports = [
   },
 
 
+  // ── WIN GENERATION RULES ─────────────────────────────────────────────────
+
+  {
+    id: 'pre-session-threshold-optimisation',
+    name: 'Pre-session: optimise thresholds for active window',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const h = new Date().getUTCHours();
+      // 30 minutes before active windows: 04:30 UTC and 12:30 UTC
+      const preWindow = (h === 4 && new Date().getUTCMinutes() >= 30) ||
+                        (h === 12 && new Date().getUTCMinutes() >= 30);
+      if (!preWindow) return null;
+      // Only fire once per window
+      const lastOpt = ctx.agentState.lastPreSessionOpt || 0;
+      if (Date.now() - lastOpt < 6 * 60 * 60 * 1000) return null;
+      const { getBestOpportunities } = require('./market-data');
+      const opps = getBestOpportunities(5).filter(function(p) {
+        return p.score > 4 && p.symbol !== 'PYTH';
+      });
+      return opps.length ? [{ opps }] : null;
+    },
+    async action(ctx, issues) {
+      const opps = issues[0].opps;
+      const changes = [];
+      const skipOKX = ctx.config.POLICY_SKIP_OKX || [];
+      const skipBybit = ctx.config.POLICY_SKIP_BYBIT || [];
+
+      for (const opp of opps) {
+        const sym = opp.symbol;
+        // If pair is skipped but showing high opportunity, consider re-enabling
+        if ((skipOKX.includes(sym) || skipBybit.includes(sym)) && opp.score > 6) {
+          // Only re-enable if not a persistent loser (check win rate)
+          const stats = ctx.pairStats[sym + '/USDT'];
+          if (!stats || stats.winRate > 0.30) {
+            ctx.config.POLICY_SKIP_OKX = skipOKX.filter(function(s) { return s !== sym; });
+            ctx.config.POLICY_SKIP_BYBIT = skipBybit.filter(function(s) { return s !== sym; });
+            changes.push(sym + ' re-enabled for session (score ' + opp.score.toFixed(1) + ', 24h ' + opp.change24h.toFixed(1) + '%)');
+          }
+        }
+      }
+
+      ctx.agentState.lastPreSessionOpt = Date.now();
+      const topPairs = opps.slice(0,3).map(function(p) {
+        return p.symbol + ' ' + p.score.toFixed(1);
+      }).join(', ');
+      await ctx.sendTG('Pre-session scan. Top pairs: ' + topPairs + (changes.length ? '\nEnabled: ' + changes.join(', ') : '\nNo changes needed'));
+      return changes.length ? changes : ['Pre-session scan complete - ' + topPairs];
+    }
+  },
+
+  {
+    id: 'jto-threshold-dynamic',
+    name: 'JTO DEX threshold: dynamically lower when conditions favourable',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.marketData) return null;
+      const jto = ctx.marketData.pairs['JTO'];
+      if (!jto) return null;
+      const currentThreshold = ctx.agentState.jtoThresholdOverride || 2.5;
+      // JTO is our best pair - if high volume + volatility, lower threshold slightly
+      if (jto.volume24h > 50000000 && jto.volatility > 4 && jto.change24h > -5) {
+        if (currentThreshold > 2.0) return [{ jto, currentThreshold, suggested: 2.0 }];
+      } else {
+        // Reset to default if conditions not favourable
+        if (currentThreshold < 2.5) return [{ jto, currentThreshold, suggested: 2.5, reset: true }];
+      }
+      return null;
+    },
+    async action(ctx, issues) {
+      const { currentThreshold, suggested, reset, jto } = issues[0];
+      // Update BUY_DEX_THRESHOLDS dynamically via arb-config override
+      if (!ctx.config.DEX_THRESHOLD_OVERRIDES) ctx.config.DEX_THRESHOLD_OVERRIDES = {};
+      ctx.config.DEX_THRESHOLD_OVERRIDES['JTO'] = suggested;
+      ctx.agentState.jtoThresholdOverride = suggested;
+      const msg = reset
+        ? 'JTO DEX threshold reset to ' + suggested + '% (low volume/volatility)'
+        : 'JTO DEX threshold lowered to ' + suggested + '% (vol $' + Math.round(jto.volume24h/1e6) + 'M, volatility ' + jto.volatility.toFixed(1) + ')';
+      await ctx.sendTG('Agent: ' + msg);
+      return [msg];
+    }
+  },
+
+  {
+    id: 'dry-spell-analysis',
+    name: 'Extended dry spell: analyse and adjust',
+    severity: 'warn',
+    detect(ctx) {
+      // If no fires in 24 hours, investigate
+      const since = Date.now() - 24 * 60 * 60 * 1000;
+      const recentFires = ctx.fires.filter(function(f) {
+        return new Date(f.date).getTime() > since && f.outcome !== 'failed';
+      });
+      if (recentFires.length > 0) return null;
+      // Only alert once per 24hrs
+      const lastDrySpell = ctx.agentState.lastDrySpellAlert || 0;
+      if (Date.now() - lastDrySpell < 20 * 60 * 60 * 1000) return null;
+      return [{ hoursSinceFire: Math.round((Date.now() - since) / 3600000) }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastDrySpellAlert = Date.now();
+      const { getBestOpportunities } = require('./market-data');
+      const opps = getBestOpportunities(5);
+      const topScores = opps.map(function(p) {
+        return p.symbol + ':' + p.score.toFixed(1);
+      }).join(' ');
+
+      // Check if threshold is too high given current market
+      const sentiment = ctx.marketData?.marketConditions?.sentiment || 'unknown';
+      const avgVol = ctx.marketData?.marketConditions?.avgVolatility || 0;
+
+      let recommendation = '';
+      if (avgVol < 2) {
+        recommendation = 'Market very quiet (avg volatility ' + avgVol.toFixed(1) + '). Consider waiting.';
+      } else if (sentiment === 'bearish') {
+        recommendation = 'Bearish market — spreads may not materialise. Holding thresholds.';
+      } else {
+        recommendation = 'Market conditions OK. Spreads not crossing threshold. Consider lowering CEX threshold to 1.5%.';
+      }
+
+      await ctx.sendTG(
+        '24hr dry spell. No opportunities fired.\n' +
+        'Sentiment: ' + sentiment + ' | Avg volatility: ' + avgVol.toFixed(1) + '\n' +
+        'Top pairs: ' + topScores + '\n' +
+        recommendation
+      );
+      return ['Dry spell alert sent — ' + recommendation];
+    }
+  },
+
+  {
+    id: 'kraken-window-prep',
+    name: 'Kraken: prepare for PENGU window',
+    severity: 'info',
+    detect(ctx) {
+      const h = new Date().getUTCHours();
+      const m = new Date().getUTCMinutes();
+      // Alert at 04:45 UTC — 15 minutes before the PENGU window
+      if (h !== 4 || m < 45) return null;
+      const lastPrep = ctx.agentState.lastKrakenPrep || 0;
+      if (Date.now() - lastPrep < 20 * 60 * 60 * 1000) return null;
+      if (!ctx.config.KRAKEN_ENABLED || ctx.config.KRAKEN_SYNTHETIC) return null;
+      return [{ window: '05:00-06:00 UTC' }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastKrakenPrep = Date.now();
+      const pengu = ctx.marketData?.pairs['PENGU'];
+      const krakenBal = ctx.balances.kraken || 0;
+      const msg = 'Kraken PENGU window in 15min (05:00-06:00 UTC)\n' +
+        'PENGU 24h: ' + (pengu ? pengu.change24h.toFixed(1) + '%' : 'unknown') +
+        ' | Volatility: ' + (pengu ? pengu.volatility.toFixed(1) : '?') + '\n' +
+        'Kraken balance: $' + krakenBal.toFixed(0) + '\n' +
+        (krakenBal < 120 ? 'WARNING: Kraken balance below trade minimum!' : 'Ready to fire');
+      await ctx.sendTG(msg);
+      return ['Kraken window prep sent'];
+    }
+  },
+
+  {
+    id: 'win-streak-report',
+    name: 'Win streak milestone',
+    severity: 'info',
+    detect(ctx) {
+      const wins = ctx.state.consecutiveWins || 0;
+      const lastMilestone = ctx.agentState.lastWinMilestone || 0;
+      if (wins > lastMilestone && wins > 0 && wins % 2 === 0) {
+        return [{ wins }];
+      }
+      return null;
+    },
+    async action(ctx, issues) {
+      const { wins } = issues[0];
+      ctx.agentState.lastWinMilestone = wins;
+      await ctx.sendTG(
+        'Win streak: ' + wins + '/10 consecutive wins\n' +
+        'P&L: +$' + (ctx.state.totalProfit || 0).toFixed(2) + '\n' +
+        (wins >= 10 ? 'TARGET REACHED - consider scaling to $200' : 'Keep going - ' + (10-wins) + ' more to scale')
+      );
+      return ['Win milestone: ' + wins + ' consecutive'];
+    }
+  },
+
+
 ];
