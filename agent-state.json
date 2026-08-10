@@ -271,22 +271,48 @@
         "Spread analysis complete - 0 insights"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-10T10:19:13.518Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T11:19:13.974Z",
+      "rule": "spread-duration-analysis",
+      "changes": [
+        "Spread analysis complete - 0 insights"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T11:35:14.156Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Market conditions OK. Spreads not crossing threshold. Consider lowering CEX threshold to 1.5%."
+      ],
+      "severity": "warn"
     }
   ],
   "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T10:07:05.079Z",
-  "actionsToday": 5,
+  "lastRun": "2026-08-10T11:50:14.115Z",
+  "actionsToday": 8,
   "lastActionDate": "2026-08-10",
   "lastSentiment": "bullish",
   "ruleCooldowns": {
     "market-active-window": 1786320048126,
     "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786355704993,
+    "temp-skip-expiry": 1786359313658,
     "market-sentiment-report": 1786342613066,
     "daily-performance-report": 1786341652574,
-    "spread-duration-analysis": 1786353523273
+    "spread-duration-analysis": 1786360753867,
+    "dry-spell-analysis": 1786361713985
   },
   "activeWindowAlerted": false,
   "lastSentimentTime": 1786342613075,
-  "lastSpreadAnalysis": 1786353523284
+  "lastSpreadAnalysis": 1786360753877,
+  "lastDrySpellAlert": 1786361713996
 }

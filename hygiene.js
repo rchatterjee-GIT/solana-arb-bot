@@ -172,9 +172,11 @@ async function cleanBybitUnified() {
     log(`Bybit UNIFIED: found ${dirty.length} non-USDT token(s)`);
     for (const c of dirty) {
       try {
+        // Round to 2 decimal places — Bybit market sells require clean quantities
+        const qty = parseFloat(parseFloat(c.walletBalance).toFixed(2)).toString();
         const r = await bybitPost('/v5/order/create', {
           category: 'spot', symbol: `${c.coin}USDT`,
-          side: 'Sell', orderType: 'Market', qty: c.walletBalance
+          side: 'Sell', orderType: 'Market', qty
         });
         if (r.retCode === 0) log(`Bybit UNIFIED: sold ${c.walletBalance} ${c.coin} (~$${parseFloat(c.usdValue).toFixed(2)})`);
         else log(`Bybit UNIFIED: sell ${c.coin} failed — ${r.retMsg}`);
@@ -183,9 +185,46 @@ async function cleanBybitUnified() {
   } catch(e) { log(`Bybit UNIFIED cleanup error: ${e.message}`); }
 }
 
+// ── Solana stranded USDT cleanup ─────────────────────────────────────────────
+async function cleanSolanaUSDT() {
+  try {
+    const {Connection,Keypair,PublicKey,Transaction} = require('@solana/web3.js');
+    const {getAssociatedTokenAddress,getAccount,createTransferInstruction} = require('@solana/spl-token');
+    const conn   = new Connection(process.env.RPC_URL, 'confirmed');
+    const wallet = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.PRIVATE_KEY)));
+    const USDT   = new PublicKey('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
+    const fromAta = await getAssociatedTokenAddress(USDT, wallet.publicKey);
+    let acc;
+    try { acc = await getAccount(conn, fromAta); } catch { return; }
+    const usdtBal = Number(acc.amount) / 1e6;
+    if (usdtBal < 5) return; // ignore dust
+    log(`Solana: found ${usdtBal.toFixed(2)} stranded USDT — sending to OKX`);
+    // Get OKX deposit address
+    const crypto2 = require('crypto');
+    const ts = new Date().toISOString();
+    const ep = '/api/v5/asset/deposit-address?ccy=USDT';
+    const sig = crypto2.createHmac('sha256', process.env.OKX_API_SECRET).update(ts+'GET'+ep).digest('base64');
+    const r = await fetch('https://www.okx.com'+ep, {
+      headers: {'OK-ACCESS-KEY':process.env.OKX_API_KEY,'OK-ACCESS-SIGN':sig,'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':process.env.OKX_PASSPHRASE}
+    });
+    const j = await r.json();
+    const addr = j.data?.find(a => a.chain === 'USDT-Solana')?.addr;
+    if (!addr) { log('Solana USDT: could not get OKX deposit address'); return; }
+    const dest   = new PublicKey(addr);
+    const toAta  = await getAssociatedTokenAddress(USDT, dest);
+    const amount = Math.floor(usdtBal * 1e6);
+    const tx = new Transaction();
+    tx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, amount));
+    const txSig = await conn.sendTransaction(tx, [wallet]);
+    await conn.confirmTransaction(txSig, 'confirmed');
+    log(`Solana USDT: sent ${usdtBal.toFixed(2)} to OKX (${txSig.slice(0,20)}...)`);
+  } catch(e) { log(`Solana USDT cleanup error: ${e.message}`); }
+}
+
 // ── Main hygiene run ──────────────────────────────────────────────────────────
 async function runHygiene() {
   log('--- Hygiene cycle start ---');
+  await cleanSolanaUSDT();
   await cleanOKXTrading();
   await cleanOKXFunding();
   await cleanBybitUnified();
