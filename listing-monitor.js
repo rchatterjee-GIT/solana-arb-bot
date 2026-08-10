@@ -305,10 +305,15 @@ async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, con
 
 // ── News monitoring via CryptoPanic ──────────────────────────────────────────
 async function checkNews() {
+  // Requires CRYPTOPANIC_API_KEY in .env — skip if not configured
+  if (!process.env.CRYPTOPANIC_API_KEY) return;
   try {
-    // CryptoPanic public API - no key needed for basic access
-    const r = await fetch('https://cryptopanic.com/api/free/v1/posts/?auth_token=public&filter=hot&currencies=BTC,ETH,SOL,JTO,PENGU&kind=news');
-    const j = await r.json();
+    const token = process.env.CRYPTOPANIC_API_KEY;
+    const r = await fetch('https://cryptopanic.com/api/free/v1/posts/?auth_token='+token+'&filter=hot&currencies=BTC,ETH,SOL,JTO,PENGU&kind=news');
+    if (!r.ok) { log('News API error: HTTP '+r.status); return; }
+    const text = await r.text();
+    if (text.trim().startsWith('<')) { log('News API returned HTML - check API key'); return; }
+    const j = JSON.parse(text);
     const results = j.results || [];
 
     const recent = results.filter(n => {

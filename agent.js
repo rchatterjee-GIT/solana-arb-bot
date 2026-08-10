@@ -158,6 +158,7 @@ async function runCycle(agentState) {
   if (agentState[PAUSED_KEY]) { agentLog('Agent paused — skipping cycle'); return; }
 
   const config  = readJSON(CONFIG_FILE)||{};
+  const configBefore = JSON.stringify(config);
   const state   = readJSON(STATE_FILE)||{};
   const trades  = readJSON(TRADES_FILE)||[];
   const fires   = readJSON(FIRES_FILE)||[];
@@ -213,13 +214,15 @@ async function runCycle(agentState) {
     }
   }
 
-  // Save config if changed
-  if (configChanged) {
+  // Save config only if actual config values changed
+  const configAfter = JSON.stringify(ctx.config);
+  if (configAfter !== JSON.stringify(configBefore)) {
     writeJSON(CONFIG_FILE, ctx.config);
     agentLog('Config updated — bot will hot-reload within 30s');
-    if (allChanges.length) {
-      const msgs = allChanges.map(c => `• ${c.changes[0]}`).join('\n');
-      await sendTG(`🤖 <b>Agent Actions</b>\n${msgs}`);
+    const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
+    if (configChanges.length) {
+      const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
+      await sendTG('Agent Actions\n' + msgs);
     }
   }
 

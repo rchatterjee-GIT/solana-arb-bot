@@ -335,11 +335,19 @@
         "Spread analysis complete - 0 insights"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-10T14:46:12.225Z",
+      "rule": "burst-event-monitor",
+      "changes": [
+        "Burst event at 2026-08-07T08:04:25: 3 fires, 1 duplicates"
+      ],
+      "severity": "warn"
     }
   ],
   "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T14:44:47.683Z",
-  "actionsToday": 13,
+  "lastRun": "2026-08-10T14:54:12.475Z",
+  "actionsToday": 14,
   "lastActionDate": "2026-08-10",
   "lastSentiment": "bullish",
   "ruleCooldowns": {
@@ -350,11 +358,13 @@
     "daily-performance-report": 1786341652574,
     "spread-duration-analysis": 1786371587448,
     "dry-spell-analysis": 1786361713985,
-    "pre-session-threshold-optimisation": 1786365046597
+    "pre-session-threshold-optimisation": 1786365046597,
+    "burst-event-monitor": 1786373172019
   },
   "activeWindowAlerted": true,
   "lastSentimentTime": 1786342613075,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786361713996,
-  "lastPreSessionOpt": 1786365046607
+  "lastPreSessionOpt": 1786365046607,
+  "lastBurstAlert": "2026-08-07T08:04:25"
 }

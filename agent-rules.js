@@ -657,10 +657,13 @@ module.exports = [
       const lastAnalysis = ctx.agentState.lastSpreadAnalysis || 0;
       const tradeCount = ctx.realTradeCount || 0;
       if (tradeCount < 5) return null;
-      const recentLoss = ctx.trades.slice(-1)[0]?.profit < 0;
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      if (!recentLoss && Date.now() - lastAnalysis < weekAgo) return null;
-      if (recentLoss && Date.now() - lastAnalysis < 60 * 60 * 1000) return null; // 1hr cooldown on loss trigger
+      const lastTrade = ctx.trades.filter(function(t){return t.direction!=='RECOVERY';}).slice(-1)[0];
+      const recentLoss = lastTrade && lastTrade.profit < 0 && (Date.now() - new Date(lastTrade.date).getTime()) < 5*60*1000;
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      // Weekly: only if 7 days since last analysis
+      if (!recentLoss && Date.now() - lastAnalysis < weekMs) return null;
+      // Post-loss: only if 6hrs since last analysis and loss was in last 5min
+      if (recentLoss && Date.now() - lastAnalysis < 6 * 60 * 60 * 1000) return null;
       return [{ trigger: recentLoss ? 'loss' : 'weekly', tradeCount }];
     },
     async action(ctx, issues) {
