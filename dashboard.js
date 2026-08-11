@@ -239,7 +239,7 @@ tr:hover td{background:#14141f}
       <div class="sec" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">
         Agent Feed <span style="font-size:.65rem;color:#444" id="af-age"></span>
       </div>
-      <div id="af-list" style="font-size:.68rem;max-height:160px;overflow-y:auto"></div>
+      <div id="af-list" style="font-size:.68rem;max-height:220px;overflow-y:auto"></div>
     </div>
     <div class="card">
       <div class="sec" style="margin-top:0">Capital Chart</div>
@@ -365,12 +365,15 @@ async function loadAgentFeed(){
     if(!d.entries||d.entries.length===0){el.innerHTML='<span class="dim">No agent activity yet</span>';return;}
     var today=new Date().toISOString().slice(0,10);
     el.innerHTML=d.entries.map(function(e){
-      var col=e.level==='ERROR'?'red':e.level==='WARN'?'yellow':e.msg.startsWith('Action')?'green':'dim';
-      var msg=e.msg.replace('Action: ','').replace('[INFO] ','').replace('[WARN] ','').slice(0,55);
+      var isAction=e.msg.startsWith('Action:');
+      var isMarket=e.msg.startsWith('Market:')||e.msg.startsWith('Funding:');
+      var isTG=e.msg.startsWith('TG:')||e.msg.includes('sent')||e.msg.includes('alert');
+      var col=e.level==='ERROR'?'#ef4444':e.level==='WARN'?'#fbbf24':isAction?'#4ade80':isMarket?'#60a5fa':isTG?'#c084fc':'#9ca3af';
+      var msg=e.msg.replace('Action: ','').replace('Telegram: ','').slice(0,65);
       var ts=e.date&&e.date.slice(0,10)!==today?e.date.slice(5,16):e.time;
-      return '<div style="padding:3px 0;border-bottom:1px solid #0f0f1a;display:flex;gap:8px;align-items:baseline">'+
-        '<span style="font-size:.62rem;color:#333;white-space:nowrap;font-family:monospace">'+ts+'</span>'+
-        '<span class="'+col+'" style="font-size:.70rem;line-height:1.3">'+msg+'</span></div>';
+      return '<div style="padding:3px 0;border-bottom:1px solid #111827;display:flex;gap:8px;align-items:baseline">'+
+        '<span style="font-size:.63rem;color:#6b7280;white-space:nowrap;font-family:monospace;flex-shrink:0">'+ts+'</span>'+
+        '<span style="color:'+col+';font-size:.72rem;line-height:1.4">'+msg+'</span></div>';
     }).join('');
   }catch(e){console.error(e);}
 }
@@ -549,7 +552,7 @@ function render(d){
   // sk removed
   // Kraken mode in system status table
   var krakenOn2=d.config&&d.config.KRAKEN_ENABLED,krakenSim2=d.config&&d.config.KRAKEN_SYNTHETIC;
-  document.getElementById('sk').innerHTML=!krakenOn2?'<span class="dim">disabled</span>':krakenSim2?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
+  // sk element removed - Kraken status in Wallets tab
   // Don't blank Kraken balance on refresh - keep last known value
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
   var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'];
@@ -600,9 +603,12 @@ function render(d){
   // Chart
   var labels=d.balHistory.map(function(b){return b.time.slice(5,16);});
   var totals=d.balHistory.map(function(b){return b.total;});
-  var ctx=document.getElementById('ch').getContext('2d');
-  if(chart)chart.destroy();
-  if(typeof Chart!=='undefined'){chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Total',data:totals,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,0.1)',borderWidth:2,pointRadius:1,fill:true,tension:0.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#333',maxTicksLimit:5,font:{size:9}},grid:{color:'#0f0f1a'}},y:{ticks:{color:'#555',font:{size:9},callback:function(v){return'$'+v.toFixed(0);}},grid:{color:'#0f0f1a'}}}}});}
+  var chEl=document.getElementById('ch');
+  if(chEl){
+    var ctx=chEl.getContext('2d');
+    if(chart)chart.destroy();
+    if(typeof Chart!=='undefined'){chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Total',data:totals,borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,0.1)',borderWidth:2,pointRadius:1,fill:true,tension:0.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#333',maxTicksLimit:5,font:{size:9}},grid:{color:'#0f0f1a'}},y:{ticks:{color:'#555',font:{size:9},callback:function(v){return'$'+v.toFixed(0);}},grid:{color:'#0f0f1a'}}}}});}
+  }
 }
 
 doRefresh();
@@ -610,7 +616,7 @@ doLiveBalances();
 setInterval(doRefresh,3000);
 setInterval(loadStatus,30000);
 setInterval(doLiveBalances,60000);
-setInterval(loadAgentFeed,15000);
+setInterval(loadAgentFeed,10000);
 </script>
 </body>
 </html>`;
@@ -719,7 +725,7 @@ const server = http.createServer(async function(req,res) {
         const m=line.match(/\[(\d{4}-\d{2}-\d{2}T[\d:]+)\] \[(\w+)\] (.+)/);
         if(!m)return null;
         return {time:m[1].slice(11,16),date:m[1],level:m[2],msg:m[3]};
-      }).filter(Boolean).reverse().slice(0,15);
+      }).filter(Boolean).reverse().slice(0,20);
       res.end(JSON.stringify({
         entries,
         lastRun:agentState.lastRun,

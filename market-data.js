@@ -7,6 +7,18 @@ const fs   = require('fs');
 const path = require('path');
 
 const CACHE_FILE = path.join(__dirname, 'market-cache.json');
+const AGENT_LOG  = path.join(__dirname, 'agent.log');
+
+function marketLog(msg) {
+  const line = '['+new Date().toISOString().slice(0,19)+'] [INFO] Market: '+msg;
+  console.log('[market-data] '+msg);
+  try {
+    const existing = fs.existsSync(AGENT_LOG) ? fs.readFileSync(AGENT_LOG,'utf8') : '';
+    const lines = existing.split('\n').filter(Boolean);
+    lines.push(line);
+    fs.writeFileSync(AGENT_LOG, lines.slice(-1000).join('\n')+'\n');
+  } catch {}
+}
 const CACHE_TTL  = 30 * 60 * 1000; // 30 minutes
 
 // Pair → CoinGecko ID mapping
@@ -58,7 +70,7 @@ async function fetchCoinGecko(ids) {
     if (!r.ok) throw new Error(`CoinGecko HTTP ${r.status}`);
     return await r.json();
   } catch(e) {
-    console.log(`[market-data] CoinGecko error: ${e.message}`);
+    marketLog('CoinGecko error: '+e.message);
     return null;
   }
 }
@@ -79,7 +91,7 @@ async function fetchJupiterLiquidity(symbol, mint, tradeSize) {
 }
 
 async function fetchMarketData(tradeSize = 120) {
-  console.log('[market-data] Fetching fresh market data...');
+  marketLog('Fetching fresh market data...');
 
   const ids = Object.values(COINGECKO_IDS);
   const cgData = await fetchCoinGecko(ids);
@@ -179,7 +191,7 @@ async function fetchMarketData(tradeSize = 120) {
   }
 
   writeCache(result);
-  console.log(`[market-data] Fetched ${Object.keys(result.pairs).length} pairs. Sentiment: ${result.marketConditions.sentiment}`);
+  marketLog('Fetched '+Object.keys(result.pairs).length+' pairs | Sentiment: '+result.marketConditions.sentiment+' | BTC 1h: '+(result.marketConditions.btc1h||0).toFixed(2)+'% | Top: '+Object.entries(result.opportunityScore||{}).sort(function(a,b){return b[1]-a[1];}).slice(0,3).map(function(e){return e[0]+':'+e[1].toFixed(1);}).join(', '));
   return result;
 }
 

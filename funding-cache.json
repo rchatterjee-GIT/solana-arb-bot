@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-11T15:10:09.486Z",
+  "fetchedAt": "2026-08-11T18:21:14.892Z",
   "summary": {
     "JTO": {
       "okxRate": 0.00005,
@@ -8,28 +8,28 @@
       "annualised": 5.5
     },
     "SOL": {
-      "okxRate": -0.0000128314314628,
-      "bybitRate": 0.00000575,
-      "avgRate": -0.0000035407157314,
-      "annualised": -0.4
+      "okxRate": 0.0000026357211177,
+      "bybitRate": 0.00004646,
+      "avgRate": 0.00002454786055885,
+      "annualised": 2.7
     },
     "WIF": {
       "okxRate": 0.00005,
-      "bybitRate": -0.00004381,
-      "avgRate": 0.000003095,
-      "annualised": 0.3
+      "bybitRate": 0.00002879,
+      "avgRate": 0.000039395,
+      "annualised": 4.3
     },
     "PENGU": {
       "okxRate": 0.00005,
-      "bybitRate": 0.00005,
-      "avgRate": 0.00005,
-      "annualised": 5.5
+      "bybitRate": 0.00004534,
+      "avgRate": 0.00004767,
+      "annualised": 5.2
     },
     "W": {
-      "okxRate": -0.0000262273315006,
+      "okxRate": -0.0000791085115509,
       "bybitRate": 0.00005,
-      "avgRate": 0.000011886334249700002,
-      "annualised": 1.3
+      "avgRate": -0.00001455425577545,
+      "annualised": -1.6
     },
     "RENDER": {
       "okxRate": 0.00005,
@@ -39,9 +39,9 @@
     },
     "PNUT": {
       "okxRate": 0.00005,
-      "bybitRate": 0.00005,
-      "avgRate": 0.00005,
-      "annualised": 5.5
+      "bybitRate": 0.00004078,
+      "avgRate": 0.00004539,
+      "annualised": 5
     },
     "GOAT": {
       "okxRate": null,
@@ -50,16 +50,16 @@
       "annualised": 5.5
     },
     "RAY": {
-      "okxRate": -0.000369961747092,
+      "okxRate": -0.0000484732733146,
       "bybitRate": null,
-      "avgRate": -0.000369961747092,
-      "annualised": -40.5
+      "avgRate": -0.0000484732733146,
+      "annualised": -5.3
     },
     "BONK": {
-      "okxRate": -0.0002151087048137,
+      "okxRate": -0.0001143661883255,
       "bybitRate": null,
-      "avgRate": -0.0002151087048137,
-      "annualised": -23.6
+      "avgRate": -0.0001143661883255,
+      "annualised": -12.5
     }
   },
   "signals": [],

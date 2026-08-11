@@ -8,6 +8,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const CACHE_FILE = path.join(__dirname, 'funding-cache.json');
+const AGENT_LOG  = path.join(__dirname, 'agent.log');
+
+function fundingLog(msg) {
+  const line = '['+new Date().toISOString().slice(0,19)+'] [INFO] Funding: '+msg;
+  console.log('[funding] '+msg);
+  try {
+    const existing = require('fs').existsSync(AGENT_LOG) ? require('fs').readFileSync(AGENT_LOG,'utf8') : '';
+    const lines = existing.split('\n').filter(Boolean);
+    lines.push(line);
+    require('fs').writeFileSync(AGENT_LOG, lines.slice(-1000).join('\n')+'\n');
+  } catch {}
+}
 const CACHE_TTL  = 15 * 60 * 1000; // 15 minutes
 
 // Pairs we trade spot — check their perp funding rates
@@ -119,7 +131,7 @@ function analyseRates(okxRates, bybitRates) {
 }
 
 async function fetchFundingRates() {
-  console.log('[funding] Fetching funding rates...');
+  fundingLog('Fetching funding rates...');
   const [okxRates, bybitRates] = await Promise.all([
     getOKXFundingRates(),
     getBybitFundingRates()
@@ -136,7 +148,7 @@ async function fetchFundingRates() {
   };
 
   writeCache(result);
-  console.log(`[funding] ${Object.keys(summary).length} pairs, ${signals.length} signals`);
+  fundingLog(Object.keys(summary).length+' pairs, '+signals.length+' signal(s)');
   return result;
 }
 

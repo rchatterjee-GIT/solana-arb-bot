@@ -48,6 +48,9 @@ async function sendTG(text) {
       signal: controller.signal
     });
     clearTimeout(timer);
+    // Log first line of message to agent feed
+    const preview = text.replace(/<[^>]+>/g,'').split('\n')[0].slice(0,60);
+    agentLog('TG: '+preview);
   } catch(e) { agentLog('Telegram send failed: '+e.message, 'WARN'); }
 }
 
@@ -186,7 +189,12 @@ async function runCycle(agentState) {
   // Get funding data (cached 15min)
   let fundingData = getFundingData();
   if (!fundingData) {
-    try { fundingData = await fetchFundingRates(); } catch(e) { agentLog('Funding fetch error: '+e.message,'WARN'); }
+    try {
+      fundingData = await fetchFundingRates();
+      if (fundingData && fundingData.signals.length > 0) {
+        agentLog('Funding: '+fundingData.signals.map(function(s){return s.sym+' '+( s.rate*100).toFixed(3)+'%';}).join(', '));
+      }
+    } catch(e) { agentLog('Funding fetch error: '+e.message,'WARN'); }
   }
 
   const ctx = {
@@ -239,6 +247,13 @@ async function runCycle(agentState) {
     // Re-read config fresh before writing to avoid overwriting bot changes
     const freshConfig = readJSON(CONFIG_FILE) || {};
     for (const k of AGENT_OWNED) { freshConfig[k] = ctx.config[k]; }
+    // Clean up expired TEMP_SKIPS before writing
+    if (freshConfig.TEMP_SKIPS) {
+      const now2 = Date.now();
+      Object.keys(freshConfig.TEMP_SKIPS).forEach(function(k) {
+        if (freshConfig.TEMP_SKIPS[k] < now2) delete freshConfig.TEMP_SKIPS[k];
+      });
+    }
     writeJSON(CONFIG_FILE, freshConfig);
     agentLog('Config updated — bot will hot-reload within 30s');
     const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
@@ -264,6 +279,18 @@ async function main() {
   sendTG('Agent ' + AGENT_VERSION + ' online. Commands: /agent status | history | pause | resume | report').catch(function(){});
 
   let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
+  // Clean up any stale TEMP_SKIPS on startup
+  try {
+    const cfg = readJSON(CONFIG_FILE) || {};
+    if (cfg.TEMP_SKIPS) {
+      const now0 = Date.now();
+      let cleaned = false;
+      Object.keys(cfg.TEMP_SKIPS).forEach(function(k) {
+        if (cfg.TEMP_SKIPS[k] < now0) { delete cfg.TEMP_SKIPS[k]; cleaned = true; }
+      });
+      if (cleaned) { writeJSON(CONFIG_FILE, cfg); agentLog('Cleaned stale TEMP_SKIPS on startup'); }
+    }
+  } catch(e) {}
   // Initialise command file
   if (!fs.existsSync(AGENT_CMD_FILE)) fs.writeFileSync(AGENT_CMD_FILE, '[]');
 
