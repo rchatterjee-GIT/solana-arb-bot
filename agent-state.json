@@ -423,11 +423,19 @@
         "Active window: JTO showing high scores"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-11T14:39:07.582Z",
+      "rule": "exchange-viability-scan",
+      "changes": [
+        "Exchange viability report sent"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786428007821,
-  "lastRun": "2026-08-11T14:38:09.895Z",
-  "actionsToday": 8,
+  "lastRun": "2026-08-11T14:58:07.860Z",
+  "actionsToday": 9,
   "lastActionDate": "2026-08-11",
   "lastSentiment": "bearish",
   "ruleCooldowns": {
@@ -440,7 +448,8 @@
     "dry-spell-analysis": 1786433768375,
     "pre-session-threshold-optimisation": 1786451408944,
     "burst-event-monitor": 1786373172019,
-    "kraken-window-prep": 1786423507023
+    "kraken-window-prep": 1786423507023,
+    "exchange-viability-scan": 1786459147209
   },
   "activeWindowAlerted": true,
   "lastSentimentTime": 1786442539495,
@@ -448,5 +457,6 @@
   "lastDrySpellAlert": 1786433768387,
   "lastPreSessionOpt": 1786451408955,
   "lastBurstAlert": "2026-08-07T08:04:25",
-  "lastKrakenPrep": 1786423507036
+  "lastKrakenPrep": 1786423507036,
+  "lastExchangeScan": 1786459147224
 }

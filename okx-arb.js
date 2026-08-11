@@ -1838,8 +1838,10 @@ async function checkAndExecute() {
           bestOkx = { pair: r.pair, direction: 'BUY_OKX', spreadPct: r.spreadOKX, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'OKX' };
       }
       if (canBybit && r.bybit && r.bybitViable && r.spreadBybit > bybitThreshFinal && r.netBybit > 0 && r.estBybit >= MIN_PROFIT) {
-        if (!bestBybit || r.spreadBybit > bestBybit.spreadPct)
-          bestBybit = { pair: r.pair, direction: 'BUY_BYBIT', spreadPct: r.spreadBybit, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Bybit' };
+        if (!bestBybit || r.spreadBybit > bestBybit.spreadPct) {
+          const bybitTradeSize = liveConfig.TRADE_SIZE_BYBIT || TRADE_SIZE_USD;
+          bestBybit = { pair: r.pair, direction: 'BUY_BYBIT', spreadPct: r.spreadBybit, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Bybit', tradeSizeUsd: bybitTradeSize };
+        }
       }
     }
     consecutiveErrors = 0;
@@ -1872,7 +1874,8 @@ async function checkAndExecute() {
         if (!dexPrice) continue;
         const spread = ((dexPrice - kPrice.ask) / kPrice.ask) * 100;
         const net    = spread - 0.40 - 0.30;
-        const thresh = (liveConfig.MIN_SPREAD_CEX || 1.0) * (1 + (liveConfig.MIN_SPREAD_BUFFER_PCT || 20) / 100);
+        const krakenBase = liveConfig.MIN_SPREAD_KRAKEN || liveConfig.MIN_SPREAD_CEX || 1.0;
+        const thresh = krakenBase * (1 + (liveConfig.MIN_SPREAD_BUFFER_PCT || 20) / 100);
         if (net > thresh && net > bestSpread) {
           bestSpread  = net;
           bestKraken  = { pair: kPair, direction: 'BUY_KRAKEN', spreadPct: net, exchange: 'Kraken' };

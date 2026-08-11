@@ -226,23 +226,21 @@ async function runCycle(agentState) {
   }
 
   // Save config only if actual config values changed
-  const configAfter = JSON.stringify(ctx.config, Object.keys(ctx.config).sort());
-  if (configAfter !== configBefore) {
-    const before = JSON.parse(configBefore);
-    const changedKeys = Object.keys(ctx.config).filter(function(k) {
-      return JSON.stringify(ctx.config[k]) !== JSON.stringify(before[k]);
-    });
-    if (changedKeys.length === 0) {
-      // No actual changes — key ordering issue, skip write
-    } else {
-      agentLog('Config changed: ' + changedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
-      writeJSON(CONFIG_FILE, ctx.config);
-      agentLog('Config updated — bot will hot-reload within 30s');
-      const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
-      if (configChanges.length) {
-        const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
-        await sendTG('Agent Actions\n' + msgs);
-      }
+  const before = JSON.parse(configBefore);
+  const changedKeys = Object.keys(ctx.config).filter(function(k) {
+    return JSON.stringify(ctx.config[k]) !== JSON.stringify(before[k]);
+  }).concat(Object.keys(before).filter(function(k) {
+    return JSON.stringify(before[k]) !== JSON.stringify(ctx.config[k]);
+  }));
+  const uniqueChangedKeys = [...new Set(changedKeys)];
+  if (uniqueChangedKeys.length > 0) {
+    agentLog('Config changed: ' + uniqueChangedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
+    writeJSON(CONFIG_FILE, ctx.config);
+    agentLog('Config updated — bot will hot-reload within 30s');
+    const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
+    if (configChanges.length) {
+      const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
+      await sendTG('Agent Actions\n' + msgs);
     }
   }
 

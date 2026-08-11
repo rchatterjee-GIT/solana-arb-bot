@@ -70,5 +70,7 @@
   },
   "TEMP_SKIPS": {
     "PENGU:threshold": 1786312425640
-  }
+  },
+  "TRADE_SIZE_BYBIT": 200,
+  "MIN_SPREAD_KRAKEN": 1.2
 }
