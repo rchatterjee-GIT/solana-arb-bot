@@ -399,18 +399,26 @@
         "Dry spell alert sent — Bearish market — spreads may not materialise. Holding thresholds."
       ],
       "severity": "warn"
+    },
+    {
+      "time": "2026-08-11T10:02:19.692Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bearish"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786428007821,
-  "lastRun": "2026-08-11T09:51:57.513Z",
-  "actionsToday": 5,
+  "lastRun": "2026-08-11T10:25:19.586Z",
+  "actionsToday": 6,
   "lastActionDate": "2026-08-11",
-  "lastSentiment": "neutral",
+  "lastSentiment": "bearish",
   "ruleCooldowns": {
     "market-active-window": 1786366846863,
     "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786438737127,
-    "market-sentiment-report": 1786420926680,
+    "temp-skip-expiry": 1786442359477,
+    "market-sentiment-report": 1786442539483,
     "daily-performance-report": 1786428007621,
     "spread-duration-analysis": 1786371587448,
     "dry-spell-analysis": 1786433768375,
@@ -419,7 +427,7 @@
     "kraken-window-prep": 1786423507023
   },
   "activeWindowAlerted": false,
-  "lastSentimentTime": 1786420926690,
+  "lastSentimentTime": 1786442539495,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786433768387,
   "lastPreSessionOpt": 1786422606925,

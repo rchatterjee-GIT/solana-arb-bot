@@ -287,17 +287,33 @@ async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, con
 
     // 6. Add to bot if viable
     if (viable && mint) {
-      // Add to new pairs tracking
-      newPairs.push({
-        symbol, exchange, mint, addedAt: Date.now(),
-        wd: wd.canWithdraw, dexLiquid: dex.liquid,
-      });
+      // Add to new-pairs.json in bot-compatible format
+      const expiresAt = new Date(Date.now() + LISTING_MAX_AGE_HRS * 60 * 60 * 1000).toISOString();
+      const newPair = {
+        name: symbol + '/USDT',
+        okxInstId: symbol + '-USDT',
+        bybitInstId: bybitSymbols.has(symbol) ? symbol + 'USDT' : null,
+        outputMint: mint,
+        decimals: 6, // default — will be corrected on first trade
+        dex: null,
+        isNative: false,
+        okxCcy: symbol,
+        okxChain: symbol + '-Solana',
+        bybitCcy: bybitSymbols.has(symbol) ? symbol : null,
+        bybitChain: bybitSymbols.has(symbol) ? 'SOL' : null,
+        buyDexEnabled: dex.liquid,
+        addedAt: Date.now(),
+        expiresAt,
+        exchange,
+        listingThreshold: LISTING_THRESHOLD,
+      };
+      newPairs.push(newPair);
 
       // Add threshold config for this pair
       if (!config.PAIR_MIN_SPREAD) config.PAIR_MIN_SPREAD = {};
       config.PAIR_MIN_SPREAD[symbol] = LISTING_THRESHOLD;
       writeJSON(CONFIG_FILE, config);
-      log(`${symbol} added to PAIR_MIN_SPREAD at ${LISTING_THRESHOLD}%`);
+      log(symbol + ' added to dynamic pairs + PAIR_MIN_SPREAD at ' + LISTING_THRESHOLD + '%');
     }
 
   } catch(e) { log(`Error processing ${symbol}: ${e.message}`); }

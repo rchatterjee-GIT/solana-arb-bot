@@ -89,8 +89,11 @@ async function cleanOKXTrading() {
           instId: `${d.ccy}-USDT`, tdMode: 'cash', side: 'sell',
           ordType: 'market', sz: d.availBal, tgtCcy: 'base_ccy'
         });
-        if (r.code === '0') log(`OKX trading: sold ${d.availBal} ${d.ccy} (~$${parseFloat(d.eqUsd).toFixed(2)})`);
-        else log(`OKX trading: sell ${d.ccy} failed — ${r.msg}`);
+        if (r.code === '0') {
+          log(`OKX trading: sold ${d.availBal} ${d.ccy} (~$${parseFloat(d.eqUsd).toFixed(2)})`);
+          // Check if this matches a known stuck trade and notify
+          await sendTG('Hygiene recovered stuck token: ' + d.availBal + ' ' + d.ccy + ' sold on OKX trading (~$' + parseFloat(d.eqUsd).toFixed(2) + ')');
+        } else log(`OKX trading: sell ${d.ccy} failed — ${r.msg}`);
       } catch(e) { log(`OKX trading: sell ${d.ccy} error — ${e.message}`); }
     }
   } catch(e) { log(`OKX trading cleanup error: ${e.message}`); }
@@ -178,8 +181,10 @@ async function cleanBybitUnified() {
           category: 'spot', symbol: `${c.coin}USDT`,
           side: 'Sell', orderType: 'Market', qty
         });
-        if (r.retCode === 0) log(`Bybit UNIFIED: sold ${c.walletBalance} ${c.coin} (~$${parseFloat(c.usdValue).toFixed(2)})`);
-        else log(`Bybit UNIFIED: sell ${c.coin} failed — ${r.retMsg}`);
+        if (r.retCode === 0) {
+          log(`Bybit UNIFIED: sold ${qty} ${c.coin} (~$${parseFloat(c.usdValue).toFixed(2)})`);
+          await sendTG('Hygiene recovered stuck token: ' + qty + ' ' + c.coin + ' sold on Bybit (~$' + parseFloat(c.usdValue).toFixed(2) + ')');
+        } else log(`Bybit UNIFIED: sell ${c.coin} failed — ${r.retMsg}`);
       } catch(e) { log(`Bybit UNIFIED: sell ${c.coin} error — ${e.message}`); }
     }
   } catch(e) { log(`Bybit UNIFIED cleanup error: ${e.message}`); }

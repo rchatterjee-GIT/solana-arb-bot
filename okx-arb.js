@@ -2709,7 +2709,21 @@ async function handleRebalanceCommand(confirm = false) {
         }
       } catch (err) {
         logCrash('rebalance:' + move.method, err);
-        await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await move.fn();
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
       }
     }
 

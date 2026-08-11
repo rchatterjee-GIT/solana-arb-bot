@@ -860,4 +860,43 @@ module.exports = [
   },
 
 
+  {
+    id: 'bybit-withdrawal-failure',
+    name: 'Bybit withdrawal failure — trigger immediate hygiene',
+    severity: 'critical',
+    detect(ctx) {
+      // Look for recent Bybit withdrawal failures in fires.json
+      const since = Date.now() - 30 * 60 * 1000; // last 30min
+      const recentFails = ctx.fires.filter(function(f) {
+        return f.direction === 'BUY_BYBIT' &&
+               f.outcome === 'failed' &&
+               f.reason && (f.reason.includes('never arrived') || f.reason.includes('withdrawal')) &&
+               new Date(f.date).getTime() > since;
+      });
+      if (recentFails.length === 0) return null;
+      const lastAlert = ctx.agentState.lastBybitRecoveryAlert || 0;
+      if (Date.now() - lastAlert < 60 * 60 * 1000) return null;
+      return [{ fails: recentFails }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastBybitRecoveryAlert = Date.now();
+      const fails = issues[0].fails;
+      const pairs = fails.map(function(f){return (f.pair||'').replace('/USDT','');}).join(', ');
+      await ctx.sendTG(
+        'Bybit withdrawal failure detected: ' + pairs + '\n' +
+        'Triggering immediate hygiene to recover stuck tokens.\n' +
+        'Tokens will be sold back to USDT automatically.'
+      );
+      // Trigger hygiene immediately
+      try {
+        const { runHygiene } = require('./hygiene');
+        await runHygiene();
+      } catch(e) {
+        await ctx.sendTG('Hygiene trigger failed: ' + e.message);
+      }
+      return ['Bybit recovery triggered for: ' + pairs];
+    }
+  },
+
+
 ];
