@@ -55,7 +55,7 @@ const FILES = [
   {
     file: 'listing-monitor.js',
     minLines: 150,
-    required: ['scanNewListings','checkNews','processNewListing','checkOKXWithdrawal'],
+    required: ['scanNewListings','checkNews','processNewListing','getKrakenPairs'],
   },
   {
     file: 'spread-analysis.js',

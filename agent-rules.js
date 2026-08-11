@@ -899,4 +899,63 @@ module.exports = [
   },
 
 
+  {
+    id: 'exchange-viability-scan',
+    name: 'Weekly exchange landscape scan',
+    severity: 'info',
+    detect(ctx) {
+      // Run once per week
+      const lastScan = ctx.agentState.lastExchangeScan || 0;
+      if (Date.now() - lastScan < 7 * 24 * 60 * 60 * 1000) return null;
+      return [{ date: new Date().toISOString().slice(0,10) }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastExchangeScan = Date.now();
+
+      // Fetch exchange news from CryptoPanic if available
+      const exchanges = [
+        { name: 'Bitget',   url: 'https://www.bitget.com', note: 'Low fees (0.01%), MiCA compliant, Solana withdrawals' },
+        { name: 'Binance',  url: 'https://www.binance.com', note: 'Best liquidity — UK access restricted, monitor for changes' },
+        { name: 'Coinbase', url: 'https://www.coinbase.com', note: 'UK compliant — limited Solana pairs, higher fees' },
+        { name: 'Gate.io',  url: 'https://www.gate.io', note: 'Parked — KYC issues, revisit if resolved' },
+        { name: 'MEXC',     url: 'https://www.mexc.com', note: 'Wide pair selection, check UK compliance' },
+        { name: 'Kucoin',   url: 'https://www.kucoin.com', note: 'Solana pairs available, check UK FCA status' },
+      ];
+
+      // Check for recent news on each exchange via CoinGecko exchange data
+      let exchangeStatus = '';
+      try {
+        const r = await fetch('https://api.coingecko.com/api/v3/exchanges?per_page=20&page=1');
+        if (r.ok) {
+          const j = await r.json();
+          for (const ex of exchanges) {
+            const found = j.find(function(e) {
+              return e.name.toLowerCase().includes(ex.name.toLowerCase());
+            });
+            if (found) {
+              const vol = found.trade_volume_24h_btc ? '$' + Math.round(found.trade_volume_24h_btc).toLocaleString() + ' BTC vol' : '';
+              const trust = found.trust_score ? 'trust:' + found.trust_score + '/10' : '';
+              exchangeStatus += ex.name + ': ' + [vol, trust].filter(Boolean).join(', ') + ' — ' + ex.note + '\n';
+            } else {
+              exchangeStatus += ex.name + ': ' + ex.note + '\n';
+            }
+          }
+        }
+      } catch(e) {
+        exchanges.forEach(function(ex) {
+          exchangeStatus += ex.name + ': ' + ex.note + '\n';
+        });
+      }
+
+      await ctx.sendTG(
+        'Weekly Exchange Landscape\n' +
+        'Currently trading: OKX, Bybit, Kraken + DEX\n\n' +
+        exchangeStatus +
+        '\nReview: any exchange with improved UK compliance or Solana pairs worth adding?'
+      );
+      return ['Exchange viability report sent'];
+    }
+  },
+
+
 ];

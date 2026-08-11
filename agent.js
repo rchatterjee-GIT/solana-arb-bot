@@ -287,8 +287,8 @@ async function main() {
         runListingMonitor(),
         new Promise(function(_,rej){setTimeout(function(){rej(new Error('Listing timeout'));},60000);})
       ]);
-      if (result && (result.newOKX > 0 || result.newBybit > 0)) {
-        agentLog('New listings: OKX +' + result.newOKX + ' Bybit +' + result.newBybit);
+      if (result && (result.newOKX > 0 || result.newBybit > 0 || result.newKraken > 0)) {
+        agentLog('New listings: OKX +' + result.newOKX + ' Bybit +' + result.newBybit + ' Kraken +' + result.newKraken);
       }
     } catch(e) { agentLog('Listing scan error: '+e.message, 'ERROR'); }
   }, 5 * 60 * 1000);
