@@ -343,28 +343,86 @@
         "Burst event at 2026-08-07T08:04:25: 3 fires, 1 duplicates"
       ],
       "severity": "warn"
+    },
+    {
+      "time": "2026-08-10T16:01:30.131Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to neutral"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-10T22:02:02.163Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bearish"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-11T04:02:06.868Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to neutral"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-11T04:30:07.165Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - BONK 5.0, JTO 4.6, RENDER 4.2"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-11T04:45:07.169Z",
+      "rule": "kraken-window-prep",
+      "changes": [
+        "Kraken window prep sent"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-11T06:00:07.821Z",
+      "rule": "daily-performance-report",
+      "changes": [
+        "Daily report sent"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-11T07:36:08.594Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Bearish market — spreads may not materialise. Holding thresholds."
+      ],
+      "severity": "warn"
     }
   ],
-  "lastDailyReport": 1786341652764,
-  "lastRun": "2026-08-10T14:54:12.475Z",
-  "actionsToday": 14,
-  "lastActionDate": "2026-08-10",
-  "lastSentiment": "bullish",
+  "lastDailyReport": 1786428007821,
+  "lastRun": "2026-08-11T07:50:08.526Z",
+  "actionsToday": 5,
+  "lastActionDate": "2026-08-11",
+  "lastSentiment": "neutral",
   "ruleCooldowns": {
     "market-active-window": 1786366846863,
     "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786370147268,
-    "market-sentiment-report": 1786342613066,
-    "daily-performance-report": 1786341652574,
+    "temp-skip-expiry": 1786431488082,
+    "market-sentiment-report": 1786420926680,
+    "daily-performance-report": 1786428007621,
     "spread-duration-analysis": 1786371587448,
-    "dry-spell-analysis": 1786361713985,
-    "pre-session-threshold-optimisation": 1786365046597,
-    "burst-event-monitor": 1786373172019
+    "dry-spell-analysis": 1786433768375,
+    "pre-session-threshold-optimisation": 1786422606912,
+    "burst-event-monitor": 1786373172019,
+    "kraken-window-prep": 1786423507023
   },
-  "activeWindowAlerted": true,
-  "lastSentimentTime": 1786342613075,
+  "activeWindowAlerted": false,
+  "lastSentimentTime": 1786420926690,
   "lastSpreadAnalysis": 1786371587458,
-  "lastDrySpellAlert": 1786361713996,
-  "lastPreSessionOpt": 1786365046607,
-  "lastBurstAlert": "2026-08-07T08:04:25"
+  "lastDrySpellAlert": 1786433768387,
+  "lastPreSessionOpt": 1786422606925,
+  "lastBurstAlert": "2026-08-07T08:04:25",
+  "lastKrakenPrep": 1786423507036
 }

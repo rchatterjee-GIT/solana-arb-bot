@@ -19,7 +19,7 @@ const CRASH_FILE     = path.join(__dirname, 'crash.log');
 const AGENT_FILE     = path.join(__dirname, 'agent-state.json');
 const AGENT_LOG      = path.join(__dirname, 'agent.log');
 
-const AGENT_VERSION  = 'v1.0';
+const AGENT_VERSION  = 'v1.1';
 const CYCLE_MS       = 60 * 1000;  // run every 60 seconds
 const PAUSED_KEY     = 'paused';
 
@@ -158,7 +158,7 @@ async function runCycle(agentState) {
   if (agentState[PAUSED_KEY]) { agentLog('Agent paused — skipping cycle'); return; }
 
   const config  = readJSON(CONFIG_FILE)||{};
-  const configBefore = JSON.stringify(config);
+  const configBefore = JSON.stringify(config, Object.keys(config).sort());
   const state   = readJSON(STATE_FILE)||{};
   const trades  = readJSON(TRADES_FILE)||[];
   const fires   = readJSON(FIRES_FILE)||[];
@@ -215,14 +215,23 @@ async function runCycle(agentState) {
   }
 
   // Save config only if actual config values changed
-  const configAfter = JSON.stringify(ctx.config);
-  if (configAfter !== JSON.stringify(configBefore)) {
-    writeJSON(CONFIG_FILE, ctx.config);
-    agentLog('Config updated — bot will hot-reload within 30s');
-    const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
-    if (configChanges.length) {
-      const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
-      await sendTG('Agent Actions\n' + msgs);
+  const configAfter = JSON.stringify(ctx.config, Object.keys(ctx.config).sort());
+  if (configAfter !== configBefore) {
+    const before = JSON.parse(configBefore);
+    const changedKeys = Object.keys(ctx.config).filter(function(k) {
+      return JSON.stringify(ctx.config[k]) !== JSON.stringify(before[k]);
+    });
+    if (changedKeys.length === 0) {
+      // No actual changes — key ordering issue, skip write
+    } else {
+      agentLog('Config changed: ' + changedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
+      writeJSON(CONFIG_FILE, ctx.config);
+      agentLog('Config updated — bot will hot-reload within 30s');
+      const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
+      if (configChanges.length) {
+        const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
+        await sendTG('Agent Actions\n' + msgs);
+      }
     }
   }
 
@@ -245,8 +254,14 @@ async function main() {
   // Initialise command file
   if (!fs.existsSync(AGENT_CMD_FILE)) fs.writeFileSync(AGENT_CMD_FILE, '[]');
 
-  // Run first cycle immediately
-  await runCycle(agentState);
+  // Run first cycle after 5 second delay to allow process to settle
+  await new Promise(function(r){setTimeout(r,5000);});
+  try {
+    await Promise.race([
+      runCycle(agentState),
+      new Promise(function(_,rej){setTimeout(function(){rej(new Error('First cycle timeout'));},30000);})
+    ]);
+  } catch(e) { agentLog('First cycle error: '+e.message, 'ERROR'); }
 
   // Check commands every 10 seconds for fast response
   setInterval(async () => {
@@ -257,8 +272,11 @@ async function main() {
   // Scan for new listings and news every 5 minutes
   setInterval(async () => {
     try {
-      const result = await runListingMonitor();
-      if (result.newOKX > 0 || result.newBybit > 0) {
+      const result = await Promise.race([
+        runListingMonitor(),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('Listing timeout'));},60000);})
+      ]);
+      if (result && (result.newOKX > 0 || result.newBybit > 0)) {
         agentLog('New listings: OKX +' + result.newOKX + ' Bybit +' + result.newBybit);
       }
     } catch(e) { agentLog('Listing scan error: '+e.message, 'ERROR'); }
@@ -266,7 +284,12 @@ async function main() {
 
   // Run full analysis cycle every 60 seconds
   setInterval(async () => {
-    try { await runCycle(agentState); }
+    try {
+      await Promise.race([
+        runCycle(agentState),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('Cycle timeout'));},45000);})
+      ]);
+    }
     catch(e) { agentLog('Cycle error: '+e.message, 'ERROR'); }
   }, CYCLE_MS);
 }

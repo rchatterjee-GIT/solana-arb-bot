@@ -78,8 +78,9 @@ const BUY_DEX_THRESHOLDS = {
 };
 function getBuyDexThreshold(ccy) { return BUY_DEX_THRESHOLDS[ccy] || BUY_DEX_THRESHOLDS['DEFAULT']; }
 
-const POLICY_SKIP_OKX   = ['TRUMP', 'POPCAT', 'BONK', 'JUP', 'BOME'];
-const POLICY_SKIP_BYBIT = ['JUP', 'TRUMP', 'POPCAT', 'BONK', 'BOME'];
+// Skip lists managed by agent via arb-config.json — no hardcoded fallbacks
+const POLICY_SKIP_OKX   = []; // legacy fallback — agent manages via config
+const POLICY_SKIP_BYBIT = []; // legacy fallback — agent manages via config
 
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const USDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
