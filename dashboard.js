@@ -236,15 +236,10 @@ tr:hover td{background:#14141f}
 
   <div class="g2">
     <div class="card">
-      <div class="sec" style="margin-top:0">System Status</div>
-      <table>
-        <tr><td class="dim">Bot version</td><td id="sv">-</td></tr>
-        <tr><td class="dim">OKX WS</td><td id="so">-</td></tr>
-        <tr><td class="dim">Kraken</td><td id="sk">-</td></tr>
-        <tr><td class="dim">Smart sell</td><td id="ss">-</td></tr>
-        <tr><td class="dim">Trade size</td><td id="sz">-</td></tr>
-        <tr><td class="dim">Next rebalance</td><td id="sc">-</td></tr>
-      </table>
+      <div class="sec" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">
+        Agent Feed <span style="font-size:.65rem;color:#444" id="af-age"></span>
+      </div>
+      <div id="af-list" style="font-size:.68rem;max-height:160px;overflow-y:auto"></div>
     </div>
     <div class="card">
       <div class="sec" style="margin-top:0">Capital Chart</div>
@@ -360,6 +355,25 @@ function switchTab(t){
 function sc(v,t){var p=v/t;if(p>=1)return'#eab308';if(p>=.8)return'#f97316';if(p>=.5)return'#a78bfa';if(v>0)return'#22c55e';return'#ef4444';}
 function countdown(ms){var s=Math.round((ms-Date.now())/1000);if(s<=0)return'now';if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
 function fmt2(n){return n!=null?'$'+parseFloat(n).toFixed(2):'-';}
+
+async function loadAgentFeed(){
+  try{
+    var r=await fetch('/api/agent-feed');var d=await r.json();
+    var el=document.getElementById('af-list');
+    var age=d.lastRun?Math.round((Date.now()-new Date(d.lastRun).getTime())/1000)+'s ago':'never';
+    document.getElementById('af-age').textContent=age+' | '+d.actionsToday+' actions today'+(d.paused?' | PAUSED':'');
+    if(!d.entries||d.entries.length===0){el.innerHTML='<span class="dim">No agent activity yet</span>';return;}
+    var today=new Date().toISOString().slice(0,10);
+    el.innerHTML=d.entries.map(function(e){
+      var col=e.level==='ERROR'?'red':e.level==='WARN'?'yellow':e.msg.startsWith('Action')?'green':'dim';
+      var msg=e.msg.replace('Action: ','').replace('[INFO] ','').replace('[WARN] ','').slice(0,55);
+      var ts=e.date&&e.date.slice(0,10)!==today?e.date.slice(5,16):e.time;
+      return '<div style="padding:3px 0;border-bottom:1px solid #0f0f1a;display:flex;gap:8px;align-items:baseline">'+
+        '<span style="font-size:.62rem;color:#333;white-space:nowrap;font-family:monospace">'+ts+'</span>'+
+        '<span class="'+col+'" style="font-size:.70rem;line-height:1.3">'+msg+'</span></div>';
+    }).join('');
+  }catch(e){console.error(e);}
+}
 
 async function doRefresh(){
   try{var r=await fetch('/api/data');var d=await r.json();render(d);loadStatus();}catch(e){console.error(e);}
@@ -485,7 +499,7 @@ function render(d){
   var st=d.status;
   var ver=st&&st.version||'${VERSION}';
   document.getElementById('vb').textContent=ver;
-  document.getElementById('sv').textContent=ver;
+  // sv removed - agent feed replaces system status
   readConfig=d.config;
   if(st&&st.timestamp){
     var age=Math.round((Date.now()-new Date(st.timestamp).getTime())/1000);
@@ -507,7 +521,7 @@ function render(d){
   document.getElementById('cg').innerHTML='<span class="'+(gain>=0?'green':'red')+'">'+(gain>=0?'+':'')+'$'+gain.toFixed(2)+' ('+gainPct+'%)</span>';
   var okxOk=st&&st.okxHealthy!==false;
   document.getElementById('os').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
-  document.getElementById('so').innerHTML=okxOk?'<span class="green">online</span>':'<span class="red">offline</span>';
+  // so removed - OKX status shown in top bar
   // Bybit status - assume online if we have a balance
   var bybitOk=liveBal&&liveBal.bybit!=null&&liveBal.bybit>0;
   document.getElementById('bs').innerHTML=bybitOk?'<span class="green">online</span>':'<span class="dim">-</span>';
@@ -530,11 +544,9 @@ function render(d){
   document.getElementById('ri').textContent=d.injRatio.toFixed(1)+'%';
   document.getElementById('ri').className='val '+(d.injRatio>=0?'green':'red');
   document.getElementById('rb').style.width=Math.min(100,Math.max(0,d.injRatio))+'%';
-  document.getElementById('ss').textContent=st&&st.smartSell?'ON':'OFF';
-  document.getElementById('sz').textContent='$'+(d.config&&d.config.TRADE_SIZE_USD||120);
-  if(st&&st.nextRebalanceCheck)document.getElementById('sc').textContent=countdown(st.nextRebalanceCheck);
+  // ss/sz/sc removed - agent feed replaces system status card
   var krakenOn=d.config&&d.config.KRAKEN_ENABLED,krakenSim=d.config&&d.config.KRAKEN_SYNTHETIC;
-  document.getElementById('sk').innerHTML=!krakenOn?'<span class="dim">disabled</span>':krakenSim?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
+  // sk removed
   // Kraken mode in system status table
   var krakenOn2=d.config&&d.config.KRAKEN_ENABLED,krakenSim2=d.config&&d.config.KRAKEN_SYNTHETIC;
   document.getElementById('sk').innerHTML=!krakenOn2?'<span class="dim">disabled</span>':krakenSim2?'<span class="purple">SIM</span>':'<span class="green">LIVE</span>';
@@ -582,6 +594,9 @@ function render(d){
     var p=e[0],s=e[1],wr=s.fires?Math.round(s.wins/s.fires*100):0;
     return '<tr><td>'+p.replace('/USDT','')+'</td><td>'+s.fires+'</td><td class="'+(wr>=50?'green':wr>0?'yellow':'red')+'">'+wr+'%</td><td class="dim">-</td><td class="'+(s.pnl>=0?'green':'red')+'">'+(s.pnl>=0?'+':'')+'$'+s.pnl.toFixed(2)+'</td></tr>';
   }).join('');
+  // Agent feed
+  loadAgentFeed();
+
   // Chart
   var labels=d.balHistory.map(function(b){return b.time.slice(5,16);});
   var totals=d.balHistory.map(function(b){return b.total;});
@@ -595,6 +610,7 @@ doLiveBalances();
 setInterval(doRefresh,3000);
 setInterval(loadStatus,30000);
 setInterval(doLiveBalances,60000);
+setInterval(loadAgentFeed,15000);
 </script>
 </body>
 </html>`;
@@ -690,6 +706,28 @@ const server = http.createServer(async function(req,res) {
     res.writeHead(200,{'Content-Type':'application/json'});
     await sendTG('/rb confirm');
     res.end(JSON.stringify({ok:true}));
+
+  }else if(url==='/api/agent-feed'){
+    res.writeHead(200,{'Content-Type':'application/json'});
+    try{
+      const agentState=readJSON(path.join(__dirname,'agent-state.json'))||{};
+      const agentLog=require('fs').existsSync(path.join(__dirname,'agent.log'))
+        ?require('fs').readFileSync(path.join(__dirname,'agent.log'),'utf8').split('\n').filter(Boolean).slice(-30)
+        :[];
+      // Parse log lines into structured entries
+      const entries=agentLog.map(function(line){
+        const m=line.match(/\[(\d{4}-\d{2}-\d{2}T[\d:]+)\] \[(\w+)\] (.+)/);
+        if(!m)return null;
+        return {time:m[1].slice(11,16),date:m[1],level:m[2],msg:m[3]};
+      }).filter(Boolean).reverse().slice(0,15);
+      res.end(JSON.stringify({
+        entries,
+        lastRun:agentState.lastRun,
+        actionsToday:agentState.actionsToday||0,
+        paused:agentState.paused||false,
+        version:'v1.1'
+      }));
+    }catch(e){res.end(JSON.stringify({entries:[],error:e.message}));}
 
   }else{
     res.writeHead(200,{'Content-Type':'text/html'});
