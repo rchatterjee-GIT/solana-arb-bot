@@ -163,7 +163,9 @@ async function runCycle(agentState) {
   if (agentState[PAUSED_KEY]) { agentLog('Agent paused — skipping cycle'); return; }
 
   const config  = readJSON(CONFIG_FILE)||{};
-  const configBefore = JSON.stringify(config, Object.keys(config).sort());
+  // Snapshot only agent-owned keys to avoid false positives from bot writes
+  const AGENT_OWNED_SNAP = ['POLICY_SKIP_OKX','POLICY_SKIP_BYBIT','PAIR_MIN_SPREAD','TEMP_SKIPS','MIN_SPREAD_CEX','MIN_SPREAD_KRAKEN','TRADE_SIZE_BYBIT','DEX_THRESHOLD_OVERRIDES'];
+  const configBefore = JSON.stringify(AGENT_OWNED_SNAP.reduce(function(a,k){a[k]=config[k];return a;},{}));
   const state   = readJSON(STATE_FILE)||{};
   const trades  = readJSON(TRADES_FILE)||[];
   const fires   = readJSON(FIRES_FILE)||[];
@@ -225,17 +227,19 @@ async function runCycle(agentState) {
     }
   }
 
-  // Save config only if actual config values changed
+  // Only watch agent-owned keys — bot writes other fields (APPROACH_BANDS etc)
+  const AGENT_OWNED = ['POLICY_SKIP_OKX','POLICY_SKIP_BYBIT','PAIR_MIN_SPREAD',
+    'TEMP_SKIPS','MIN_SPREAD_CEX','MIN_SPREAD_KRAKEN','TRADE_SIZE_BYBIT','DEX_THRESHOLD_OVERRIDES'];
   const before = JSON.parse(configBefore);
-  const changedKeys = Object.keys(ctx.config).filter(function(k) {
+  const changedKeys = AGENT_OWNED.filter(function(k) {
     return JSON.stringify(ctx.config[k]) !== JSON.stringify(before[k]);
-  }).concat(Object.keys(before).filter(function(k) {
-    return JSON.stringify(before[k]) !== JSON.stringify(ctx.config[k]);
-  }));
-  const uniqueChangedKeys = [...new Set(changedKeys)];
-  if (uniqueChangedKeys.length > 0) {
-    agentLog('Config changed: ' + uniqueChangedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
-    writeJSON(CONFIG_FILE, ctx.config);
+  });
+  if (changedKeys.length > 0) {
+    agentLog('Config changed: ' + changedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
+    // Re-read config fresh before writing to avoid overwriting bot changes
+    const freshConfig = readJSON(CONFIG_FILE) || {};
+    for (const k of AGENT_OWNED) { freshConfig[k] = ctx.config[k]; }
+    writeJSON(CONFIG_FILE, freshConfig);
     agentLog('Config updated — bot will hot-reload within 30s');
     const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
     if (configChanges.length) {
