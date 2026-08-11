@@ -62,6 +62,11 @@ const FILES = [
     minLines: 100,
     required: ['analyseSpreadDuration','printReport'],
   },
+  {
+    file: 'funding-monitor.js',
+    minLines: 100,
+    required: ['fetchFundingRates','getFundingData','getTopSignals'],
+  },
 ];
 
 let allOk = true;

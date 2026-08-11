@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const rules  = require('./agent-rules');
 const { fetchMarketData, getMarketData } = require('./market-data');
 const { run: runListingMonitor } = require('./listing-monitor');
+const { fetchFundingRates, getFundingData } = require('./funding-monitor');
 
 const CONFIG_FILE    = path.join(__dirname, 'arb-config.json');
 const STATE_FILE     = path.join(__dirname, 'arb-state.json');
@@ -39,10 +40,14 @@ function agentLog(msg, level='INFO') {
 
 async function sendTG(text) {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(function(){controller.abort();}, 8000);
     await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_TOKEN+'/sendMessage', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text, parse_mode:'HTML'})
+      body: JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text, parse_mode:'HTML'}),
+      signal: controller.signal
     });
+    clearTimeout(timer);
   } catch(e) { agentLog('Telegram send failed: '+e.message, 'WARN'); }
 }
 
@@ -176,9 +181,15 @@ async function runCycle(agentState) {
     marketData = await fetchMarketData(config.TRADE_SIZE_USD || 120);
   }
 
+  // Get funding data (cached 15min)
+  let fundingData = getFundingData();
+  if (!fundingData) {
+    try { fundingData = await fetchFundingRates(); } catch(e) { agentLog('Funding fetch error: '+e.message,'WARN'); }
+  }
+
   const ctx = {
     config, state, trades, fires, pairStats, balances, pending,
-    botStatus, agentState, recentCrashLines, marketData,
+    botStatus, agentState, recentCrashLines, marketData, fundingData,
     realTradeCount: real.length,
     sendTG, resyncState,
   };
@@ -247,8 +258,8 @@ async function runCycle(agentState) {
 }
 
 async function main() {
-  agentLog(`Agent ${AGENT_VERSION} starting...`);
-  await sendTG(`🤖 <b>Agent ${AGENT_VERSION} online</b>\nMonitoring: pairs, balances, state, crashes\nCommands: /agent status | history | pause | resume | report`);
+  agentLog('Agent ' + AGENT_VERSION + ' starting...');
+  sendTG('Agent ' + AGENT_VERSION + ' online. Commands: /agent status | history | pause | resume | report').catch(function(){});
 
   let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
   // Initialise command file

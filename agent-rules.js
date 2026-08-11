@@ -786,4 +786,78 @@ module.exports = [
   },
 
 
+  // ── FUNDING RATE RULES ────────────────────────────────────────────────────
+
+  {
+    id: 'funding-rate-extreme',
+    name: 'Extreme funding rate — spread opportunity likely',
+    severity: 'warn',
+    detect(ctx) {
+      if (!ctx.fundingData) return null;
+      const extreme = ctx.fundingData.highSignals || [];
+      if (extreme.length === 0) return null;
+      const lastFunding = ctx.agentState.lastFundingAlert || 0;
+      if (Date.now() - lastFunding < 4 * 60 * 60 * 1000) return null; // 4hr cooldown
+      return extreme.length ? [{ signals: extreme }] : null;
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastFundingAlert = Date.now();
+      const signals = issues[0].signals;
+      const lines = signals.map(function(s) {
+        return s.sym + ': ' + (s.rate*100).toFixed(4) + '%/8hr (' + s.annualised.toFixed(0) + '%/yr) — ' + s.direction;
+      });
+      const implications = signals.map(function(s) { return s.sym + ': ' + s.implication; });
+
+      // Lower threshold for affected pairs temporarily
+      const changes = [];
+      for (const s of signals) {
+        const skipOKX = ctx.config.POLICY_SKIP_OKX || [];
+        const skipBybit = ctx.config.POLICY_SKIP_BYBIT || [];
+        if (!skipOKX.includes(s.sym) || !skipBybit.includes(s.sym)) {
+          const current = ctx.config.PAIR_MIN_SPREAD?.[s.sym] || ctx.config.MIN_SPREAD_CEX || 1.5;
+          const lowered = parseFloat(Math.max(1.2, current - 0.5).toFixed(1));
+          if (lowered < current) {
+            if (!ctx.config.PAIR_MIN_SPREAD) ctx.config.PAIR_MIN_SPREAD = {};
+            ctx.config.PAIR_MIN_SPREAD[s.sym] = lowered;
+            if (!ctx.config.TEMP_SKIPS) ctx.config.TEMP_SKIPS = {};
+            ctx.config.TEMP_SKIPS[s.sym + ':threshold'] = Date.now() + 2 * 60 * 60 * 1000;
+            changes.push(s.sym + ' threshold lowered to ' + lowered + '% for 2hrs (extreme funding)');
+          }
+        }
+      }
+
+      await ctx.sendTG(
+        'Extreme funding rates detected — spread opportunity likely:\n' +
+        lines.join('\n') + '\n\n' +
+        implications.join('\n') +
+        (changes.length ? '\nActions: ' + changes.join(', ') : '')
+      );
+      return changes.length ? changes : ['Funding alert sent: ' + signals.map(function(s){return s.sym;}).join(', ')];
+    }
+  },
+
+  {
+    id: 'funding-rate-elevated',
+    name: 'Elevated funding rates — watch for spread opportunities',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.fundingData) return null;
+      const elevated = ctx.fundingData.mediumSignals || [];
+      if (elevated.length === 0) return null;
+      const lastAlert = ctx.agentState.lastFundingElevatedAlert || 0;
+      if (Date.now() - lastAlert < 6 * 60 * 60 * 1000) return null;
+      return [{ signals: elevated }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastFundingElevatedAlert = Date.now();
+      const signals = issues[0].signals;
+      const lines = signals.map(function(s) {
+        return s.sym + ': ' + (s.rate*100).toFixed(4) + '%/8hr (' + s.direction + ')';
+      }).join(', ');
+      await ctx.sendTG('Elevated funding: ' + lines + '\nMonitor for spread widening — no action yet');
+      return ['Elevated funding alert: ' + signals.map(function(s){return s.sym;}).join(', ')];
+    }
+  },
+
+
 ];
