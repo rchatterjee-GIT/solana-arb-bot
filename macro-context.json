@@ -1,0 +1,33 @@
+{
+  "lastUpdated": "2026-08-08",
+  "themes": [
+    {
+      "date": "2026-08-08",
+      "source": "Motley Fool",
+      "headline": "Crypto Exchanges Seeing Less Activity — DEX Share at 24% All-Time High",
+      "implications": [
+        "DEX volume share at all-time high (24%) — our DEX leg structurally advantaged",
+        "Solana DEX cleared $50.8B in June — Jupiter liquidity improving",
+        "CEX spot volume declining — CEX arb windows may be shorter/fewer",
+        "Perpetuals volume holding up — funding rates increasingly important signal",
+        "Bear market end signal — volume bottoming, recovery expected",
+        "Tokenized stocks growing — new asset class emerging on-chain"
+      ],
+      "botActions": [
+        "Prioritise DEX trades over CEX trades where both available",
+        "Monitor funding rates closely as leading indicator",
+        "Prepare for increased activity as bear market turns",
+        "Consider DEX-only pairs with good Solana liquidity"
+      ],
+      "sentiment": "cautiously_bullish",
+      "timeframe": "weeks_to_months"
+    }
+  ],
+  "structuralInsights": {
+    "dexSharePct": 24,
+    "solanaMonthlyDEXVolume": 50800000000,
+    "marketPhase": "late_bear_early_recovery",
+    "preferredLeg": "DEX",
+    "keySignal": "funding_rates"
+  }
+}

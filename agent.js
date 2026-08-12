@@ -136,6 +136,7 @@ function handleTelegramCommand(text, agentState) {
     return '🤖 Last 10 actions:\n' + history.map(h=>`${h.time.slice(0,16)} ${h.rule}: ${h.changes.join(', ')}`).join('\n');
   }
   if (text === '/agent report') return '__FORCE_REPORT__';
+  if (text === '/agent macro') return '__SHOW_MACRO__';
   return null;
 }
 
@@ -152,7 +153,19 @@ async function checkCommands(agentState) {
       const response = handleTelegramCommand(cmd.text, agentState);
       if (response === '__FORCE_REPORT__') {
         agentState.lastDailyReport = 0;
-        await sendTG('Forcing report on next cycle...');
+        agentState.lastOutlookReport = 0;
+        await sendTG('Forcing outlook report on next cycle...');
+      } else if (response === '__SHOW_MACRO__') {
+        const mcFile = path.join(__dirname, 'macro-context.json');
+        if (require('fs').existsSync(mcFile)) {
+          const mc = JSON.parse(require('fs').readFileSync(mcFile,'utf8'));
+          const t = mc.themes?.[0];
+          if (t) {
+            await sendTG('<b>Current Macro Context</b>\n' + t.date + ': ' + t.headline + '\nPhase: ' + (mc.structuralInsights?.marketPhase||'unknown') + '\nSentiment: ' + t.sentiment + '\nImplications:\n' + t.implications.slice(0,3).map(function(i){return '• '+i;}).join('\n'));
+          }
+        } else {
+          await sendTG('No macro context file found');
+        }
       } else if (response) {
         await sendTG(response);
       }
@@ -197,9 +210,18 @@ async function runCycle(agentState) {
     } catch(e) { agentLog('Funding fetch error: '+e.message,'WARN'); }
   }
 
+  // Load macro context (manually updated from news/research)
+  let macroContext = null;
+  try {
+    const mcFile = path.join(__dirname, 'macro-context.json');
+    if (require('fs').existsSync(mcFile)) {
+      macroContext = JSON.parse(require('fs').readFileSync(mcFile,'utf8'));
+    }
+  } catch {}
+
   const ctx = {
     config, state, trades, fires, pairStats, balances, pending,
-    botStatus, agentState, recentCrashLines, marketData, fundingData,
+    botStatus, agentState, recentCrashLines, marketData, fundingData, macroContext,
     realTradeCount: real.length,
     sendTG, resyncState,
   };

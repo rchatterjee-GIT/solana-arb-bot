@@ -487,31 +487,47 @@
         "Sentiment changed to bearish"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-12T12:29:48.471Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to neutral"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-12T12:30:48.757Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - JUP 4.6, BONK 4.3, JTO 4.2"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786514448950,
-  "lastRun": "2026-08-12T12:28:43.741Z",
-  "actionsToday": 7,
+  "lastRun": "2026-08-12T15:23:52.700Z",
+  "actionsToday": 9,
   "lastActionDate": "2026-08-12",
-  "lastSentiment": "bearish",
+  "lastSentiment": "neutral",
   "ruleCooldowns": {
     "market-active-window": 1786498187173,
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786460466572,
-    "market-sentiment-report": 1786516129015,
+    "market-sentiment-report": 1786537788300,
     "daily-performance-report": 1786514448766,
     "spread-duration-analysis": 1786371587448,
     "dry-spell-analysis": 1786505807605,
-    "pre-session-threshold-optimisation": 1786509048100,
+    "pre-session-threshold-optimisation": 1786537848524,
     "burst-event-monitor": 1786373172019,
     "kraken-window-prep": 1786509948162,
     "exchange-viability-scan": 1786459147209
   },
   "activeWindowAlerted": false,
-  "lastSentimentTime": 1786516129024,
+  "lastSentimentTime": 1786537788313,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786505807621,
-  "lastPreSessionOpt": 1786509048111,
+  "lastPreSessionOpt": 1786537848535,
   "lastBurstAlert": "2026-08-07T08:04:25",
   "lastKrakenPrep": 1786509948175,
   "lastExchangeScan": 1786459147224

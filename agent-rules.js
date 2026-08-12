@@ -1007,6 +1007,16 @@ module.exports = [
       const activeHours = mc.activeWindow ? 'Currently in active window (05-08h or 13-17h UTC)' : 'Next active window: ' + (new Date().getUTCHours() < 5 ? '05:00' : new Date().getUTCHours() < 13 ? '13:00' : '05:00 tomorrow') + ' UTC';
       msg1 += activeHours;
 
+      // Add macro context if available
+      if (ctx.macroContext && ctx.macroContext.themes && ctx.macroContext.themes.length > 0) {
+        const latest = ctx.macroContext.themes[0];
+        const si = ctx.macroContext.structuralInsights || {};
+        msg1 += '\n\n<b>Macro Context (' + latest.date + '):</b>\n';
+        msg1 += latest.headline + '\n';
+        msg1 += 'Phase: ' + (si.marketPhase||'unknown').replace(/_/g,' ') + ' | Preferred leg: ' + (si.preferredLeg||'both') + '\n';
+        msg1 += 'Key signal: ' + (si.keySignal||'spreads').replace(/_/g,' ');
+      }
+
       await ctx.sendTG(msg1);
       await new Promise(function(r){setTimeout(r,1000);});
 
@@ -1110,6 +1120,55 @@ module.exports = [
       await ctx.sendTG(msg4);
 
       return ['Daily outlook report sent (4 messages)'];
+    }
+  },
+
+
+  {
+    id: 'macro-structural-insight',
+    name: 'Macro context: act on structural insights',
+    severity: 'info',
+    detect(ctx) {
+      if (!ctx.macroContext) return null;
+      const si = ctx.macroContext.structuralInsights || {};
+      const lastMacro = ctx.agentState.lastMacroInsight || 0;
+      // Fire once per day
+      if (Date.now() - lastMacro < 20 * 60 * 60 * 1000) return null;
+      return [{ si, themes: ctx.macroContext.themes || [] }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastMacroInsight = Date.now();
+      const si = issues[0].si;
+      const changes = [];
+
+      // Act on structural insights
+      if (si.preferredLeg === 'DEX') {
+        // Lower DEX thresholds slightly to favour DEX trades
+        const currentDex = ctx.config.MIN_SPREAD_DEX || 1.0;
+        if (currentDex > 0.9) {
+          ctx.config.MIN_SPREAD_DEX = 0.9;
+          changes.push('DEX threshold lowered to 0.9% (macro: DEX structurally favoured)');
+        }
+      }
+
+      if (si.keySignal === 'funding_rates') {
+        // Already monitoring — just log
+        agentLog('Macro: funding rates identified as key signal — monitoring active');
+      }
+
+      if (si.marketPhase === 'late_bear_early_recovery') {
+        // Slightly more aggressive — lower buffer
+        const currentBuffer = ctx.config.MIN_SPREAD_BUFFER_PCT || 20;
+        if (currentBuffer > 15) {
+          ctx.config.MIN_SPREAD_BUFFER_PCT = 15;
+          changes.push('Spread buffer lowered to 15% (macro: recovery phase, more aggressive)');
+        }
+      }
+
+      if (changes.length > 0) {
+        await ctx.sendTG('Macro insight applied:\n' + changes.join('\n'));
+      }
+      return changes.length ? changes : ['Macro context reviewed — no config changes needed'];
     }
   },
 
