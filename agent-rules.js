@@ -958,4 +958,160 @@ module.exports = [
   },
 
 
+  {
+    id: 'daily-outlook-report',
+    name: 'Daily forward-looking outlook report',
+    severity: 'info',
+    detect(ctx) {
+      const h = new Date().getUTCHours();
+      const m = new Date().getUTCMinutes();
+      if (h !== 8 || m > 1) return null;
+      const lastReport = ctx.agentState.lastOutlookReport || 0;
+      if (Date.now() - lastReport < 20 * 60 * 60 * 1000) return null;
+      return [{ date: new Date().toISOString().slice(0,10) }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastOutlookReport = Date.now();
+      const { getBestOpportunities, getPairSignal } = require('./market-data');
+      const { getTopSignals } = require('./funding-monitor');
+      const mc = ctx.marketData?.marketConditions || {};
+      const pairs = ctx.marketData?.pairs || {};
+      const trades = ctx.trades.filter(function(t){return t.direction!=='RECOVERY';});
+      const since7d = Date.now() - 7*24*60*60*1000;
+      const week = trades.filter(function(t){return new Date(t.date).getTime()>since7d;});
+      const weekWins = week.filter(function(t){return t.profit>0;});
+      const weekPnl = week.reduce(function(a,t){return a+(t.profit||0);},0);
+
+      // ── MESSAGE 1: Market Overview ───────────────────────────────────────
+      const btc = pairs['BTC'] || {};
+      const eth = pairs['ETH'] || {};
+      const sol = pairs['SOL'] || {};
+      const sentEmoji = mc.sentiment==='bullish'?'[UP]':mc.sentiment==='bearish'?'[DN]':'[--]';
+
+      let msg1 = '<b>Daily Outlook ' + issues[0].date + '</b>\n\n';
+      msg1 += sentEmoji + ' <b>Market Sentiment: ' + (mc.sentiment||'unknown').toUpperCase() + '</b>\n';
+      msg1 += 'BTC: ' + (btc.change24h>=0?'+':'') + (btc.change24h||0).toFixed(1) + '% (1h: ' + (btc.change1h>=0?'+':'') + (btc.change1h||0).toFixed(2) + '%)\n';
+      msg1 += 'ETH: ' + (eth.change24h>=0?'+':'') + (eth.change24h||0).toFixed(1) + '% (1h: ' + (eth.change1h>=0?'+':'') + (eth.change1h||0).toFixed(2) + '%)\n';
+      msg1 += 'SOL: ' + (sol.change24h>=0?'+':'') + (sol.change24h||0).toFixed(1) + '%\n';
+      msg1 += 'Avg alt volatility: ' + (mc.avgVolatility||0).toFixed(1) + ' | Bullish pairs: ' + (mc.bullishPairs||0) + ' | Bearish: ' + (mc.bearishPairs||0) + '\n\n';
+
+      // Prediction
+      const predictedActivity = mc.avgVolatility > 5 ? 'HIGH' : mc.avgVolatility > 3 ? 'MODERATE' : 'LOW';
+      const spreadLikelihood = mc.avgVolatility > 5 ? 'Spread opportunities likely today' :
+                               mc.avgVolatility > 3 ? 'Possible spread windows — monitor closely' :
+                               'Flat market expected — patience required';
+      msg1 += '<b>Predicted Activity: ' + predictedActivity + '</b>\n';
+      msg1 += spreadLikelihood + '\n';
+
+      // Active windows prediction
+      const activeHours = mc.activeWindow ? 'Currently in active window (05-08h or 13-17h UTC)' : 'Next active window: ' + (new Date().getUTCHours() < 5 ? '05:00' : new Date().getUTCHours() < 13 ? '13:00' : '05:00 tomorrow') + ' UTC';
+      msg1 += activeHours;
+
+      await ctx.sendTG(msg1);
+      await new Promise(function(r){setTimeout(r,1000);});
+
+      // ── MESSAGE 2: Top Pair Opportunities ───────────────────────────────
+      const opps = getBestOpportunities(8).filter(function(p){return p.symbol!=='BTC'&&p.symbol!=='ETH';});
+      const skipOKX = ctx.config.POLICY_SKIP_OKX || [];
+      const skipBybit = ctx.config.POLICY_SKIP_BYBIT || [];
+
+      let msg2 = '<b>Top Pair Opportunities Today</b>\n';
+      for (const opp of opps.slice(0,6)) {
+        const skipped = skipOKX.includes(opp.symbol) && skipBybit.includes(opp.symbol);
+        const signal = getPairSignal(opp.symbol);
+        const pairStats = ctx.pairStats[opp.symbol+'/USDT'] || {};
+        const winRate = pairStats.total ? Math.round(pairStats.winRate*100) : null;
+        const scoreBar = opp.score > 7 ? '[HOT]' : opp.score > 5 ? '[HIGH]' : opp.score > 3 ? '[MED]' : '[LOW]';
+        const statusTag = skipped ? ' [SKIPPED]' : signal?.signal==='avoid' ? ' [AVOID]' : '';
+
+        msg2 += scoreBar + ' <b>' + opp.symbol + '</b>' + statusTag + '\n';
+        msg2 += '  Score: ' + opp.score.toFixed(1) + ' | 24h: ' + (opp.change24h>=0?'+':'') + opp.change24h.toFixed(1) + '% | Vol: ' + opp.volatility.toFixed(1) + '\n';
+        msg2 += '  Vol 24h: $' + Math.round((opp.volume24h||0)/1e6) + 'M';
+        if (winRate !== null) msg2 += ' | Historical: ' + winRate + '% win (' + pairStats.total + ' trades)';
+        if (signal?.signal === 'avoid') msg2 += '\n  [AVOID] ' + signal.reason;
+        msg2 += '\n';
+      }
+
+      await ctx.sendTG(msg2);
+      await new Promise(function(r){setTimeout(r,1000);});
+
+      // ── MESSAGE 3: Funding Rates & Profitability Forecast ────────────────
+      const fundingSignals = getTopSignals(5);
+      let msg3 = '<b>Funding Rates & Profitability Forecast</b>\n';
+
+      if (fundingSignals.length > 0) {
+        msg3 += '<b>Active Funding Signals:</b>\n';
+        fundingSignals.forEach(function(s) {
+          msg3 += (s.urgency==='high'?'🚨':'⚡') + ' ' + s.sym + ': ' + (s.rate*100).toFixed(4) + '%/8hr (' + s.direction + ')\n';
+          msg3 += '  → ' + s.implication + '\n';
+        });
+        msg3 += '\n';
+      } else {
+        msg3 += 'Funding rates: neutral across all pairs\n';
+      }
+
+      // P&L forecast
+      const avgProfitPerWin = trades.filter(function(t){return t.profit>0;}).reduce(function(a,t){return a+t.profit;},0) / Math.max(1,trades.filter(function(t){return t.profit>0;}).length);
+      const winRate7d = week.length ? Math.round(weekWins.length/week.length*100) : 0;
+      const expectedFires = mc.avgVolatility > 5 ? '5-10' : mc.avgVolatility > 3 ? '2-5' : '0-2';
+      const expectedWins = mc.avgVolatility > 5 ? '2-4' : mc.avgVolatility > 3 ? '1-2' : '0-1';
+      const expectedPnl = mc.avgVolatility > 5 ? '+$' + (avgProfitPerWin*3).toFixed(0) + ' to +$' + (avgProfitPerWin*6).toFixed(0) :
+                          mc.avgVolatility > 3 ? '+$' + (avgProfitPerWin*1).toFixed(0) + ' to +$' + (avgProfitPerWin*3).toFixed(0) : '$0 (flat market)';
+
+      msg3 += '<b>Profitability Forecast:</b>\n';
+      msg3 += 'Expected fires today: ' + expectedFires + '\n';
+      msg3 += 'Expected wins: ' + expectedWins + '\n';
+      msg3 += 'Expected P&L: ' + expectedPnl + '\n';
+      msg3 += 'Avg profit/win (historical): $' + avgProfitPerWin.toFixed(2) + '\n\n';
+
+      msg3 += '<b>7-Day Performance:</b>\n';
+      msg3 += 'Trades: ' + week.length + ' | Wins: ' + weekWins.length + ' (' + winRate7d + '%)\n';
+      msg3 += 'P&L: ' + (weekPnl>=0?'+':'') + '$' + weekPnl.toFixed(2) + '\n';
+      msg3 += 'Consecutive wins: ' + (ctx.state.consecutiveWins||0) + '/10';
+
+      await ctx.sendTG(msg3);
+      await new Promise(function(r){setTimeout(r,1000);});
+
+      // ── MESSAGE 4: New Listings & Opportunities ──────────────────────────
+      const newPairsFile = require('path').join(__dirname, 'new-pairs.json');
+      const newPairs = require('fs').existsSync(newPairsFile) ?
+        JSON.parse(require('fs').readFileSync(newPairsFile,'utf8')) : [];
+      const activePairs = newPairs.filter(function(p){return p.expiresAt && new Date(p.expiresAt).getTime()>Date.now();});
+
+      let msg4 = '<b>New Listings & Watch List</b>\n';
+
+      if (activePairs.length > 0) {
+        msg4 += '<b>Active New Listings (bot scanning):</b>\n';
+        activePairs.forEach(function(p) {
+          const age = Math.round((Date.now()-p.addedAt)/3600000);
+          msg4 += '[NEW] ' + p.symbol + ' (' + p.exchange + ') — added ' + age + 'h ago, threshold: ' + p.listingThreshold + '%\n';
+        });
+        msg4 += '\n';
+      } else {
+        msg4 += 'No new listings currently active\n';
+      }
+
+      // Today's recommended focus
+      const topTradeable = opps.filter(function(p){
+        return !skipOKX.includes(p.symbol) || !skipBybit.includes(p.symbol);
+      }).slice(0,3);
+
+      msg4 += '<b>Recommended Focus Today:</b>\n';
+      topTradeable.forEach(function(p) {
+        const thresh = ctx.config.PAIR_MIN_SPREAD?.[p.symbol] || ctx.config.MIN_SPREAD_CEX || 1.5;
+        msg4 += '• ' + p.symbol + ': watch for ' + thresh + '%+ spread (score ' + p.score.toFixed(1) + ')\n';
+      });
+
+      msg4 += '\n<b>Bot Status:</b>\n';
+      msg4 += 'Capital: ~$' + Math.round((ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)) + '\n';
+      msg4 += 'OKX: $' + Math.round(ctx.balances.okx||0) + ' | Bybit: $' + Math.round(ctx.balances.bybit||0) + ' | Sol: $' + Math.round(ctx.balances.solana||0) + '\n';
+      msg4 += 'Consecutive clean: ' + (ctx.state.consecutiveClean||0) + '/20';
+
+      await ctx.sendTG(msg4);
+
+      return ['Daily outlook report sent (4 messages)'];
+    }
+  },
+
+
 ];

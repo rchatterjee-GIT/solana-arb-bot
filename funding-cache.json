@@ -1,47 +1,47 @@
 {
-  "fetchedAt": "2026-08-12T07:40:52.386Z",
+  "fetchedAt": "2026-08-12T12:28:43.680Z",
   "summary": {
     "JTO": {
       "okxRate": 0.00005,
-      "bybitRate": -0.00011124,
-      "avgRate": -0.00003062,
-      "annualised": -3.4
+      "bybitRate": -0.00006874,
+      "avgRate": -0.000009369999999999997,
+      "annualised": -1
     },
     "SOL": {
-      "okxRate": 0.0000798745027778,
-      "bybitRate": 0.00004612,
-      "avgRate": 0.0000629972513889,
-      "annualised": 6.9
+      "okxRate": -0.0000316862368271,
+      "bybitRate": null,
+      "avgRate": -0.00001584311841355,
+      "annualised": -1.7
     },
     "WIF": {
       "okxRate": 0.00005,
-      "bybitRate": -0.0000152,
-      "avgRate": 0.000017400000000000003,
-      "annualised": 1.9
+      "bybitRate": 0.00005,
+      "avgRate": 0.00005,
+      "annualised": 5.5
     },
     "PENGU": {
-      "okxRate": -0.0000469590472627,
+      "okxRate": -0.0000016160961712,
       "bybitRate": 0.00005,
-      "avgRate": 0.0000015204763686500003,
-      "annualised": 0.2
+      "avgRate": 0.000024191951914400002,
+      "annualised": 2.6
     },
     "W": {
-      "okxRate": 0.0000438372136062,
+      "okxRate": 0.00005,
       "bybitRate": 0.00005,
-      "avgRate": 0.0000469186068031,
-      "annualised": 5.1
+      "avgRate": 0.00005,
+      "annualised": 5.5
     },
     "RENDER": {
       "okxRate": 0.00005,
-      "bybitRate": -0.00003022,
-      "avgRate": 0.000009890000000000002,
-      "annualised": 1.1
+      "bybitRate": 0.00005,
+      "avgRate": 0.00005,
+      "annualised": 5.5
     },
     "PNUT": {
-      "okxRate": 0.0000173203650976,
-      "bybitRate": 0.00005,
-      "avgRate": 0.0000336601825488,
-      "annualised": 3.7
+      "okxRate": 0.00005,
+      "bybitRate": 0.00000478,
+      "avgRate": 0.00002739,
+      "annualised": 3
     },
     "GOAT": {
       "okxRate": null,
@@ -56,10 +56,10 @@
       "annualised": 11
     },
     "BONK": {
-      "okxRate": -0.0001649546506969,
+      "okxRate": -0.0001788906108705,
       "bybitRate": null,
-      "avgRate": -0.0001649546506969,
-      "annualised": -18.1
+      "avgRate": -0.0001788906108705,
+      "annualised": -19.6
     }
   },
   "signals": [],

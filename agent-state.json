@@ -490,7 +490,7 @@
     }
   ],
   "lastDailyReport": 1786514448950,
-  "lastRun": "2026-08-12T07:53:49.609Z",
+  "lastRun": "2026-08-12T12:28:43.741Z",
   "actionsToday": 7,
   "lastActionDate": "2026-08-12",
   "lastSentiment": "bearish",
@@ -507,7 +507,7 @@
     "kraken-window-prep": 1786509948162,
     "exchange-viability-scan": 1786459147209
   },
-  "activeWindowAlerted": true,
+  "activeWindowAlerted": false,
   "lastSentimentTime": 1786516129024,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786505807621,
