@@ -21,7 +21,7 @@ const CRASH_FILE     = path.join(__dirname, 'crash.log');
 const AGENT_FILE     = path.join(__dirname, 'agent-state.json');
 const AGENT_LOG      = path.join(__dirname, 'agent.log');
 
-const AGENT_VERSION  = 'v1.1';
+const AGENT_VERSION  = 'v1.2';
 const CYCLE_MS       = 60 * 1000;  // run every 60 seconds
 const PAUSED_KEY     = 'paused';
 
