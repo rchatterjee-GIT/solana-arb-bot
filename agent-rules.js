@@ -563,7 +563,7 @@ module.exports = [
         'Kraken balance: $' + krakenBal.toFixed(0) + '\n' +
         (krakenBal < 120 ? 'WARNING: Kraken balance below trade minimum!' : 'Ready to fire');
       await ctx.sendTG(msg);
-      return ['Kraken window prep sent'];
+      return ['Kraken window prep sent — $' + krakenBal.toFixed(0) + (krakenBal < 120 ? ' WARNING below minimum' : ' ready')];
     }
   },
 

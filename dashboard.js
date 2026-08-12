@@ -369,11 +369,11 @@ async function loadAgentFeed(){
       var isMarket=e.msg.startsWith('Market:')||e.msg.startsWith('Funding:');
       var isTG=e.msg.startsWith('TG:')||e.msg.includes('sent')||e.msg.includes('alert');
       var col=e.level==='ERROR'?'#ef4444':e.level==='WARN'?'#fbbf24':isAction?'#4ade80':isMarket?'#60a5fa':isTG?'#c084fc':'#9ca3af';
-      var msg=e.msg.replace('Action: ','').replace('Telegram: ','').slice(0,65);
+      var msg=e.msg.replace('Action: ','').replace('Telegram: ','');
       var ts=e.date&&e.date.slice(0,10)!==today?e.date.slice(5,16):e.time;
       return '<div style="padding:3px 0;border-bottom:1px solid #111827;display:flex;gap:8px;align-items:baseline">'+
         '<span style="font-size:.63rem;color:#6b7280;white-space:nowrap;font-family:monospace;flex-shrink:0">'+ts+'</span>'+
-        '<span style="color:'+col+';font-size:.72rem;line-height:1.4">'+msg+'</span></div>';
+        '<span style="color:'+col+';font-size:.72rem;line-height:1.4;word-break:break-word">'+msg+'</span></div>';
     }).join('');
   }catch(e){console.error(e);}
 }
