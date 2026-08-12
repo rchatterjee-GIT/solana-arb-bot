@@ -2,6 +2,68 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
+      "date": "2026-08-12",
+      "source": "Decrypt",
+      "headline": "Russia Approves Trading of Bitcoin, Ethereum and USDT—But No XRP",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 22,
+      "link": "https://decrypt.co/375345/russia-approves-trading-bitcoin-ethereum-usdt-no-xrp"
+    },
+    {
+      "date": "2026-08-12",
+      "source": "CoinTelegraph",
+      "headline": "Itaú joins Brazil tokenization pilot with OpenAssets",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 22,
+      "link": ""
+    },
+    {
+      "date": "2026-08-12",
+      "source": "CoinDesk",
+      "headline": "Bitcoin stuck as ETF inflows offset selling, but inflation data could spark a move",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 22,
+      "link": "https://www.coindesk.com/markets/2026/08/11/bitcoin-stuck-as-etf-inflows-offset-selling-but-inflation-data-could-spark-a-move"
+    },
+    {
+      "date": "2026-08-12",
+      "source": "CoinDesk",
+      "headline": "Live updates: AI stocks surge on Q2 beats, bitcoin falls below $64,000 as inflation hits estimates",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 22,
+      "link": "https://www.coindesk.com/tech/2026/08/12/live-updates-bitcoin-at-usd63-600-as-japan-s-metaplanet-moves-3-881-btc-between-wallets"
+    },
+    {
+      "date": "2026-08-12",
+      "source": "CoinTelegraph",
+      "headline": "Fidelity files with SEC to add staking to Ethereum ETF",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 27,
+      "link": ""
+    },
+    {
       "date": "2026-08-08",
       "source": "Motley Fool",
       "headline": "Crypto Exchanges Seeing Less Activity — DEX Share at 24% All-Time High",
@@ -29,5 +91,6 @@
     "marketPhase": "late_bear_early_recovery",
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
-  }
+  },
+  "lastNewsRun": "2026-08-12T15:29:45.874Z"
 }

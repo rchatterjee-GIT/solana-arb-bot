@@ -503,15 +503,23 @@
         "Pre-session scan complete - JUP 4.6, BONK 4.3, JTO 4.2"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-12T15:25:03.929Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: W showing high scores"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786514448950,
-  "lastRun": "2026-08-12T15:23:52.700Z",
-  "actionsToday": 9,
+  "lastRun": "2026-08-12T15:29:04.046Z",
+  "actionsToday": 10,
   "lastActionDate": "2026-08-12",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
-    "market-active-window": 1786498187173,
+    "market-active-window": 1786548303732,
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786460466572,
     "market-sentiment-report": 1786537788300,
@@ -521,14 +529,16 @@
     "pre-session-threshold-optimisation": 1786537848524,
     "burst-event-monitor": 1786373172019,
     "kraken-window-prep": 1786509948162,
-    "exchange-viability-scan": 1786459147209
+    "exchange-viability-scan": 1786459147209,
+    "macro-structural-insight": 1786548303732
   },
-  "activeWindowAlerted": false,
+  "activeWindowAlerted": true,
   "lastSentimentTime": 1786537788313,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786505807621,
   "lastPreSessionOpt": 1786537848535,
   "lastBurstAlert": "2026-08-07T08:04:25",
   "lastKrakenPrep": 1786509948175,
-  "lastExchangeScan": 1786459147224
+  "lastExchangeScan": 1786459147224,
+  "lastMacroInsight": 1786548303949
 }

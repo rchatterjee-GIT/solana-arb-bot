@@ -67,6 +67,11 @@ const FILES = [
     minLines: 100,
     required: ['fetchFundingRates','getFundingData','getTopSignals'],
   },
+  {
+    file: 'news-monitor.js',
+    minLines: 150,
+    required: ['runNewsTrawl','formatDigest','parseRSS','scoreItem'],
+  },
 ];
 
 let allOk = true;

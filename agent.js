@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const rules  = require('./agent-rules');
 const { fetchMarketData, getMarketData } = require('./market-data');
 const { run: runListingMonitor } = require('./listing-monitor');
+const { runNewsTrawl, formatDigest } = require('./news-monitor');
 const { fetchFundingRates, getFundingData } = require('./funding-monitor');
 
 const CONFIG_FILE    = path.join(__dirname, 'arb-config.json');
@@ -330,6 +331,25 @@ async function main() {
     try { await checkCommands(agentState); }
     catch(e) { agentLog('Command check error: '+e.message, 'ERROR'); }
   }, 10 * 1000);
+
+  // News trawl every 4 hours
+  setInterval(async () => {
+    try {
+      const result = await Promise.race([
+        runNewsTrawl(sendTG),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('News timeout'));},60000);})
+      ]);
+      if (result && result.relevant > 0) {
+        const digest = formatDigest(result);
+        if (digest) {
+          agentLog('News: ' + result.relevant + ' relevant articles, ' + result.urgent + ' urgent');
+          await sendTG(digest);
+        }
+      } else {
+        agentLog('News trawl: no new relevant articles');
+      }
+    } catch(e) { agentLog('News trawl error: '+e.message, 'WARN'); }
+  }, 4 * 60 * 60 * 1000);
 
   // Scan for new listings and news every 5 minutes
   setInterval(async () => {
