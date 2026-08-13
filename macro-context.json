@@ -2,87 +2,128 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
-      "date": "2026-08-12",
+      "date": "2026-08-13",
       "source": "Decrypt",
-      "headline": "Russia Approves Trading of Bitcoin, Ethereum and USDT—But No XRP",
+      "headline": "ZEC Rebounds 11%! Trump says he won’t pardon Sam Bankman-Fried! Florida revisits it’s Strategic Bitcoin Reserve!",
       "implications": [
         "URGENT: Market impact — review positions",
         "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
       "sentiment": "high_impact",
-      "score": 22,
-      "link": "https://decrypt.co/375345/russia-approves-trading-bitcoin-ethereum-usdt-no-xrp"
+      "score": 23,
+      "link": "https://decrypt.co/videos/interviews/72tPnqPX/zec-rebounds-11-trump-says-he-wont-pardon-sam-bankman-fried-florida-revisits-its-strategic-bitcoin-reserve"
     },
     {
-      "date": "2026-08-12",
-      "source": "CoinTelegraph",
-      "headline": "Itaú joins Brazil tokenization pilot with OpenAssets",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 22,
-      "link": ""
-    },
-    {
-      "date": "2026-08-12",
-      "source": "CoinDesk",
-      "headline": "Bitcoin stuck as ETF inflows offset selling, but inflation data could spark a move",
+      "date": "2026-08-13",
+      "source": "Decrypt",
+      "headline": "Are we back? Crypto is Green! Solana Intern goes rogue! Pump up 13%! Monero hits another ATH!",
       "implications": [
         "General market development — monitor for spread impact"
       ],
       "botActions": [],
       "sentiment": "high_impact",
-      "score": 22,
-      "link": "https://www.coindesk.com/markets/2026/08/11/bitcoin-stuck-as-etf-inflows-offset-selling-but-inflation-data-could-spark-a-move"
+      "score": 26,
+      "link": "https://decrypt.co/videos/interviews/Iv1NIhI4/are-we-back-crypto-is-green-solana-intern-goes-rogue-pump-up-13-monero-hits-another-ath"
     },
     {
-      "date": "2026-08-12",
-      "source": "CoinDesk",
-      "headline": "Live updates: AI stocks surge on Q2 beats, bitcoin falls below $64,000 as inflation hits estimates",
+      "date": "2026-08-13",
+      "source": "Decrypt",
+      "headline": "Crypto sells off amidst Trump Tariff Turmoil! $Trove falls 90% in awful TGE! Pump Fund announced!",
       "implications": [
         "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 22,
-      "link": "https://www.coindesk.com/tech/2026/08/12/live-updates-bitcoin-at-usd63-600-as-japan-s-metaplanet-moves-3-881-btc-between-wallets"
-    },
-    {
-      "date": "2026-08-12",
-      "source": "CoinTelegraph",
-      "headline": "Fidelity files with SEC to add staking to Ethereum ETF",
-      "implications": [
-        "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
       "sentiment": "high_impact",
       "score": 27,
-      "link": ""
+      "link": "https://decrypt.co/videos/interviews/lokwS0bc/crypto-sells-off-amidst-trump-tariff-turmoil-trove-falls-90-in-awful-tge-pump-fund-announced"
     },
     {
-      "date": "2026-08-08",
-      "source": "Motley Fool",
-      "headline": "Crypto Exchanges Seeing Less Activity — DEX Share at 24% All-Time High",
+      "date": "2026-08-13",
+      "source": "Decrypt",
+      "headline": "Trump Tariffs 3: Return of the Bull Market! NYSE Tokenising, what that means for $Hype! Claude Meme Meta!",
       "implications": [
-        "DEX volume share at all-time high (24%) — our DEX leg structurally advantaged",
-        "Solana DEX cleared $50.8B in June — Jupiter liquidity improving",
-        "CEX spot volume declining — CEX arb windows may be shorter/fewer",
-        "Perpetuals volume holding up — funding rates increasingly important signal",
-        "Bear market end signal — volume bottoming, recovery expected",
-        "Tokenized stocks growing — new asset class emerging on-chain"
+        "Bullish macro signal — increased arb activity expected"
       ],
-      "botActions": [
-        "Prioritise DEX trades over CEX trades where both available",
-        "Monitor funding rates closely as leading indicator",
-        "Prepare for increased activity as bear market turns",
-        "Consider DEX-only pairs with good Solana liquidity"
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 31,
+      "link": "https://decrypt.co/videos/interviews/O1HZN4PH/trump-tariffs-3-return-of-the-bull-market-nyse-tokenising-what-that-means-for-hype-claude-meme-meta"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "CoinDesk",
+      "headline": "Brazil’s largest bitcoin treasury firm plans ETF with 95% allocation to Strategy's STRC",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
       ],
-      "sentiment": "cautiously_bullish",
-      "timeframe": "weeks_to_months"
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 33,
+      "link": "https://www.coindesk.com/business/2026/08/13/brazil-s-largest-bitcoin-treasury-firm-plans-etf-with-95-allocation-to-strategy-s-strc"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "FT Markets",
+      "headline": "Rio Tinto gets $1.8bn bailout for Australia’s biggest aluminium smelter",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 10,
+      "link": "https://www.ft.com/content/92f69c81-f15f-409f-877d-0cc61f4ef697?syn-25a6b1a6=1"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "Motley Fool Crypto",
+      "headline": "Which Precious Metals ETF Is the Better Buy: iShares' Gold Trust IAU or Silver Miners SLVP?",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 10,
+      "link": "https://www.fool.com/coverage/etfs/2026/08/12/which-precious-metals-etf-is-the-better-buy-ishares-gold-trust-iau-or-silver-miners-slvp/?source=iedfolrf0000001"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "The Block",
+      "headline": "Hyperliquid treasury Hyperion triples quarterly profits as HYPE holdings rise in value",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 12,
+      "link": "https://www.theblock.co/news/markets/2026-08-12-hyperliquid-treasury-hyperion-triples-quarterly-profits-as-hype-holdings-rise-in-value-411652"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "CoinDesk",
+      "headline": "Morgan Stanley's infrastructure partner Zerohash rebuffed in pitch to be U.S. trust bank",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 13,
+      "link": "https://www.coindesk.com/policy/2026/08/12/morgan-stanley-s-infrastructure-partner-zerohash-rebuffed-in-pitch-to-be-u-s-trust-bank"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "CoinDesk",
+      "headline": "Securitize falls 20% after earnings miss as tokenization revenue falls short",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 13,
+      "link": "https://www.coindesk.com/markets/2026/08/12/securitize-falls-20-after-earnings-miss-as-tokenization-revenue-falls-short"
     }
   ],
   "structuralInsights": {
@@ -92,5 +133,5 @@
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
   },
-  "lastNewsRun": "2026-08-12T15:29:45.874Z"
+  "lastNewsRun": "2026-08-13T11:33:08.696Z"
 }

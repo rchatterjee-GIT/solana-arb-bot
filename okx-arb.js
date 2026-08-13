@@ -1259,9 +1259,15 @@ async function executeSwapToUSDC(trade, ctx) {
     try {
       ctx.log(`Leg B attempt ${attempt+1}/${LEG_B_SLIPPAGE.length} @ ${slippage}bps`);
       logger.log('SWAP_ATTEMPT', `attempt ${attempt+1}/${LEG_B_SLIPPAGE.length} slippage:${slippage}bps`);
-      const qr = await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${pair.outputMint}&outputMint=${USDC_MINT}&amount=${rawAmount}&slippageBps=${slippage}`, { headers: { 'x-api-key': process.env.JUPITER_API_KEY } });
-      const quote = await qr.json();
-      if (!quote.outAmount) throw new Error('No quote — Jupiter returned no route');
+      let quote = null;
+      for (let qAttempt = 0; qAttempt < 3; qAttempt++) {
+        if (qAttempt > 0) await new Promise(r => setTimeout(r, 5000));
+        const qr = await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${pair.outputMint}&outputMint=${USDC_MINT}&amount=${rawAmount}&slippageBps=${slippage}`, { headers: { 'x-api-key': process.env.JUPITER_API_KEY } });
+        quote = await qr.json();
+        if (quote.outAmount) break;
+        ctx.log(`Leg B quote attempt ${qAttempt+1}/3: no route — retrying in 5s`);
+      }
+      if (!quote || !quote.outAmount) throw new Error('No quote — Jupiter returned no route after 3 attempts');
       usdcOut = quote.outAmount / 1e6;
       const sr = await fetch('https://api.jup.ag/swap/v1/swap', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.JUPITER_API_KEY }, body: JSON.stringify({ quoteResponse: quote, userPublicKey: wallet.publicKey.toString(), wrapAndUnwrapSol: true, dynamicSlippage: true, prioritizationFeeLamports: 100_000 }) });
       const { swapTransaction, error } = await sr.json();

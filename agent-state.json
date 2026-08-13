@@ -1,30 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-09T14:37:32.627Z",
-      "rule": "pair-threshold-too-low",
-      "changes": [
-        "W PAIR_MIN_SPREAD raised: 2.5% → 3.2% (losses at high spread)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:49:32.662Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:49:32.752Z",
-      "rule": "market-sentiment-report",
-      "changes": [
-        "Sentiment changed to bullish"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-09T14:50:37.188Z",
       "rule": "market-active-window",
       "changes": [
@@ -511,34 +487,350 @@
         "Active window: W showing high scores"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-12T22:07:09.489Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bearish"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-12T23:37:09.663Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Bearish market — spreads may not materialise. Holding thresholds."
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-13T00:00:09.902Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PENGU showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T01:09:10.411Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 182s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:10:10.390Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 242s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:11:10.558Z",
+      "rule": "exchange-severely-imbalanced",
+      "changes": [
+        "Rebalance triggered: okx: $241 vs target $350 (31% off), bybit: $170 vs target $300 (43% off)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-13T01:11:10.674Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 302s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:12:10.405Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 362s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:13:10.834Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 422s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:14:10.426Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 482s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:15:13.419Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 545s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:16:12.264Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 603s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:17:12.257Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 663s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:18:12.229Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 723s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:19:12.236Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 783s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:20:12.247Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 843s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:21:12.275Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 903s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:22:12.262Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 963s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:23:12.309Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1023s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:24:12.269Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1083s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:25:12.249Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1143s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:26:12.283Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1203s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:27:12.263Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1263s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:28:12.282Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1323s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:29:12.315Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1383s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:30:12.295Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1443s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:31:15.200Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1506s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:32:12.297Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1563s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:33:12.294Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1623s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:34:12.344Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1683s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:35:12.319Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1743s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:36:12.321Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1803s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:37:12.339Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1864s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T01:38:12.390Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1924s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-13T04:30:13.701Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - WIF 5.1, JUP 5.0, W 4.8"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T04:45:13.792Z",
+      "rule": "kraken-window-prep",
+      "changes": [
+        "Kraken window prep sent — $0 WARNING below minimum"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T06:00:14.338Z",
+      "rule": "daily-performance-report",
+      "changes": [
+        "Daily report sent"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T06:22:14.875Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to neutral"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T08:00:18.545Z",
+      "rule": "daily-outlook-report",
+      "changes": [
+        "Daily outlook report sent (4 messages)"
+      ],
+      "severity": "info"
     }
   ],
-  "lastDailyReport": 1786514448950,
-  "lastRun": "2026-08-12T15:31:43.621Z",
-  "actionsToday": 10,
-  "lastActionDate": "2026-08-12",
+  "lastDailyReport": 1786600814338,
+  "lastRun": "2026-08-13T12:09:16.930Z",
+  "actionsToday": 37,
+  "lastActionDate": "2026-08-13",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
-    "market-active-window": 1786548303732,
+    "market-active-window": 1786579209680,
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786460466572,
-    "market-sentiment-report": 1786537788300,
-    "daily-performance-report": 1786514448766,
+    "market-sentiment-report": 1786602134726,
+    "daily-performance-report": 1786600814202,
     "spread-duration-analysis": 1786371587448,
-    "dry-spell-analysis": 1786505807605,
-    "pre-session-threshold-optimisation": 1786537848524,
+    "dry-spell-analysis": 1786577829481,
+    "pre-session-threshold-optimisation": 1786595413530,
     "burst-event-monitor": 1786373172019,
-    "kraken-window-prep": 1786509948162,
+    "kraken-window-prep": 1786596313624,
     "exchange-viability-scan": 1786459147209,
-    "macro-structural-insight": 1786548303732
+    "macro-structural-insight": 1786620316611,
+    "bot-stale": 1786585092229,
+    "exchange-severely-imbalanced": 1786583470245,
+    "daily-outlook-report": 1786608015067
   },
-  "activeWindowAlerted": true,
-  "lastSentimentTime": 1786537788313,
+  "activeWindowAlerted": false,
+  "lastSentimentTime": 1786602134733,
   "lastSpreadAnalysis": 1786371587458,
-  "lastDrySpellAlert": 1786505807621,
-  "lastPreSessionOpt": 1786537848535,
+  "lastDrySpellAlert": 1786577829491,
+  "lastPreSessionOpt": 1786595413539,
   "lastBurstAlert": "2026-08-07T08:04:25",
-  "lastKrakenPrep": 1786509948175,
+  "lastKrakenPrep": 1786596313631,
   "lastExchangeScan": 1786459147224,
-  "lastMacroInsight": 1786548303949
+  "lastMacroInsight": 1786620316625,
+  "lastOutlookReport": 1786608015074
 }
