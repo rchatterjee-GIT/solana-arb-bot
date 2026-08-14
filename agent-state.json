@@ -1,22 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-10T12:30:46.790Z",
-      "rule": "pre-session-threshold-optimisation",
-      "changes": [
-        "Pre-session scan complete - JTO 9.6, PENGU 7.1, PNUT 5.7"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T13:00:47.031Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: JTO, PENGU showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-10T13:19:47.128Z",
       "rule": "spread-duration-analysis",
       "changes": [
@@ -799,11 +783,27 @@
         "PNUT DEX: 3.5% -> 3% (medium vol $13M + volatility 3.7)"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-14T07:07:33.093Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 5% -> 3.8% (medium vol $36M + volatility 3.8)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T07:07:33.093Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786687259048,
-  "lastRun": "2026-08-14T06:11:55.995Z",
-  "actionsToday": 13,
+  "lastRun": "2026-08-14T07:35:32.755Z",
+  "actionsToday": 15,
   "lastActionDate": "2026-08-14",
   "lastSentiment": "bearish",
   "ruleCooldowns": {
@@ -818,13 +818,13 @@
     "burst-event-monitor": 1786373172019,
     "kraken-window-prep": 1786682755314,
     "exchange-viability-scan": 1786459147209,
-    "macro-structural-insight": 1786620316611,
+    "macro-structural-insight": 1786692332676,
     "bot-stale": 1786585092229,
     "exchange-severely-imbalanced": 1786583470245,
     "daily-outlook-report": 1786608015067,
     "pair-consecutive-losses": 1786636617360,
     "pair-threshold-too-low": 1786636617360,
-    "dex-threshold-dynamic": 1786687556331
+    "dex-threshold-dynamic": 1786691252909
   },
   "activeWindowAlerted": true,
   "lastSentimentTime": 1786685035627,
@@ -834,7 +834,7 @@
   "lastBurstAlert": "2026-08-07T08:04:25",
   "lastKrakenPrep": 1786682755320,
   "lastExchangeScan": 1786459147224,
-  "lastMacroInsight": 1786620316625,
+  "lastMacroInsight": 1786692332684,
   "lastOutlookReport": 1786608015074,
-  "lastDexAdjust": 1786687556339
+  "lastDexAdjust": 1786691252916
 }

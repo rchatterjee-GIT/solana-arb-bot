@@ -1198,7 +1198,7 @@ module.exports = [
 
       if (si.keySignal === 'funding_rates') {
         // Already monitoring — just log
-        agentLog('Macro: funding rates identified as key signal — monitoring active');
+        console.log('[agent] Macro: funding rates identified as key signal — monitoring active');
       }
 
       if (si.marketPhase === 'late_bear_early_recovery') {
@@ -1232,7 +1232,7 @@ module.exports = [
     },
     async action(ctx, issues) {
       ctx.agentState.lastViabilityTest = Date.now();
-      agentLog('Starting weekly pair viability test...');
+      console.log('[agent] Starting weekly pair viability test...');
 
       const TRADE_SIZE = ctx.config.TRADE_SIZE_USD || 120;
       const pairs = ['SOL','JTO','WIF','BONK','JUP','PYTH','RAY','W','BOME','TRUMP','ZEUS','RENDER','PNUT','GOAT','PENGU'];
@@ -1291,7 +1291,7 @@ module.exports = [
         'No Solana chain: ' + (noChain||'none');
 
       await ctx.sendTG(msg);
-      agentLog('Viability test complete: ' + results.length + ' pairs checked');
+      console.log('[agent] Viability test complete: ' + results.length + ' pairs checked');
       return ['Viability test: ' + results.filter(function(r){return r.action==='enable';}).length + ' viable, ' + results.filter(function(r){return r.action==='kill';}).length + ' killed'];
     }
   },
