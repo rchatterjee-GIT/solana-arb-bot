@@ -1,286 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-09T14:50:37.188Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:51:37.268Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:52:37.357Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:53:37.453Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:54:37.571Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:55:37.634Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:56:37.747Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:57:37.901Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:58:37.911Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T14:59:14.046Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:00:19.128Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:01:19.144Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:02:19.255Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:03:19.350Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:04:19.446Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:05:16.451Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:06:16.496Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:07:16.573Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:08:16.736Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:09:16.731Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:10:16.815Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:11:16.836Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:12:16.954Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PYTH showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T15:49:52.708Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: JTO showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-09T17:22:45.412Z",
-      "rule": "market-avoid-signal",
-      "changes": [
-        "PENGU threshold raised 2.5% → 3.5% (market: High 1h volatility (5.4%) — spread may close before withdrawal)"
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-09T17:53:45.640Z",
-      "rule": "market-avoid-signal",
-      "changes": [
-        "PENGU threshold raised 3.5% → 4.5% (market: High 1h volatility (5.4%) — spread may close before withdrawal)"
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-10T00:00:48.269Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PNUT, PENGU showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T00:05:48.685Z",
-      "rule": "market-sentiment-report",
-      "changes": [
-        "Sentiment changed to neutral"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T06:00:52.764Z",
-      "rule": "daily-performance-report",
-      "changes": [
-        "Daily report sent"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T06:16:53.260Z",
-      "rule": "market-sentiment-report",
-      "changes": [
-        "Sentiment changed to bullish"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T09:18:43.406Z",
-      "rule": "spread-duration-analysis",
-      "changes": [
-        "Spread analysis complete - 0 insights"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T10:19:13.518Z",
-      "rule": "spread-duration-analysis",
-      "changes": [
-        "Spread analysis complete - 0 insights"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T11:19:13.974Z",
-      "rule": "spread-duration-analysis",
-      "changes": [
-        "Spread analysis complete - 0 insights"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-10T11:35:14.156Z",
-      "rule": "dry-spell-analysis",
-      "changes": [
-        "Dry spell alert sent — Market conditions OK. Spreads not crossing threshold. Consider lowering CEX threshold to 1.5%."
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-10T12:19:46.662Z",
-      "rule": "spread-duration-analysis",
-      "changes": [
-        "Spread analysis complete - 0 insights"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-10T12:30:46.790Z",
       "rule": "pre-session-threshold-optimisation",
       "changes": [
@@ -799,38 +519,322 @@
         "Daily outlook report sent (4 messages)"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-13T12:30:49.328Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - JTO 5.1, PNUT 4.7, PENGU 4.3"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T13:04:49.988Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PNUT showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T15:56:57.367Z",
+      "rule": "pair-consecutive-losses",
+      "changes": [
+        "GOAT added to POLICY_SKIP_OKX (24hr temp skip — 3 consecutive losses)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-13T15:56:57.381Z",
+      "rule": "pair-threshold-too-low",
+      "changes": [
+        "W PAIR_MIN_SPREAD raised: 2.5% → 3.2% (losses at high spread)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T15:57:47.018Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T15:57:47.018Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T15:57:47.018Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3.5% -> 4.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T15:57:47.018Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "W DEX: 2.5% -> 3.5% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T16:57:48.116Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T16:57:48.116Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 3.8% (medium vol $43M + volatility 4.0)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T16:57:48.116Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.5% -> 2.3% (medium vol $23M + volatility 3.4)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T18:13:49.178Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T19:15:49.637Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T19:15:49.637Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T20:17:50.204Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T20:17:50.204Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T21:19:50.690Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3.8% -> 4.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T21:19:50.690Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.5% -> 2.3% (medium vol $23M + volatility 3.7)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T22:21:51.206Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 3.8% (medium vol $47M + volatility 3.2)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T23:23:51.667Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bullish"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T23:23:51.910Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3.8% -> 4.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-13T23:23:51.910Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.3% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T00:25:52.123Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T01:38:54.043Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Market conditions OK. Spreads not crossing threshold. Consider lowering CEX threshold to 1.5%."
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-14T02:28:54.878Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: BONK, JTO showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T02:28:55.029Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T04:01:55.484Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 5% -> 4.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T04:01:55.484Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T04:30:55.361Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - JTO 5.4, BONK 5.0, PNUT 4.3"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T04:45:55.473Z",
+      "rule": "kraken-window-prep",
+      "changes": [
+        "Kraken window prep sent — $0 WARNING below minimum"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T05:03:56.118Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T05:03:56.118Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 3% -> 3.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T05:23:55.802Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bearish"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T06:00:59.048Z",
+      "rule": "daily-performance-report",
+      "changes": [
+        "Daily report sent"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-14T06:05:56.533Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 3.5% -> 3% (medium vol $13M + volatility 3.7)"
+      ],
+      "severity": "info"
     }
   ],
-  "lastDailyReport": 1786600814338,
-  "lastRun": "2026-08-13T12:09:16.930Z",
-  "actionsToday": 37,
-  "lastActionDate": "2026-08-13",
-  "lastSentiment": "neutral",
+  "lastDailyReport": 1786687259048,
+  "lastRun": "2026-08-14T06:11:55.995Z",
+  "actionsToday": 13,
+  "lastActionDate": "2026-08-14",
+  "lastSentiment": "bearish",
   "ruleCooldowns": {
-    "market-active-window": 1786579209680,
+    "market-active-window": 1786674534701,
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786460466572,
-    "market-sentiment-report": 1786602134726,
-    "daily-performance-report": 1786600814202,
+    "market-sentiment-report": 1786685035618,
+    "daily-performance-report": 1786687258774,
     "spread-duration-analysis": 1786371587448,
-    "dry-spell-analysis": 1786577829481,
-    "pre-session-threshold-optimisation": 1786595413530,
+    "dry-spell-analysis": 1786671533872,
+    "pre-session-threshold-optimisation": 1786681855213,
     "burst-event-monitor": 1786373172019,
-    "kraken-window-prep": 1786596313624,
+    "kraken-window-prep": 1786682755314,
     "exchange-viability-scan": 1786459147209,
     "macro-structural-insight": 1786620316611,
     "bot-stale": 1786585092229,
     "exchange-severely-imbalanced": 1786583470245,
-    "daily-outlook-report": 1786608015067
+    "daily-outlook-report": 1786608015067,
+    "pair-consecutive-losses": 1786636617360,
+    "pair-threshold-too-low": 1786636617360,
+    "dex-threshold-dynamic": 1786687556331
   },
-  "activeWindowAlerted": false,
-  "lastSentimentTime": 1786602134733,
+  "activeWindowAlerted": true,
+  "lastSentimentTime": 1786685035627,
   "lastSpreadAnalysis": 1786371587458,
-  "lastDrySpellAlert": 1786577829491,
-  "lastPreSessionOpt": 1786595413539,
+  "lastDrySpellAlert": 1786671533879,
+  "lastPreSessionOpt": 1786681855222,
   "lastBurstAlert": "2026-08-07T08:04:25",
-  "lastKrakenPrep": 1786596313631,
+  "lastKrakenPrep": 1786682755320,
   "lastExchangeScan": 1786459147224,
   "lastMacroInsight": 1786620316625,
-  "lastOutlookReport": 1786608015074
+  "lastOutlookReport": 1786608015074,
+  "lastDexAdjust": 1786687556339
 }

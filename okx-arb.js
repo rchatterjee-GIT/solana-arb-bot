@@ -37,7 +37,7 @@ const wallet     = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.
 console.log('🔑 Wallet loaded:', wallet.publicKey.toString());
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_VERSION            = 'v4.14';
+const BOT_VERSION            = 'v4.15';
 const TRADE_SIZE_USD         = 120;
 const MIN_SPREAD_CEX         = 1.00;
 const MAX_RETRIES            = 3;
@@ -70,13 +70,20 @@ const HOLD_REPORT_INTERVAL   = 30 * 60 * 1000;
 
 // ── Per-pair BUY_DEX thresholds ───────────────────────────────────────────────
 const BUY_DEX_THRESHOLDS = {
-  'SOL': 2.50, 'JTO': 2.50, 'WIF': 2.50, 'RAY': 2.50,
+  // Agent can override these via DEX_THRESHOLD_OVERRIDES in arb-config.json
+  'SOL': 2.00, 'JTO': 2.50, 'WIF': 2.00, 'RAY': 2.00,
   'W': 2.00, 'PYTH': 2.50, 'RENDER': 2.50,
-  'BONK': 3.50, 'MEW': 3.50, 'BOME': 3.50, 'ZEUS': 3.50,
-  'PNUT': 3.50, 'GOAT': 3.50, 'PENGU': 4.50, 'TRUMP': 4.00,
-  'DEFAULT': 3.50,
+  'BONK': 3.00, 'MEW': 3.00, 'BOME': 3.50, 'ZEUS': 3.50,
+  'PNUT': 3.00, 'GOAT': 3.00, 'PENGU': 3.50, 'TRUMP': 4.00,
+  'JUP': 2.50,
+  'DEFAULT': 3.00,
 };
-function getBuyDexThreshold(ccy) { return BUY_DEX_THRESHOLDS[ccy] || BUY_DEX_THRESHOLDS['DEFAULT']; }
+function getBuyDexThreshold(ccy) {
+  // Agent can override via arb-config.json DEX_THRESHOLD_OVERRIDES
+  const override = liveConfig?.DEX_THRESHOLD_OVERRIDES?.[ccy];
+  if (override != null) return override;
+  return BUY_DEX_THRESHOLDS[ccy] || BUY_DEX_THRESHOLDS['DEFAULT'];
+}
 
 // Skip lists managed by agent via arb-config.json — no hardcoded fallbacks
 const POLICY_SKIP_OKX   = []; // legacy fallback — agent manages via config
@@ -90,19 +97,19 @@ const PAIRS = [
   { name: 'SOL/USDT',    okxInstId: 'SOL-USDT',    bybitInstId: 'SOLUSDT',    outputMint: 'So11111111111111111111111111111111111111112',    decimals: 9,  dex: 'Raydium', isNative: true,  okxCcy: 'SOL',    okxChain: 'SOL-Solana',    bybitCcy: 'SOL',    bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'JTO/USDT',    okxInstId: 'JTO-USDT',    bybitInstId: 'JTOUSDT',    outputMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',  decimals: 9,  dex: null,      isNative: false, okxCcy: 'JTO',    okxChain: 'JTO-Solana',    bybitCcy: 'JTO',    bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'WIF/USDT',    okxInstId: 'WIF-USDT',    bybitInstId: 'WIFUSDT',    outputMint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',  decimals: 6,  dex: 'Raydium', isNative: false, okxCcy: 'WIF',    okxChain: 'WIF-Solana',    bybitCcy: 'WIF',    bybitChain: 'SOL', buyDexEnabled: true  },
-  { name: 'BONK/USDT',   okxInstId: 'BONK-USDT',   bybitInstId: 'BONKUSDT',   outputMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',  decimals: 5,  dex: null,      isNative: false, okxCcy: 'BONK',   okxChain: 'BONK-Solana',   bybitCcy: 'BONK',   bybitChain: 'SOL', buyDexEnabled: false },
-  { name: 'JUP/USDT',    okxInstId: 'JUP-USDT',    bybitInstId: 'JUPUSDT',    outputMint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'JUP',    okxChain: 'JUP-Solana',    bybitCcy: 'JUP',    bybitChain: 'SOL', buyDexEnabled: false },
+  { name: 'BONK/USDT',   okxInstId: 'BONK-USDT',   bybitInstId: 'BONKUSDT',   outputMint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',  decimals: 5,  dex: null,      isNative: false, okxCcy: 'BONK',   okxChain: 'BONK-Solana',   bybitCcy: 'BONK',   bybitChain: 'SOL', buyDexEnabled: true  },
+  { name: 'JUP/USDT',    okxInstId: 'JUP-USDT',    bybitInstId: 'JUPUSDT',    outputMint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'JUP',    okxChain: 'JUP-Solana',    bybitCcy: 'JUP',    bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'PYTH/USDT',   okxInstId: 'PYTH-USDT',   bybitInstId: 'PYTHUSDT',   outputMint: 'HZ1JovNiVvGqNLPQFZE5BsKs1Jvzd2Qqxe5bw3RVFHW',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'PYTH',   okxChain: 'PYTH-Solana',   bybitCcy: 'PYTH',  bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'RAY/USDT',    okxInstId: 'RAY-USDT',    bybitInstId: null,         outputMint: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',   decimals: 6,  dex: 'Raydium', isNative: false, okxCcy: 'RAY',    okxChain: 'RAY-Solana',    bybitCcy: null,     bybitChain: null,  buyDexEnabled: true  },
   { name: 'W/USDT',      okxInstId: 'W-USDT',      bybitInstId: 'WUSDT',      outputMint: '85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'W',      okxChain: 'W-Solana',      bybitCcy: 'W',      bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'POPCAT/USDT', okxInstId: 'POPCAT-USDT', bybitInstId: null,         outputMint: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr',   decimals: 9,  dex: null,      isNative: false, okxCcy: 'POPCAT', okxChain: 'POPCAT-Solana', bybitCcy: null,     bybitChain: null,  buyDexEnabled: false },
-  { name: 'MEW/USDT',    okxInstId: 'MEW-USDT',    bybitInstId: 'MEWUSDT',    outputMint: 'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5',    decimals: 5,  dex: null,      isNative: false, okxCcy: 'MEW',    okxChain: 'MEW-Solana',    bybitCcy: 'MEW',    bybitChain: 'SOL', buyDexEnabled: false },
+  { name: 'MEW/USDT',    okxInstId: 'MEW-USDT',    bybitInstId: 'MEWUSDT',    outputMint: 'MEW1gQWJ3nEXg2qgERiKu7FAFj79PHvQVREQUzScPP5',    decimals: 5,  dex: null,      isNative: false, okxCcy: 'MEW',    okxChain: 'MEW-Solana',    bybitCcy: 'MEW',    bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'BOME/USDT',   okxInstId: 'BOME-USDT',   bybitInstId: 'BOMEUSDT',   outputMint: 'ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'BOME',   okxChain: 'BOME-Solana',   bybitCcy: 'BOME',   bybitChain: 'SOL', buyDexEnabled: false },
   { name: 'TRUMP/USDT',  okxInstId: 'TRUMP-USDT',  bybitInstId: 'TRUMPUSDT',  outputMint: '6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'TRUMP',  okxChain: 'TRUMP-Solana',  bybitCcy: 'TRUMP',  bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'ZEUS/USDT',   okxInstId: 'ZEUS-USDT',   bybitInstId: null,         outputMint: 'ZEUS1aR7aX8DFFkgutzZaBW51tvGc4GRsHcEUuRLJtb',    decimals: 6,  dex: null,      isNative: false, okxCcy: 'ZEUS',   okxChain: 'ZEUS-Solana',   bybitCcy: null,     bybitChain: null,  buyDexEnabled: false },
   { name: 'RENDER/USDT', okxInstId: 'RENDER-USDT', bybitInstId: 'RENDERUSDT', outputMint: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof',    decimals: 8,  dex: null,      isNative: false, okxCcy: 'RENDER', okxChain: 'RENDER-Solana', bybitCcy: 'RENDER', bybitChain: 'SOL', buyDexEnabled: true  },
-  { name: 'PNUT/USDT',   okxInstId: 'PNUT-USDT',   bybitInstId: 'PNUTUSDT',   outputMint: '2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'PNUT',   okxChain: 'PNUT-Solana',   bybitCcy: 'PNUT',   bybitChain: 'SOL', buyDexEnabled: false },
-  { name: 'GOAT/USDT',   okxInstId: 'GOAT-USDT',   bybitInstId: 'GOATUSDT',   outputMint: 'CzLSujWBLFsSjncfkh59rUFqvafWcY5tzedWJSuypump',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'GOAT',   okxChain: 'GOAT-Solana',   bybitCcy: 'GOAT',   bybitChain: 'SOL', buyDexEnabled: false },
+  { name: 'PNUT/USDT',   okxInstId: 'PNUT-USDT',   bybitInstId: 'PNUTUSDT',   outputMint: '2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'PNUT',   okxChain: 'PNUT-Solana',   bybitCcy: 'PNUT',   bybitChain: 'SOL', buyDexEnabled: true  },
+  { name: 'GOAT/USDT',   okxInstId: 'GOAT-USDT',   bybitInstId: 'GOATUSDT',   outputMint: 'CzLSujWBLFsSjncfkh59rUFqvafWcY5tzedWJSuypump',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'GOAT',   okxChain: 'GOAT-Solana',   bybitCcy: 'GOAT',   bybitChain: 'SOL', buyDexEnabled: true  },
   { name: 'PENGU/USDT',  okxInstId: 'PENGU-USDT',  bybitInstId: 'PENGUUSDT',  outputMint: '2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv',   decimals: 6,  dex: null,      isNative: false, okxCcy: 'PENGU',  okxChain: 'PENGU-Solana',  bybitCcy: 'PENGU',  bybitChain: 'SOL', buyDexEnabled: true  },
 ];
 
@@ -2893,10 +2900,27 @@ async function main() {
       // Write live balances to bot-status so dashboard stays current
       const statusFile = path.join(__dirname, 'bot-status.json');
       const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
       existing.liveBalances = {
         solana: w.usdc,
         okx: okxBals.usdt,
         bybit: bybitBal,
+        kraken: krakenBal,
         updatedAt: new Date().toISOString(),
       };
       fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));

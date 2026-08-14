@@ -461,34 +461,79 @@ module.exports = [
   },
 
   {
-    id: 'jto-threshold-dynamic',
-    name: 'JTO DEX threshold: dynamically lower when conditions favourable',
+    id: 'dex-threshold-dynamic',
+    name: 'DEX thresholds: adjust all pairs based on volume and volatility',
     severity: 'info',
     detect(ctx) {
       if (!ctx.marketData) return null;
-      const jto = ctx.marketData.pairs['JTO'];
-      if (!jto) return null;
-      const currentThreshold = ctx.agentState.jtoThresholdOverride || 2.5;
-      // JTO is our best pair - if high volume + volatility, lower threshold slightly
-      if (jto.volume24h > 50000000 && jto.volatility > 4 && jto.change24h > -5) {
-        if (currentThreshold > 2.0) return [{ jto, currentThreshold, suggested: 2.0 }];
-      } else {
-        // Reset to default if conditions not favourable
-        if (currentThreshold < 2.5) return [{ jto, currentThreshold, suggested: 2.5, reset: true }];
+      const lastAdjust = ctx.agentState.lastDexAdjust || 0;
+      if (Date.now() - lastAdjust < 30 * 60 * 1000) return null; // max every 30min
+      
+      // DEX pairs with their base thresholds and volume tiers
+      const DEX_PAIRS = [
+        { sym: 'JTO',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 30e6,  minVol2: 50e6  },
+        { sym: 'RAY',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 10e6,  minVol2: 25e6  },
+        { sym: 'PENGU', base: 4.5, aggressive: 3.0, conservative: 5.0, minVol: 20e6,  minVol2: 50e6  },
+        { sym: 'W',     base: 3.2, aggressive: 2.5, conservative: 3.5, minVol: 15e6,  minVol2: 40e6  },
+        { sym: 'WIF',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 20e6,  minVol2: 50e6  },
+        { sym: 'PNUT',  base: 3.5, aggressive: 2.5, conservative: 4.0, minVol: 10e6,  minVol2: 25e6  },
+      ];
+
+      const adjustments = [];
+      for (const p of DEX_PAIRS) {
+        const data = ctx.marketData.pairs[p.sym];
+        if (!data) continue;
+        const vol = data.volume24h || 0;
+        const volat = data.volatility || 0;
+        const change24h = data.change24h || 0;
+        const current = ctx.config.DEX_THRESHOLD_OVERRIDES?.[p.sym] || p.base;
+
+        let suggested = p.base;
+        let reason = 'normal';
+
+        if (vol > p.minVol2 && volat > 5 && Math.abs(change24h) < 10) {
+          // High volume + high volatility + not in freefall = aggressive
+          suggested = p.aggressive;
+          reason = 'high vol $' + Math.round(vol/1e6) + 'M + volatility ' + volat.toFixed(1);
+        } else if (vol > p.minVol && volat > 3 && Math.abs(change24h) < 15) {
+          // Medium conditions = slightly below base
+          suggested = parseFloat(((p.base + p.aggressive) / 2).toFixed(1));
+          reason = 'medium vol $' + Math.round(vol/1e6) + 'M + volatility ' + volat.toFixed(1);
+        } else if (vol < p.minVol * 0.3 || volat < 1.5 || Math.abs(change24h) > 20) {
+          // Low volume or extreme move = conservative
+          suggested = p.conservative;
+          reason = 'low vol/extreme move';
+        }
+
+        if (Math.abs(suggested - current) >= 0.2) {
+          adjustments.push({ sym: p.sym, current, suggested, reason, direction: suggested < current ? 'lowered' : 'raised' });
+        }
       }
-      return null;
+
+      return adjustments.length ? [{ adjustments }] : null;
     },
     async action(ctx, issues) {
-      const { currentThreshold, suggested, reset, jto } = issues[0];
-      // Update BUY_DEX_THRESHOLDS dynamically via arb-config override
+      ctx.agentState.lastDexAdjust = Date.now();
+      const adjustments = issues[0].adjustments;
       if (!ctx.config.DEX_THRESHOLD_OVERRIDES) ctx.config.DEX_THRESHOLD_OVERRIDES = {};
-      ctx.config.DEX_THRESHOLD_OVERRIDES['JTO'] = suggested;
-      ctx.agentState.jtoThresholdOverride = suggested;
-      const msg = reset
-        ? 'JTO DEX threshold reset to ' + suggested + '% (low volume/volatility)'
-        : 'JTO DEX threshold lowered to ' + suggested + '% (vol $' + Math.round(jto.volume24h/1e6) + 'M, volatility ' + jto.volatility.toFixed(1) + ')';
-      await ctx.sendTG('Agent: ' + msg);
-      return [msg];
+
+      const changes = [];
+      const lowered = [];
+      const raised = [];
+
+      for (const adj of adjustments) {
+        ctx.config.DEX_THRESHOLD_OVERRIDES[adj.sym] = adj.suggested;
+        changes.push(adj.sym + ' DEX: ' + adj.current + '% -> ' + adj.suggested + '% (' + adj.reason + ')');
+        if (adj.direction === 'lowered') lowered.push(adj.sym + ' ' + adj.suggested + '%');
+        else raised.push(adj.sym + ' ' + adj.suggested + '%');
+      }
+
+      let msg = 'DEX threshold adjustments:\n';
+      if (lowered.length) msg += 'Lowered (more active): ' + lowered.join(', ') + '\n';
+      if (raised.length) msg += 'Raised (less active): ' + raised.join(', ') + '\n';
+
+      await ctx.sendTG(msg);
+      return changes;
     }
   },
 
@@ -1169,6 +1214,85 @@ module.exports = [
         await ctx.sendTG('Macro insight applied:\n' + changes.join('\n'));
       }
       return changes.length ? changes : ['Macro context reviewed — no config changes needed'];
+    }
+  },
+
+
+  {
+    id: 'pair-viability-weekly-test',
+    name: 'Weekly pair viability test',
+    severity: 'info',
+    detect(ctx) {
+      const lastTest = ctx.agentState.lastViabilityTest || 0;
+      if (Date.now() - lastTest < 7 * 24 * 60 * 60 * 1000) return null;
+      // Run at 07:00 UTC Sunday
+      const now = new Date();
+      if (now.getUTCDay() !== 0 || now.getUTCHours() !== 7) return null;
+      return [{ date: now.toISOString().slice(0,10) }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastViabilityTest = Date.now();
+      agentLog('Starting weekly pair viability test...');
+
+      const TRADE_SIZE = ctx.config.TRADE_SIZE_USD || 120;
+      const pairs = ['SOL','JTO','WIF','BONK','JUP','PYTH','RAY','W','BOME','TRUMP','ZEUS','RENDER','PNUT','GOAT','PENGU'];
+      const crypto = require('crypto');
+      const results = [];
+
+      for (const sym of pairs) {
+        try {
+          // Check OKX withdrawal
+          const ts = new Date().toISOString();
+          const path = '/api/v5/asset/currencies?ccy=' + sym;
+          const sig = crypto.createHmac('sha256', process.env.OKX_API_SECRET).update(ts+'GET'+path).digest('base64');
+          const r = await fetch('https://www.okx.com'+path, {
+            headers: {'OK-ACCESS-KEY':process.env.OKX_API_KEY,'OK-ACCESS-SIGN':sig,'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':process.env.OKX_PASSPHRASE}
+          });
+          const j = await r.json();
+          const chain = (j.data||[]).find(function(c){return c.chain&&c.chain.includes('Solana');});
+
+          if (!chain) { results.push({ sym, status: 'NO_CHAIN', action: 'skip' }); continue; }
+
+          const canWd = chain.canWd === true || chain.canWd === '1';
+          const feeUsd = parseFloat(chain.minFee||'0') * (ctx.marketData?.pairs?.[sym]?.price || 1);
+          const feePct = feeUsd / TRADE_SIZE * 100;
+
+          let status, action;
+          if (!canWd) { status = 'WD_DISABLED'; action = 'skip'; }
+          else if (feePct > 3.0) { status = 'FEE_TOO_HIGH'; action = 'kill'; }
+          else if (feePct > 1.5) { status = 'MARGINAL'; action = 'watch'; }
+          else { status = 'VIABLE'; action = 'enable'; }
+
+          results.push({ sym, status, feePct: parseFloat(feePct.toFixed(2)), canWd, action });
+
+          // Apply actions
+          if (action === 'kill') {
+            if (!ctx.config.POLICY_SKIP_OKX.includes(sym)) ctx.config.POLICY_SKIP_OKX.push(sym);
+            if (!ctx.config.POLICY_SKIP_BYBIT.includes(sym)) ctx.config.POLICY_SKIP_BYBIT.push(sym);
+          } else if (action === 'enable' && status === 'VIABLE') {
+            ctx.config.POLICY_SKIP_OKX = ctx.config.POLICY_SKIP_OKX.filter(function(s){return s!==sym;});
+          }
+        } catch(e) {
+          results.push({ sym, status: 'ERROR', error: e.message, action: 'skip' });
+        }
+        await new Promise(function(r){setTimeout(r,250);});
+      }
+
+      // Build report
+      const viable   = results.filter(function(r){return r.action==='enable';}).map(function(r){return r.sym+'('+r.feePct+'%)';}).join(', ');
+      const marginal = results.filter(function(r){return r.action==='watch';}).map(function(r){return r.sym+'('+r.feePct+'%)';}).join(', ');
+      const killed   = results.filter(function(r){return r.action==='kill';}).map(function(r){return r.sym;}).join(', ');
+      const noChain  = results.filter(function(r){return r.status==='NO_CHAIN'||r.status==='WD_DISABLED';}).map(function(r){return r.sym;}).join(', ');
+
+      const msg = 'Weekly Pair Viability Test\n' +
+        'Viable: ' + (viable||'none') + '\n' +
+        'Marginal: ' + (marginal||'none') + '\n' +
+        'Killed: ' + (killed||'none') + '\n' +
+        'No Solana chain: ' + (noChain||'none');
+
+      await ctx.sendTG(msg);
+      agentLog('Viability test complete: ' + results.length + ' pairs checked');
+      return ['Viability test: ' + results.filter(function(r){return r.action==='enable';}).length + ' viable, ' + results.filter(function(r){return r.action==='kill';}).length + ' killed'];
     }
   },
 

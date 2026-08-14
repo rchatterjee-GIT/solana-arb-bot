@@ -76,7 +76,9 @@ async function fetchKraken() {
     const sig=hmac.digest('base64');
     const r=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':sig,'Content-Type':'application/x-www-form-urlencoded'},body:data});
     const j=await r.json();
-    return parseFloat(j.result?.USDT||j.result?.ZUSD||0);
+    const usdt=parseFloat(j.result?.USDT||0);
+    const zusd=parseFloat(j.result?.ZUSD||0);
+    return usdt+zusd;
   } catch(e){return null;}
 }
 

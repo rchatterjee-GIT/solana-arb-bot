@@ -2,9 +2,122 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
+      "date": "2026-08-14",
+      "source": "The Block",
+      "headline": "Gemini shares slide after $108 million loss as Winklevoss says &#8216;we still have work to do&#8217;",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 10,
+      "link": "https://www.theblock.co/news/business/2026-08-13-gemini-shares-slide-108-million-loss-winklevoss-says-we-still-have-work-to-do-411775"
+    },
+    {
+      "date": "2026-08-14",
+      "source": "Motley Fool Crypto",
+      "headline": "RLJ Lodging Trust (RLJ) Q2 2026 Earnings Call Transcript",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 11,
+      "link": "https://www.fool.com/earnings/call-transcripts/2026/08/13/rlj-lodging-trust-rlj-q2-2026-earnings-call-transcript/?source=iedfolrf0000001"
+    },
+    {
+      "date": "2026-08-14",
+      "source": "CoinDesk",
+      "headline": "SEC cancels long-awaited proposal of Reg Crypto, postponing meeting without new date",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 12,
+      "link": "https://www.coindesk.com/policy/2026/08/13/sec-cancels-long-awaited-proposal-of-reg-crypto-postponing-meeting-without-new-date"
+    },
+    {
+      "date": "2026-08-14",
+      "source": "Motley Fool Crypto",
+      "headline": "Nvidia CEO Jensen Huang Just Introduced a Bold $500 Billion Plan to Potentially Create Chip-Backed Securities. What Could Go Wrong?",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 13,
+      "link": "https://www.fool.com/investing/2026/08/13/nvidia-ceo-jensen-huang-just-introduced-a-bold-500/?source=iedfolrf0000001"
+    },
+    {
+      "date": "2026-08-14",
+      "source": "The Block",
+      "headline": "Washington court orders Kalshi to halt most prediction market offerings in state",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 13,
+      "link": "https://www.theblock.co/news/regulation/2026-08-13-washington-court-orders-kalshi-411785"
+    },
+    {
       "date": "2026-08-13",
       "source": "Decrypt",
-      "headline": "ZEC Rebounds 11%! Trump says he won’t pardon Sam Bankman-Fried! Florida revisits it’s Strategic Bitcoin Reserve!",
+      "headline": "Crypto Group Warns Fed Could Use Banking Access to Squeeze Digital Asset Firms",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 14,
+      "link": "https://decrypt.co/375567/crypto-group-fed-banking-access-squeeze-firms"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "CoinDesk",
+      "headline": "Bullish shares surge 14% as subscription revenue offsets digital asset slowdown",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 16,
+      "link": "https://www.coindesk.com/business/2026/08/13/bullish-reports-usd280-million-q2-net-loss-as-crypto-trading-slows"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "Decrypt",
+      "headline": "Bitcoin Companies Want Help From AI Labs to Guard Against Hackers",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 20,
+      "link": "https://decrypt.co/375564/bitcoin-firms-want-ai-hacking-tools"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "The Block",
+      "headline": "Ether.fi adds tokenized stocks, metals and Aave-powered portfolio loans in latest &#8216;neobank&#8217; expansion",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 21,
+      "link": "https://www.theblock.co/news/defi/2026-08-13-ether-fi-adds-tokenized-stocks-metals-and-aave-powered-portfolio-loans-in-latest-neobank-expansion-411704"
+    },
+    {
+      "date": "2026-08-13",
+      "source": "Decrypt",
+      "headline": "Ethereum DeFi Platform Ether.fi Adds Tokenized Stocks and Portfolio-Backed Loans",
       "implications": [
         "URGENT: Market impact — review positions",
         "Regulatory development — monitor exchange availability"
@@ -12,118 +125,7 @@
       "botActions": [],
       "sentiment": "high_impact",
       "score": 23,
-      "link": "https://decrypt.co/videos/interviews/72tPnqPX/zec-rebounds-11-trump-says-he-wont-pardon-sam-bankman-fried-florida-revisits-its-strategic-bitcoin-reserve"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Are we back? Crypto is Green! Solana Intern goes rogue! Pump up 13%! Monero hits another ATH!",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 26,
-      "link": "https://decrypt.co/videos/interviews/Iv1NIhI4/are-we-back-crypto-is-green-solana-intern-goes-rogue-pump-up-13-monero-hits-another-ath"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Crypto sells off amidst Trump Tariff Turmoil! $Trove falls 90% in awful TGE! Pump Fund announced!",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 27,
-      "link": "https://decrypt.co/videos/interviews/lokwS0bc/crypto-sells-off-amidst-trump-tariff-turmoil-trove-falls-90-in-awful-tge-pump-fund-announced"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Trump Tariffs 3: Return of the Bull Market! NYSE Tokenising, what that means for $Hype! Claude Meme Meta!",
-      "implications": [
-        "Bullish macro signal — increased arb activity expected"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 31,
-      "link": "https://decrypt.co/videos/interviews/O1HZN4PH/trump-tariffs-3-return-of-the-bull-market-nyse-tokenising-what-that-means-for-hype-claude-meme-meta"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "CoinDesk",
-      "headline": "Brazil’s largest bitcoin treasury firm plans ETF with 95% allocation to Strategy's STRC",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 33,
-      "link": "https://www.coindesk.com/business/2026/08/13/brazil-s-largest-bitcoin-treasury-firm-plans-etf-with-95-allocation-to-strategy-s-strc"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "FT Markets",
-      "headline": "Rio Tinto gets $1.8bn bailout for Australia’s biggest aluminium smelter",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 10,
-      "link": "https://www.ft.com/content/92f69c81-f15f-409f-877d-0cc61f4ef697?syn-25a6b1a6=1"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "Motley Fool Crypto",
-      "headline": "Which Precious Metals ETF Is the Better Buy: iShares' Gold Trust IAU or Silver Miners SLVP?",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 10,
-      "link": "https://www.fool.com/coverage/etfs/2026/08/12/which-precious-metals-etf-is-the-better-buy-ishares-gold-trust-iau-or-silver-miners-slvp/?source=iedfolrf0000001"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "The Block",
-      "headline": "Hyperliquid treasury Hyperion triples quarterly profits as HYPE holdings rise in value",
-      "implications": [
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 12,
-      "link": "https://www.theblock.co/news/markets/2026-08-12-hyperliquid-treasury-hyperion-triples-quarterly-profits-as-hype-holdings-rise-in-value-411652"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "CoinDesk",
-      "headline": "Morgan Stanley's infrastructure partner Zerohash rebuffed in pitch to be U.S. trust bank",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 13,
-      "link": "https://www.coindesk.com/policy/2026/08/12/morgan-stanley-s-infrastructure-partner-zerohash-rebuffed-in-pitch-to-be-u-s-trust-bank"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "CoinDesk",
-      "headline": "Securitize falls 20% after earnings miss as tokenization revenue falls short",
-      "implications": [
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 13,
-      "link": "https://www.coindesk.com/markets/2026/08/12/securitize-falls-20-after-earnings-miss-as-tokenization-revenue-falls-short"
+      "link": "https://decrypt.co/375529/ethereum-defi-etherfi-tokenized-stocks"
     }
   ],
   "structuralInsights": {
@@ -133,5 +135,5 @@
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
   },
-  "lastNewsRun": "2026-08-13T11:33:08.696Z"
+  "lastNewsRun": "2026-08-14T03:57:50.536Z"
 }

@@ -194,11 +194,11 @@ async function scanNewListings() {
   } else {
     log('First Bybit scan — baseline set (' + bybitPairs.length + ' pairs, no alerts)');
   }
-  // Only alert on Kraken new listings if we had a previous scan (not first run)
+  // Process new Kraken listings through full viability framework
   if (known.kraken && known.kraken.length > 0 && newKraken.length > 0 && newKraken.length < 10) {
     for (const pair of newKraken) {
-      log('New Kraken listing: ' + pair.symbol);
-      await sendTG('New Kraken listing: ' + pair.symbol + ' — check if available on OKX/Bybit for arb');
+      log('New Kraken listing: ' + pair.symbol + ' — running viability check');
+      await processKrakenListing(pair.symbol, okxSymbols, bybitSymbols, config, newPairs);
     }
   } else if (newKraken.length >= 10) {
     log('First Kraken scan — baseline set (' + krakenPairs.length + ' pairs, no alerts)');
@@ -250,22 +250,34 @@ async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, con
       spreadInfo = `spread ${spreadPct.toFixed(2)}%`;
     }
 
-    // 5. Build alert
-    const viable = wd.canWithdraw && dex.liquid;
-    const emoji = viable ? '🚀' : '⚠️';
+    // 5. Check fee viability at $120 trade size
+    let feeUsd = 0;
+    let feePct = 0;
+    if (wd.fee) {
+      try {
+        const cgr = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + symbol.toLowerCase() + '&vs_currencies=usd');
+        const cgj = await cgr.json();
+        const price = Object.values(cgj)[0]?.usd || 0;
+        feeUsd = wd.fee * price;
+        feePct = feeUsd / 120 * 100;
+      } catch {}
+    }
+    const feeViable = feePct < 3.0 || feeUsd === 0;
+    const viable = wd.canWithdraw && dex.liquid && feeViable;
 
-    const alertMsg =
-      `${emoji} <b>New ${exchange} Listing: ${symbol}</b>\n` +
-      `Withdrawal: ${wd.canWithdraw ? '✅ enabled' : '❌ disabled'}\n` +
-      `DEX liquidity: ${dex.liquid ? '✅ liquid' : '❌ '+dex.reason}\n` +
-      `Mint: ${mint ? mint.slice(0,8)+'...' : 'not found'}\n` +
-      `${spreadInfo}\n` +
-      (viable ? '→ Adding to bot scan list (threshold '+LISTING_THRESHOLD+'%)' : '→ Monitor only - not adding to bot');
+    const alertMsg = (viable ? '[NEW]' : '[SKIP]') + ' New ' + exchange + ' Listing: ' + symbol + '\n' +
+      'Withdrawal: ' + (wd.canWithdraw ? 'enabled' : 'disabled') + '\n' +
+      'DEX: ' + (dex.liquid ? 'liquid (' + (dex.priceImpact||0).toFixed(2) + '% impact)' : 'illiquid') + '\n' +
+      (feeUsd > 0 ? 'WD fee: $' + feeUsd.toFixed(2) + ' (' + feePct.toFixed(1) + '% of trade)\n' : '') +
+      spreadInfo + '\n' +
+      (viable ? '-> Adding to bot (threshold ' + LISTING_THRESHOLD + '%)' :
+       !wd.canWithdraw ? '-> Withdrawal disabled' :
+       !dex.liquid ? '-> No DEX liquidity' : '-> Fee too high');
 
     await sendTG(alertMsg);
-    log(`${symbol} alert sent. Viable: ${viable}`);
+    log(symbol + ' alert sent. Viable: ' + viable);
 
-    // 6. Add to bot if viable
+        // 6. Add to bot if viable
     if (viable && mint) {
       // Add to new-pairs.json in bot-compatible format
       const expiresAt = new Date(Date.now() + LISTING_MAX_AGE_HRS * 60 * 60 * 1000).toISOString();
@@ -342,8 +354,108 @@ async function checkNews() {
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
+async function processKrakenListing(symbol, okxSymbols, bybitSymbols, config, newPairs) {
+  try {
+    // Check if listed on OKX or Bybit (needed for arb)
+    const onOKX   = okxSymbols.has(symbol);
+    const onBybit = bybitSymbols.has(symbol);
+
+    if (!onOKX && !onBybit) {
+      log(symbol + ': Kraken only — no OKX/Bybit listing, cannot arb');
+      await sendTG('New Kraken listing: ' + symbol + ' (Kraken only — not on OKX/Bybit, no arb possible)');
+      return;
+    }
+
+    // Check DEX liquidity and mint
+    const mint = await findMint(symbol);
+    const dex  = mint ? await checkDEXLiquidity(mint, LISTING_TRADE_SIZE) : { liquid: false, reason: 'No mint' };
+
+    // Check OKX withdrawal if listed there
+    let wd = { canWithdraw: false };
+    if (onOKX) wd = await checkOKXWithdrawal(symbol);
+
+    // Fee viability
+    let feeUsd = 0, feePct = 0;
+    if (wd.fee) {
+      try {
+        const cgr = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + symbol.toLowerCase() + '&vs_currencies=usd');
+        const cgj = await cgr.json();
+        const price = Object.values(cgj)[0]?.usd || 0;
+        feeUsd  = wd.fee * price;
+        feePct  = feeUsd / 120 * 100;
+      } catch {}
+    }
+    const feeViable = feePct < 3.0 || feeUsd === 0;
+    const viable    = (wd.canWithdraw || onBybit) && dex.liquid && feeViable;
+
+    const exchanges = [onOKX?'OKX':'', onBybit?'Bybit':''].filter(Boolean).join('+');
+    const alertMsg =
+      (viable ? '[NEW]' : '[SKIP]') + ' Kraken listing: ' + symbol + '\n' +
+      'Also on: ' + (exchanges || 'nowhere') + '\n' +
+      'Withdrawal: ' + (wd.canWithdraw ? 'enabled' : 'disabled') + '\n' +
+      'DEX: ' + (dex.liquid ? 'liquid' : 'illiquid') + '\n' +
+      (feeUsd > 0 ? 'Fee: $' + feeUsd.toFixed(2) + ' (' + feePct.toFixed(1) + '%)\n' : '') +
+      (viable ? '-> Adding to bot scan list' : '-> Not viable for arb');
+
+    await sendTG(alertMsg);
+
+    if (viable && mint) {
+      // Add to new-pairs.json for bot to pick up
+      const expiresAt = new Date(Date.now() + LISTING_MAX_AGE_HRS * 60 * 60 * 1000).toISOString();
+      newPairs.push({
+        symbol, exchange: 'Kraken+' + exchanges, mint,
+        addedAt: Date.now(), expiresAt,
+        wd: wd.canWithdraw, dexLiquid: dex.liquid,
+        listingThreshold: LISTING_THRESHOLD,
+        name: symbol + '/USDT',
+        okxInstId: onOKX ? symbol + '-USDT' : null,
+        bybitInstId: onBybit ? symbol + 'USDT' : null,
+        outputMint: mint, decimals: 6, isNative: false,
+        okxCcy: onOKX ? symbol : null, okxChain: onOKX ? symbol + '-Solana' : null,
+        bybitCcy: onBybit ? symbol : null, bybitChain: onBybit ? 'SOL' : null,
+        buyDexEnabled: dex.liquid,
+      });
+      if (!config.PAIR_MIN_SPREAD) config.PAIR_MIN_SPREAD = {};
+      config.PAIR_MIN_SPREAD[symbol] = LISTING_THRESHOLD;
+      writeJSON(CONFIG_FILE, config);
+      log(symbol + ' auto-added to bot via Kraken detection');
+    }
+  } catch(e) { log('Kraken listing process error for ' + symbol + ': ' + e.message); }
+}
+
+async function recheckExistingNewPairs() {
+  // Re-check viability of previously detected pairs
+  // Withdrawal may have been enabled, or conditions changed
+  const newPairs = readJSON(NEW_FILE) || [];
+  const config = readJSON(CONFIG_FILE) || {};
+  if (newPairs.length === 0) return;
+
+  log('Re-checking ' + newPairs.length + ' existing new pair(s)...');
+  for (const pair of newPairs) {
+    if (!pair.mint) continue;
+    try {
+      const wd = pair.exchange === 'OKX' ? await checkOKXWithdrawal(pair.symbol) : { canWithdraw: true };
+      const dex = await checkDEXLiquidity(pair.mint, 60);
+      const nowViable = wd.canWithdraw && dex.liquid;
+
+      if (nowViable && !pair.wd) {
+        // Became viable — add to config
+        if (!config.PAIR_MIN_SPREAD) config.PAIR_MIN_SPREAD = {};
+        config.PAIR_MIN_SPREAD[pair.symbol] = LISTING_THRESHOLD;
+        writeJSON(CONFIG_FILE, config);
+        pair.wd = true;
+        pair.dexLiquid = true;
+        await sendTG('[NEW] ' + pair.symbol + ' withdrawal now enabled — added to bot scan list');
+        log(pair.symbol + ' became viable — added to config');
+      }
+    } catch(e) { log('Recheck error for ' + pair.symbol + ': ' + e.message); }
+  }
+  writeJSON(NEW_FILE, newPairs);
+}
+
 async function run() {
   const result = await scanNewListings();
+  await recheckExistingNewPairs();
   await checkNews();
   return result;
 }

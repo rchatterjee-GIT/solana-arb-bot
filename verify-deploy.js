@@ -68,6 +68,11 @@ const FILES = [
     required: ['fetchFundingRates','getFundingData','getTopSignals'],
   },
   {
+    file: 'bitget-scaffold.js',
+    minLines: 100,
+    required: ['getBitgetBalance','getBitgetTicker','bitgetWithdraw','calcSpread'],
+  },
+  {
     file: 'news-monitor.js',
     minLines: 150,
     required: ['runNewsTrawl','formatDigest','parseRSS','scoreItem'],
