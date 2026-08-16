@@ -73,6 +73,11 @@ const FILES = [
     required: ['getBitgetBalance','getBitgetTicker','bitgetWithdraw','calcSpread'],
   },
   {
+    file: 'coinbase-scaffold.js',
+    minLines: 150,
+    required: ['getCoinbaseBalance','getCoinbaseTicker','coinbaseMarketBuy','coinbaseWithdraw','calcCoinbaseSpread'],
+  },
+  {
     file: 'news-monitor.js',
     minLines: 150,
     required: ['runNewsTrawl','formatDigest','parseRSS','scoreItem'],

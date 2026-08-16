@@ -2,109 +2,71 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
-      "date": "2026-08-14",
-      "source": "The Block",
-      "headline": "Gemini shares slide after $108 million loss as Winklevoss says &#8216;we still have work to do&#8217;",
+      "date": "2026-08-16",
+      "source": "Motley Fool Crypto",
+      "headline": "Vanguard's VGLT or Schwab's SCHQ: Which Long-Term Treasury ETF Is the Better Buy?",
       "implications": [
-        "General market development — monitor for spread impact"
+        "DEX activity update — monitor Jupiter liquidity"
       ],
       "botActions": [],
       "sentiment": "moderate_impact",
-      "score": 10,
-      "link": "https://www.theblock.co/news/business/2026-08-13-gemini-shares-slide-108-million-loss-winklevoss-says-we-still-have-work-to-do-411775"
+      "score": 18,
+      "link": "https://www.fool.com/coverage/etfs/2026/08/15/vanguard-s-vglt-or-schwab-s-schq-which-long-term-treasury-etf-is-the-better-buy/?source=iedfolrf0000001"
     },
     {
-      "date": "2026-08-14",
-      "source": "Motley Fool Crypto",
-      "headline": "RLJ Lodging Trust (RLJ) Q2 2026 Earnings Call Transcript",
+      "date": "2026-08-15",
+      "source": "The Block",
+      "headline": "JPMorgan cut Polymarket’s banking ties in October but still wants a role in a potential IPO: FT",
       "implications": [
         "URGENT: Market impact — review positions",
         "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
       "sentiment": "moderate_impact",
-      "score": 11,
-      "link": "https://www.fool.com/earnings/call-transcripts/2026/08/13/rlj-lodging-trust-rlj-q2-2026-earnings-call-transcript/?source=iedfolrf0000001"
+      "score": 12,
+      "link": "https://www.theblock.co/news/business/2026-08-15-jpmorgan-cut-polymarkets-banking-ties-in-october-but-still-wants-a-role-in-a-potential-ipo-ft-411929"
     },
     {
-      "date": "2026-08-14",
+      "date": "2026-08-15",
       "source": "CoinDesk",
-      "headline": "SEC cancels long-awaited proposal of Reg Crypto, postponing meeting without new date",
+      "headline": "Why the world’s second-largest Bitcoin mining power is shutting down rigs in its capital city",
       "implications": [
         "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
       "sentiment": "moderate_impact",
       "score": 12,
-      "link": "https://www.coindesk.com/policy/2026/08/13/sec-cancels-long-awaited-proposal-of-reg-crypto-postponing-meeting-without-new-date"
+      "link": "https://www.coindesk.com/policy/2026/08/15/why-the-world-s-second-largest-bitcoin-mining-power-is-shutting-down-rigs-in-its-capital-city"
     },
     {
-      "date": "2026-08-14",
-      "source": "Motley Fool Crypto",
-      "headline": "Nvidia CEO Jensen Huang Just Introduced a Bold $500 Billion Plan to Potentially Create Chip-Backed Securities. What Could Go Wrong?",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 13,
-      "link": "https://www.fool.com/investing/2026/08/13/nvidia-ceo-jensen-huang-just-introduced-a-bold-500/?source=iedfolrf0000001"
-    },
-    {
-      "date": "2026-08-14",
-      "source": "The Block",
-      "headline": "Washington court orders Kalshi to halt most prediction market offerings in state",
+      "date": "2026-08-15",
+      "source": "CoinDesk",
+      "headline": "Paul Tudor Jones’ investment firm increases stake in BlackRock's bitcoin ETF after year of selling",
       "implications": [
         "General market development — monitor for spread impact"
       ],
       "botActions": [],
       "sentiment": "moderate_impact",
-      "score": 13,
-      "link": "https://www.theblock.co/news/regulation/2026-08-13-washington-court-orders-kalshi-411785"
+      "score": 17,
+      "link": "https://www.coindesk.com/business/2026/08/15/paul-tudor-jones-investment-firm-increases-blackrock-s-bitcoin-etf-stake-after-year-of-selling"
     },
     {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Crypto Group Warns Fed Could Use Banking Access to Squeeze Digital Asset Firms",
+      "date": "2026-08-15",
+      "source": "Motley Fool Crypto",
+      "headline": "Which Is the Better Short-Term Bond ETF, Vanguard's VTES or VanEck's SMB?",
       "implications": [
-        "URGENT: Market impact — review positions",
+        "DEX activity update — monitor Jupiter liquidity",
         "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
       "sentiment": "moderate_impact",
-      "score": 14,
-      "link": "https://decrypt.co/375567/crypto-group-fed-banking-access-squeeze-firms"
+      "score": 19,
+      "link": "https://www.fool.com/coverage/etfs/2026/08/15/which-is-the-better-short-term-bond-etf-vanguard-s-vtes-or-vaneck-s-smb/?source=iedfolrf0000001"
     },
     {
-      "date": "2026-08-13",
+      "date": "2026-08-15",
       "source": "CoinDesk",
-      "headline": "Bullish shares surge 14% as subscription revenue offsets digital asset slowdown",
-      "implications": [
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 16,
-      "link": "https://www.coindesk.com/business/2026/08/13/bullish-reports-usd280-million-q2-net-loss-as-crypto-trading-slows"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Bitcoin Companies Want Help From AI Labs to Guard Against Hackers",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 20,
-      "link": "https://decrypt.co/375564/bitcoin-firms-want-ai-hacking-tools"
-    },
-    {
-      "date": "2026-08-13",
-      "source": "The Block",
-      "headline": "Ether.fi adds tokenized stocks, metals and Aave-powered portfolio loans in latest &#8216;neobank&#8217; expansion",
+      "headline": "Swiss mega-bank UBS ramps up its Bitcoin exposure with a massive 24-fold surge in ETF call options",
       "implications": [
         "URGENT: Market impact — review positions",
         "Regulatory development — monitor exchange availability"
@@ -112,20 +74,57 @@
       "botActions": [],
       "sentiment": "high_impact",
       "score": 21,
-      "link": "https://www.theblock.co/news/defi/2026-08-13-ether-fi-adds-tokenized-stocks-metals-and-aave-powered-portfolio-loans-in-latest-neobank-expansion-411704"
+      "link": "https://www.coindesk.com/business/2026/08/15/swiss-mega-bank-ubs-ramps-up-its-bitcoin-exposure-with-a-massive-24-fold-surge-in-etf-call-options"
     },
     {
-      "date": "2026-08-13",
-      "source": "Decrypt",
-      "headline": "Ethereum DeFi Platform Ether.fi Adds Tokenized Stocks and Portfolio-Backed Loans",
+      "date": "2026-08-15",
+      "source": "CoinDesk",
+      "headline": "Clarity survives (barely), Strategy sells and the untold story of Mastercard's $1.8 billion deal: Crypto's week in 5 stories",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 12,
+      "link": "https://www.coindesk.com/business/2026/08/15/clarity-survives-barely-strategy-sells-and-the-untold-story-of-mastercard-s-usd1-8-billion-deal-crypto-s-week-in-5-stories"
+    },
+    {
+      "date": "2026-08-15",
+      "source": "Motley Fool Crypto",
+      "headline": "Fed Chair Kevin Warsh Is Reshaping the Central Bank, but the Unintended Consequences of His Actions Can Derail Wall Street",
       "implications": [
         "URGENT: Market impact — review positions",
         "Regulatory development — monitor exchange availability"
       ],
       "botActions": [],
-      "sentiment": "high_impact",
-      "score": 23,
-      "link": "https://decrypt.co/375529/ethereum-defi-etherfi-tokenized-stocks"
+      "sentiment": "moderate_impact",
+      "score": 17,
+      "link": "https://www.fool.com/investing/2026/08/15/fed-kevin-warsh-reforms-unintended-consequences/?source=iedfolrf0000001"
+    },
+    {
+      "date": "2026-08-15",
+      "source": "Motley Fool Crypto",
+      "headline": "Crypto Market Today, Aug. 14: Bitcoin Slips as SEC Tokenization Progress Stalls",
+      "implications": [
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 10,
+      "link": "https://www.fool.com/coverage/stock-market-today/2026/08/14/crypto-market-today-aug-14-bitcoin-slips-as-tokenization-regulation-stalls/?source=iedfolrf0000001"
+    },
+    {
+      "date": "2026-08-15",
+      "source": "Motley Fool Crypto",
+      "headline": "Warren Buffett's Successor, Greg Abel, Pared Down Bank of America, and Piled Into a Virtual Monopoly That's Now Berkshire's 3rd-Largest Holding",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 13,
+      "link": "https://www.fool.com/investing/2026/08/14/warren-buffett-greg-abel-pared-down-bac-buy-googl/?source=iedfolrf0000001"
     }
   ],
   "structuralInsights": {
@@ -135,5 +134,5 @@
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
   },
-  "lastNewsRun": "2026-08-14T03:57:50.536Z"
+  "lastNewsRun": "2026-08-16T07:05:12.121Z"
 }

@@ -1,14 +1,18 @@
 {
   "POLICY_SKIP_OKX": [
+    "BOME",
     "POPCAT",
-    "MEW",
     "ZEUS",
-    "RENDER",
     "GOAT"
   ],
   "POLICY_SKIP_BYBIT": [
+    "BOME",
+    "BONK",
+    "GOAT",
+    "JUP",
     "MEW",
     "POPCAT",
+    "TRUMP",
     "ZEUS"
   ],
   "RECOVERY_SKIP_BYBIT": [
@@ -24,15 +28,15 @@
   "HOLD_CHECK_SECS": 30,
   "APPROACH_BANDS": [
     {
-      "pct": 60,
+      "pct": 80,
       "cooldown_min": 30
     },
     {
-      "pct": 75,
-      "cooldown_min": 15
+      "pct": 90,
+      "cooldown_min": 10
     },
     {
-      "pct": 90,
+      "pct": 95,
       "cooldown_min": 5
     }
   ],
@@ -50,11 +54,11 @@
   "REBALANCE_TARGET_BYBIT": 300,
   "REBALANCE_TARGET_KRAKEN": 300,
   "KRAKEN_SYNTHETIC": false,
-  "lastTestDate": "2026-08-09T06:02:38.653Z",
+  "lastTestDate": "2026-08-16T06:03:01.120Z",
   "lastTestSummary": {
-    "passed": 96,
-    "failed": 4,
-    "warned": 2
+    "passed": 97,
+    "failed": 5,
+    "warned": 0
   },
   "MIN_SPREAD_DEX": 1,
   "PAIR_MIN_SPREAD": {
@@ -66,23 +70,23 @@
     "BONK": 3
   },
   "TEMP_SKIPS": {
-    "GOAT:POLICY_SKIP_OKX": 1786723017367
+    "GOAT:POLICY_SKIP_OKX": 1786896013132
   },
   "TRADE_SIZE_BYBIT": 200,
   "MIN_SPREAD_KRAKEN": 1.2,
   "DEX_THRESHOLD_OVERRIDES": {
     "SOL": 2,
     "JTO": 2.5,
-    "RAY": 2.5,
+    "RAY": 3,
     "WIF": 2.5,
     "W": 3.5,
     "JUP": 2.5,
     "BONK": 3,
     "PYTH": 2.5,
     "RENDER": 2.5,
-    "PNUT": 3,
+    "PNUT": 3.5,
     "GOAT": 3,
-    "PENGU": 3.8,
+    "PENGU": 4.5,
     "TRUMP": 4,
     "BOME": 3.5,
     "MEW": 99,
