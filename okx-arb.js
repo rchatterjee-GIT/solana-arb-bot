@@ -1819,6 +1819,9 @@ async function checkAndExecute() {
       const liveData = { timestamp: new Date().toISOString(), okxHealthy, pairs: pairResults.filter(r => r.status === 'fulfilled' && r.value).map(r => { const v = r.value; return { name: v.pair.name, okxBid: v.okx.bid, okxAsk: v.okx.ask, bybitBid: v.bybit?.bid||null, bybitAsk: v.bybit?.ask||null, spreadOKX: parseFloat(v.spreadOKX.toFixed(3)), spreadBybit: v.bybit?parseFloat(v.spreadBybit.toFixed(3)):null, spreadDex: parseFloat(v.spreadDex.toFixed(3)), dexThresh: v.dexThresh, okxViable: v.okxViable, bybitViable: v.bybitViable, dexEnabled: v.dexEnabled }; }).sort((a, b) => Math.max(b.spreadOKX, b.spreadDex) - Math.max(a.spreadOKX, a.spreadDex)) };
       fs.writeFileSync(path.join(__dirname, 'arb-live.json'), JSON.stringify(liveData));
       // Write bot status for dashboard
+      // Preserve liveBalances across writes
+      let existingLiveBal = {};
+      try { existingLiveBal = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8')).liveBalances || {}; } catch {}
       fs.writeFileSync(path.join(__dirname, 'bot-status.json'), JSON.stringify({
         version: BOT_VERSION,
         timestamp: new Date().toISOString(),
@@ -1837,6 +1840,7 @@ async function checkAndExecute() {
         smartSell: liveConfig.SMART_SELL !== false,
         skipOKX: liveConfig.POLICY_SKIP_OKX || POLICY_SKIP_OKX,
         skipBybit: liveConfig.POLICY_SKIP_BYBIT || POLICY_SKIP_BYBIT,
+        liveBalances: existingLiveBal,
       }));
     } catch { /* ignore */ }
     await checkApproachAlerts(pairResults);
