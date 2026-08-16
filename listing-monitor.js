@@ -62,11 +62,14 @@ async function bybitGet(ep, qs) {
 // ── Fetch all OKX spot pairs ──────────────────────────────────────────────────
 async function getCoinbasePairs() {
   try {
-    const r = await fetch('https://api.coinbase.com/api/v3/brokerage/products?product_type=SPOT&quote_currency_id=USDC&limit=500');
+    // Use public exchange rates endpoint - no auth needed
+    const r = await fetch('https://api.exchange.coinbase.com/products', {
+      headers: { 'User-Agent': 'ArbitrageBot/1.0' }
+    });
     const j = await r.json();
-    return (j.products || [])
-      .filter(p => p.status === 'online' && p.product_type === 'SPOT')
-      .map(p => ({ symbol: p.base_currency_id, instId: p.product_id }));
+    return (Array.isArray(j) ? j : [])
+      .filter(p => p.quote_currency === 'USDC' && p.status === 'online' && !p.cancel_only && !p.post_only)
+      .map(p => ({ symbol: p.base_currency, instId: p.id }));
   } catch(e) { log('Coinbase pairs error: ' + e.message); return []; }
 }
 

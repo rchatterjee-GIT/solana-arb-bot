@@ -1087,7 +1087,7 @@ async function recoverOKXTokens() {
         await new Promise(r => setTimeout(r, 3000));
         const newBals = await getOKXBalances();
         recovered.push({ ccy: d.ccy, bal, usdEst });
-        await sendAlert(`🤖 <b>Auto-recovered: ${d.ccy} on OKX</b>\nSold ${bal.toFixed(4)} ${d.ccy}\nOKX USDT now: $${newBals.usdt.toFixed(2)}`);
+        await sendAlert(`🤖 <b>Auto-recovered: ${d.ccy} on OKX\nSold ${bal.toFixed(4)} ${d.ccy}\nOKX USDT now: $${newBals.usdt.toFixed(2)}`);
       } catch (err) { logCrash(`recoverOKXTokens:${d.ccy}`, err); }
       await new Promise(r => setTimeout(r, 1000));
     }
@@ -1142,7 +1142,7 @@ async function recoverBybitTokens() {
         await new Promise(r => setTimeout(r, 3000));
         const newBal = await getBybitBalance('USDT');
         recovered.push({ ccy: c.coin, bal, usdEst });
-        await sendAlert(`🤖 <b>Auto-recovered: ${c.coin} on Bybit</b>\nSold ${bal.toFixed(4)} ${c.coin}\nBybit USDT now: $${newBal.toFixed(2)}`);
+        await sendAlert(`🤖 <b>Auto-recovered: ${c.coin} on Bybit\nSold ${bal.toFixed(4)} ${c.coin}\nBybit USDT now: $${newBal.toFixed(2)}`);
       } catch (err) { logCrash(`recoverBybitTokens:${c.coin}`, err); }
       await new Promise(r => setTimeout(r, 1000));
     }
@@ -1438,7 +1438,7 @@ async function backgroundWalletClean() {
           const result = await okxPrivate('POST', '/api/v5/trade/order', { instId: d.ccy + '-USDT', tdMode: 'cash', side: 'sell', ordType: 'market', sz: sellQty, tgtCcy: 'base_ccy' });
           if (result.code === '0') {
             console.log('  ✅ OKX ' + d.ccy + ' sold');
-            await sendAlert('🤖 [BOT] Cleaned: ' + d.ccy + ' on OKX</b>\n$' + usdEst.toFixed(2) + ' → USDT');
+            await sendAlert('🤖 [BOT] Cleaned: ' + d.ccy + ' on OKX\n$' + usdEst.toFixed(2) + ' → USDT');
           } else {
             console.log('  ⚠️  OKX ' + d.ccy + ' sell failed: ' + result.msg);
           }
@@ -1487,7 +1487,7 @@ async function backgroundWalletClean() {
         }
         if (sold) {
           console.log('  ✅ Bybit ' + c.coin + ' sold');
-          await sendAlert('🤖 [BOT] Cleaned: ' + c.coin + ' on Bybit</b>\n$' + usdEst.toFixed(2) + ' → USDT');
+          await sendAlert('🤖 [BOT] Cleaned: ' + c.coin + ' on Bybit\n$' + usdEst.toFixed(2) + ' → USDT');
         } else {
           console.log('  ⚠️  Bybit ' + c.coin + ': will retry in 15min');
         }
@@ -1505,7 +1505,7 @@ async function backgroundWalletClean() {
       const { outAmount } = await jupiterSwapRaw(USDT_MINT, USDC_MINT, Math.floor(usdtBal), 50);
       const usdcOut = outAmount / 1e6;
       console.log(`  ✅ Swapped $${usdtAmt.toFixed(2)} USDT → $${usdcOut.toFixed(2)} USDC`);
-      await sendAlert(`🧹 <b>Cleaned: USDT on Solana</b>\n$${usdtAmt.toFixed(2)} → $${usdcOut.toFixed(2)} USDC`);
+      await sendAlert(`🧹 <b>Cleaned: USDT on Solana\n$${usdtAmt.toFixed(2)} → $${usdcOut.toFixed(2)} USDC`);
       anyFound = true;
     }
   } catch (err) { logCrash('bgClean:Solana:USDT', err); }
@@ -1529,7 +1529,7 @@ async function backgroundWalletClean() {
         const { outAmount } = await jupiterSwapRaw(pair.outputMint, USDC_MINT, Math.floor(rawBal));
         const usdcOut = outAmount / 1e6;
         console.log('  ✅ Solana ' + pair.okxCcy + ' → $' + usdcOut.toFixed(2) + ' USDC');
-        await sendAlert('🤖 [BOT] Cleaned: ' + pair.okxCcy + ' on Solana</b>\n$' + usdEst.toFixed(2) + ' → $' + usdcOut.toFixed(2) + ' USDC');
+        await sendAlert('🤖 [BOT] Cleaned: ' + pair.okxCcy + ' on Solana\n$' + usdEst.toFixed(2) + ' → $' + usdcOut.toFixed(2) + ' USDC');
       } catch (err) { logCrash('bgClean:Solana:' + pair.okxCcy, err); }
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -2199,7 +2199,7 @@ ${'─'.repeat(60)}`);
     const krakenStr = krakenBal2 !== null ? '$' + krakenBal2.toFixed(0) : 'syncing';
     const cbStr     = coinbaseBal2 !== null ? '$' + coinbaseBal2.toFixed(0) : 'syncing';
     const parts = [
-      '[BOT] ' + BOT_VERSION + ' | ' + (isActive?'ACTIVE':'quiet') + ' | ' + timeStr,
+      '🤖 [BOT] ' + BOT_VERSION + ' | ' + (isActive?'ACTIVE':'quiet') + ' | ' + timeStr,
       'Sol:$' + w.usdc.toFixed(0) + ' OKX:$' + okxBals.usdt.toFixed(0) + (okxHealthy?'':' [DOWN]') + ' By:$' + bybitBal.toFixed(0),
       'Kr:' + krakenStr + ' CB:' + cbStr,
       'Total: $' + knownTotal.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '% ROI)',
@@ -2942,7 +2942,7 @@ async function main() {
   } catch {}
 
   await sendAlert(
-    '[BOT] ' + BOT_VERSION + ' started | OKX: ' + (okxHealthy?'OK':'DOWN') + ' | Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
+    '🤖 [BOT] ' + BOT_VERSION + ' started | OKX: ' + (okxHealthy?'OK':'DOWN') + ' | Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
   );
     startOKXWS();
   startBybitWS();

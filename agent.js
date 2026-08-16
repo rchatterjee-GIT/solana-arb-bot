@@ -300,7 +300,7 @@ async function runCycle(agentState) {
 
 async function main() {
   agentLog('Agent ' + AGENT_VERSION + ' starting...');
-  sendTG('[AGENT] ' + AGENT_VERSION + ' online | Commands: /agent status | report | macro | pause | resume').catch(function(){});
+  sendTG('🔍 [AGENT] ' + AGENT_VERSION + ' online | /agent status | report | macro | pause | resume').catch(function(){});
 
   let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
   // Clean up any stale TEMP_SKIPS on startup
