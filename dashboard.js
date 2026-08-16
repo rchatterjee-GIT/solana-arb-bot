@@ -229,6 +229,7 @@ tr:hover td{background:#14141f}
     <div class="card" id="okx-card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
     <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div><div class="sub" id="bs">-</div></div>
     <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken</div><div class="sub" id="ks">-</div></div>
+    <div class="card"><div class="val" id="lcb">-</div><div class="lbl">Coinbase USDC</div><div class="sub" id="cbs">-</div></div>
   </div>
 
   <div class="g5">
@@ -303,6 +304,7 @@ tr:hover td{background:#14141f}
     <div style="margin-bottom:8px"><span class="dim">OKX: </span><span id="ov"></span></div>
     <div style="margin-bottom:8px"><span class="dim">Bybit: </span><span id="bv"></span></div>
     <div id="kvr" style="display:none"><span class="dim">Kraken: </span><span id="kv"></span></div>
+    <div id="cvr" style="display:none"><span class="dim">Coinbase: </span><span id="cbv"></span></div>
   </div>
 </div>
 
@@ -574,6 +576,7 @@ function render(d){
   // sk element removed - Kraken status in Wallets tab
   // Don't blank Kraken balance on refresh - keep last known value
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
+  var cvr=document.getElementById('cvr');var cbOn=d.config&&d.config.COINBASE_ENABLED;if(cbOn){cvr.style.display='';document.getElementById('cbv').innerHTML='<span class="badge bg">JTO</span><span class="badge bg">WIF</span><span class="badge bg">BONK</span><span class="badge bg">PENGU</span><span class="badge bg">PNUT</span><span class="badge bg">W</span><span class="badge bg">RENDER</span><span class="badge bg">TRUMP</span><span class="badge bg">PYTH</span><span class="badge bg">SOL</span>';}else cvr.style.display='none';
   var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'];
   var allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
   var skipOKX=st&&st.skipOKX||[],skipBybit=st&&st.skipBybit||[];
