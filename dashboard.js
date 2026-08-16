@@ -283,11 +283,11 @@ tr:hover td{background:#14141f}
     </div>
     <div class="card">
       <div class="val" id="w-kraken">-</div>
+      <div class="lbl">Kraken USDT</div>
+    </div>
     <div class="card">
       <div class="val" id="w-coinbase">-</div>
       <div class="lbl">Coinbase USDC</div>
-    </div>
-      <div class="lbl">Kraken USDT</div>
     </div>
   </div>
 
@@ -302,7 +302,7 @@ tr:hover td{background:#14141f}
   <div class="sec">Pair Viability</div>
   <div class="card">
     <div style="margin-bottom:8px"><span class="dim">OKX: </span><span id="ov"></span></div>
-    <div style="margin-bottom:8px"><span class="dim">Bybit: </span><span id="bv"></span></div>
+    <div style="margin-bottom:8px"><span class="dim">Bybit: </span><span id="byv"></span></div>
     <div id="kvr" style="display:none"><span class="dim">Kraken: </span><span id="kv"></span></div>
     <div id="cvr" style="display:none"><span class="dim">Coinbase: </span><span id="cbv"></span></div>
   </div>

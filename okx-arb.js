@@ -2942,7 +2942,19 @@ async function main() {
   } catch {}
 
   await sendAlert(
-    '🤖 [BOT] ' + BOT_VERSION + ' started | OKX: ' + (okxHealthy?'OK':'DOWN') + ' | Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
   );
     startOKXWS();
   startBybitWS();

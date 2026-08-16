@@ -2,127 +2,25 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
-      "date": "2026-08-16",
-      "source": "Decrypt",
-      "headline": "Crypto rebounds after Trump TACO’s on Tariffs! BitGo $2.1B IPO! Solana’s SKR token soars 250% FDV!",
+      "date": "2026-08-08",
+      "source": "Motley Fool",
+      "headline": "Crypto Exchanges Seeing Less Activity — DEX Share at 24% All-Time High",
       "implications": [
-        "General market development — monitor for spread impact"
+        "DEX volume share at all-time high (24%) — our DEX leg structurally advantaged",
+        "Solana DEX cleared $50.8B in June — Jupiter liquidity improving",
+        "CEX spot volume declining — CEX arb windows may be shorter/fewer",
+        "Perpetuals volume holding up — funding rates increasingly important signal",
+        "Bear market end signal — volume bottoming, recovery expected",
+        "Tokenized stocks growing — new asset class emerging on-chain"
       ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 19,
-      "link": "https://decrypt.co/videos/interviews/MqZOhomP/crypto-rebounds-after-trump-tacos-on-tariffs-bitgo-21b-ipo-solanas-skr-token-soars-250-fdv"
-    },
-    {
-      "date": "2026-08-16",
-      "source": "Decrypt",
-      "headline": "ZEC Rebounds 11%! Trump says he won’t pardon Sam Bankman-Fried! Florida revisits it’s Strategic Bitcoin Reserve!",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
+      "botActions": [
+        "Prioritise DEX trades over CEX trades where both available",
+        "Monitor funding rates closely as leading indicator",
+        "Prepare for increased activity as bear market turns",
+        "Consider DEX-only pairs with good Solana liquidity"
       ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 23,
-      "link": "https://decrypt.co/videos/interviews/72tPnqPX/zec-rebounds-11-trump-says-he-wont-pardon-sam-bankman-fried-florida-revisits-its-strategic-bitcoin-reserve"
-    },
-    {
-      "date": "2026-08-16",
-      "source": "Decrypt",
-      "headline": "Are we back? Crypto is Green! Solana Intern goes rogue! Pump up 13%! Monero hits another ATH!",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 26,
-      "link": "https://decrypt.co/videos/interviews/Iv1NIhI4/are-we-back-crypto-is-green-solana-intern-goes-rogue-pump-up-13-monero-hits-another-ath"
-    },
-    {
-      "date": "2026-08-16",
-      "source": "Decrypt",
-      "headline": "Crypto sells off amidst Trump Tariff Turmoil! $Trove falls 90% in awful TGE! Pump Fund announced!",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 27,
-      "link": "https://decrypt.co/videos/interviews/lokwS0bc/crypto-sells-off-amidst-trump-tariff-turmoil-trove-falls-90-in-awful-tge-pump-fund-announced"
-    },
-    {
-      "date": "2026-08-16",
-      "source": "Decrypt",
-      "headline": "Trump Tariffs 3: Return of the Bull Market! NYSE Tokenising, what that means for $Hype! Claude Meme Meta!",
-      "implications": [
-        "Bullish macro signal — increased arb activity expected"
-      ],
-      "botActions": [],
-      "sentiment": "high_impact",
-      "score": 31,
-      "link": "https://decrypt.co/videos/interviews/O1HZN4PH/trump-tariffs-3-return-of-the-bull-market-nyse-tokenising-what-that-means-for-hype-claude-meme-meta"
-    },
-    {
-      "date": "2026-08-16",
-      "source": "Motley Fool Crypto",
-      "headline": "Vanguard's VGLT or Schwab's SCHQ: Which Long-Term Treasury ETF Is the Better Buy?",
-      "implications": [
-        "DEX activity update — monitor Jupiter liquidity"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 18,
-      "link": "https://www.fool.com/coverage/etfs/2026/08/15/vanguard-s-vglt-or-schwab-s-schq-which-long-term-treasury-etf-is-the-better-buy/?source=iedfolrf0000001"
-    },
-    {
-      "date": "2026-08-15",
-      "source": "The Block",
-      "headline": "JPMorgan cut Polymarket’s banking ties in October but still wants a role in a potential IPO: FT",
-      "implications": [
-        "URGENT: Market impact — review positions",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 12,
-      "link": "https://www.theblock.co/news/business/2026-08-15-jpmorgan-cut-polymarkets-banking-ties-in-october-but-still-wants-a-role-in-a-potential-ipo-ft-411929"
-    },
-    {
-      "date": "2026-08-15",
-      "source": "CoinDesk",
-      "headline": "Why the world’s second-largest Bitcoin mining power is shutting down rigs in its capital city",
-      "implications": [
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 12,
-      "link": "https://www.coindesk.com/policy/2026/08/15/why-the-world-s-second-largest-bitcoin-mining-power-is-shutting-down-rigs-in-its-capital-city"
-    },
-    {
-      "date": "2026-08-15",
-      "source": "CoinDesk",
-      "headline": "Paul Tudor Jones’ investment firm increases stake in BlackRock's bitcoin ETF after year of selling",
-      "implications": [
-        "General market development — monitor for spread impact"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 17,
-      "link": "https://www.coindesk.com/business/2026/08/15/paul-tudor-jones-investment-firm-increases-blackrock-s-bitcoin-etf-stake-after-year-of-selling"
-    },
-    {
-      "date": "2026-08-15",
-      "source": "Motley Fool Crypto",
-      "headline": "Which Is the Better Short-Term Bond ETF, Vanguard's VTES or VanEck's SMB?",
-      "implications": [
-        "DEX activity update — monitor Jupiter liquidity",
-        "Regulatory development — monitor exchange availability"
-      ],
-      "botActions": [],
-      "sentiment": "moderate_impact",
-      "score": 19,
-      "link": "https://www.fool.com/coverage/etfs/2026/08/15/which-is-the-better-short-term-bond-etf-vanguard-s-vtes-or-vaneck-s-smb/?source=iedfolrf0000001"
+      "sentiment": "cautiously_bullish",
+      "timeframe": "weeks_to_months"
     }
   ],
   "structuralInsights": {
@@ -131,6 +29,5 @@
     "marketPhase": "late_bear_early_recovery",
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
-  },
-  "lastNewsRun": "2026-08-16T11:05:16.024Z"
+  }
 }

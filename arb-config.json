@@ -1,38 +1,41 @@
 {
   "POLICY_SKIP_OKX": [
+    "TRUMP",
     "POPCAT",
-    "ZEUS",
-    "MEW",
-    "RENDER",
-    "GOAT"
+    "BONK",
+    "JUP",
+    "BOME"
   ],
   "POLICY_SKIP_BYBIT": [
-    "MEW",
+    "JUP",
+    "TRUMP",
     "POPCAT",
-    "ZEUS"
+    "BONK",
+    "BOME",
+    "GOAT"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
   ],
   "TRADE_SIZE_USD": 120,
-  "MIN_SPREAD_CEX": 1.5,
+  "MIN_SPREAD_CEX": 1,
   "WINS_TARGET": 10,
   "SMART_SELL": true,
   "HOLD_MIN_SPREAD_PCT": 0.4,
-  "HOLD_MAX_HOURS": 0.5,
+  "HOLD_MAX_HOURS": 2,
   "HOLD_STOP_LOSS_PCT": 5,
   "HOLD_CHECK_SECS": 30,
   "APPROACH_BANDS": [
     {
-      "pct": 80,
+      "pct": 60,
       "cooldown_min": 30
     },
     {
-      "pct": 90,
-      "cooldown_min": 10
+      "pct": 75,
+      "cooldown_min": 15
     },
     {
-      "pct": 95,
+      "pct": 90,
       "cooldown_min": 5
     }
   ],
@@ -43,50 +46,21 @@
   "VOLATILE_BAND_MULTIPLIER": 0.8,
   "note": "Edit via node command only. Changes take effect within 30s.",
   "MAX_CONCURRENT_TRADES": 2,
-  "MIN_SPREAD_BUFFER_PCT": 12,
-  "KRAKEN_ENABLED": true,
+  "MIN_SPREAD_BUFFER_PCT": 20,
+  "KRAKEN_ENABLED": false,
   "REBALANCE_TARGET_SOLANA": 200,
   "REBALANCE_TARGET_OKX": 350,
   "REBALANCE_TARGET_BYBIT": 300,
   "REBALANCE_TARGET_KRAKEN": 300,
   "KRAKEN_SYNTHETIC": false,
-  "lastTestDate": "2026-08-16T06:03:01.120Z",
-  "lastTestSummary": {
-    "passed": 97,
-    "failed": 5,
-    "warned": 0
-  },
-  "MIN_SPREAD_DEX": 1,
   "PAIR_MIN_SPREAD": {
-    "GOAT": 3,
-    "PENGU": 2.5,
     "W": 3.2,
-    "BOME": 3,
-    "TRUMP": 4,
-    "BONK": 3
+    "GOAT": 2
   },
-  "TEMP_SKIPS": {
-    "GOAT:POLICY_SKIP_OKX": 1786969644894
-  },
-  "TRADE_SIZE_BYBIT": 200,
-  "MIN_SPREAD_KRAKEN": 1.2,
   "DEX_THRESHOLD_OVERRIDES": {
-    "SOL": 2,
-    "JTO": 2.5,
     "RAY": 3,
-    "WIF": 3,
-    "W": 3.5,
-    "JUP": 2.5,
-    "BONK": 3,
-    "PYTH": 2.5,
-    "RENDER": 2.5,
-    "PNUT": 3.5,
-    "GOAT": 3,
     "PENGU": 5,
-    "TRUMP": 4,
-    "BOME": 3.5,
-    "MEW": 99,
-    "ZEUS": 99
-  },
-  "COINBASE_ENABLED": true
+    "W": 3.5,
+    "WIF": 3
+  }
 }
