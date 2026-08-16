@@ -2,6 +2,13 @@
 // Each rule: { id, name, detect(ctx), action(ctx), severity }
 // severity: 'info' | 'warn' | 'critical'
 
+// Shared balance header for all Telegram messages
+function balHeader(ctx) {
+  const total = (ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)+(ctx.balances.coinbase||0);
+  const roi = ((total - 261.31) / 261.31 * 100).toFixed(1);
+  return 'Sol:$'+(ctx.balances.solana||0).toFixed(0)+' OKX:$'+(ctx.balances.okx||0).toFixed(0)+' By:$'+(ctx.balances.bybit||0).toFixed(0)+' Kr:$'+(ctx.balances.kraken||0).toFixed(0)+' CB:$'+(ctx.balances.coinbase||0).toFixed(0)+'\nTotal: $'+total.toFixed(0)+' ('+roi+'% ROI)';
+}
+
 module.exports = [
 
   // ── PAIR PERFORMANCE RULES ────────────────────────────────────────────────
@@ -409,7 +416,7 @@ module.exports = [
       ctx.agentState.lastSentiment = conditions.sentiment;
       ctx.agentState.lastSentimentTime = Date.now();
       const emoji = conditions.sentiment === 'bullish' ? '🟢' : conditions.sentiment === 'bearish' ? '🔴' : '🟡';
-      await ctx.sendTG(emoji + ' <b>Market Sentiment: ' + conditions.sentiment.toUpperCase() + '</b>\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs);
+      await ctx.sendTG(emoji + ' <b>Market Sentiment: ' + conditions.sentiment.toUpperCase() + '</b>\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs + '\n' + balHeader(ctx));
       return ['Sentiment changed to ' + conditions.sentiment];
     }
   },
@@ -634,9 +641,10 @@ module.exports = [
       const { wins } = issues[0];
       ctx.agentState.lastWinMilestone = wins;
       await ctx.sendTG(
-        'Win streak: ' + wins + '/10 consecutive wins\n' +
+        'Win streak: ' + wins + '/10\n' +
         'P&L: +$' + (ctx.state.totalProfit || 0).toFixed(2) + '\n' +
-        (wins >= 10 ? 'TARGET REACHED - consider scaling to $200' : 'Keep going - ' + (10-wins) + ' more to scale')
+        balHeader(ctx) + '\n' +
+        (wins >= 10 ? 'TARGET REACHED - scale to $200 now' : (10-wins) + ' more to scale')
       );
       return ['Win milestone: ' + wins + ' consecutive'];
     }
@@ -828,7 +836,7 @@ module.exports = [
       }
 
       if (balBefore) {
-        diagnosis += 'Balances at fire: Sol:$' + (balBefore.solana||0).toFixed(0) + ' OKX:$' + (balBefore.okx||0).toFixed(0) + ' By:$' + (balBefore.bybit||0).toFixed(0);
+        diagnosis += 'Balances at fire: Sol:$' + (balBefore.solana||0).toFixed(0) + ' OKX:$' + (balBefore.okx||0).toFixed(0) + ' By:$' + (balBefore.bybit||0).toFixed(0) + ' Kr:$' + (balBefore.kraken||0).toFixed(0) + ' CB:$' + (balBefore.coinbase||0).toFixed(0);
       }
 
       await ctx.sendTG('Burst event diagnosed:\n' + diagnosis);
