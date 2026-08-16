@@ -2193,7 +2193,7 @@ ${'─'.repeat(60)}`);
     } catch {}
     // Only include exchanges with known balances in total
     const knownTotal = total + (krakenBal2 !== null ? krakenBal2 : 0) + (coinbaseBal2 !== null ? coinbaseBal2 : 0);
-    const sc = startCapital || 261.31;
+    const sc = (startCapital && startCapital > 100) ? startCapital : 261.31;
     const gain2 = knownTotal - sc;
     const gainPct2 = (gain2 / sc * 100).toFixed(1);
     const krakenStr = krakenBal2 !== null ? '$' + krakenBal2.toFixed(0) : 'syncing';
@@ -2252,13 +2252,23 @@ async function runStartupChecks() {
   await runRecoveryChecks();
   const w = await getWalletBalances(), okxBals = await getOKXBalances(), okxFunding = await getOKXFundingBal(), bybitBal = await getBybitBalance('USDT');
   const total = w.usdc + okxBals.usdt + okxFunding + bybitBal;
+  // Read Kraken + Coinbase from liveBalances (written by startup sync)
+  let krakenSum = null, coinbaseSum = null;
+  try {
+    const lb = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8')).liveBalances || {};
+    krakenSum   = typeof lb.kraken   === 'number' ? lb.kraken   : null;
+    coinbaseSum = typeof lb.coinbase === 'number' ? lb.coinbase : null;
+  } catch {}
+  const grandTotal = total + (krakenSum||0) + (coinbaseSum||0);
   console.log(`\n💼 Capital Summary:`);
   console.log(`   Solana USDC:      $${w.usdc.toFixed(2)}`);
   console.log(`   Solana SOL:       ${w.sol.toFixed(4)}`);
   console.log(`   OKX trading USDT: $${okxBals.usdt.toFixed(2)}${!okxHealthy?' [OFFLINE]':''}`);
   console.log(`   OKX funding USDT: $${okxFunding.toFixed(2)}`);
   console.log(`   Bybit USDT:       $${bybitBal.toFixed(2)}`);
-  console.log(`   Total liquid:     $${total.toFixed(2)}`);
+  console.log(`   Kraken USDT:      ${krakenSum!=null?'$'+krakenSum.toFixed(2):'syncing'}`);
+  console.log(`   Coinbase USDC:    ${coinbaseSum!=null?'$'+coinbaseSum.toFixed(2):'syncing'}`);
+  console.log(`   Total liquid:     $${grandTotal.toFixed(2)}`);
   console.log(`   Trade size:       $${TRADE_SIZE_USD}`);
   console.log(`   OKX health:       ${okxHealthy ? '✅ online' : '❌ offline'}`);
   console.log('\n✅ Startup checks complete\n');
@@ -2697,6 +2707,30 @@ async function handleRemovePair(ccy) {
 
 
 // ── Omni-directional rebalance ───────────────────────────────────────────────
+async function executeRebalanceMove(move) {
+  if (move.method === 'sol-to-okx') {
+    await swapUSDCtoUSDT(move.amount);
+    const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+    await withdrawUSDTFromSolana(move.amount, depositAddr);
+  } else if (move.method === 'sol-to-bybit') {
+    await swapUSDCtoUSDT(move.amount);
+    const depositAddr = await getBybitDepositAddress('USDT');
+    await withdrawUSDTFromSolana(move.amount, depositAddr);
+  } else if (move.method === 'okx-to-sol') {
+    await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+  } else if (move.method === 'okx-to-bybit') {
+    const depositAddr = await getBybitDepositAddress('USDT');
+    await withdrawUSDTFromOKX(move.amount, depositAddr);
+  } else if (move.method === 'bybit-to-sol') {
+    await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+  } else if (move.method === 'bybit-to-okx') {
+    const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+    await withdrawUSDTFromBybit(move.amount, depositAddr);
+  } else {
+    throw new Error('Unknown rebalance method: ' + move.method);
+  }
+}
+
 async function handleRebalanceCommand(confirm = false) {
   try {
     const w        = await getWalletBalances();
@@ -2822,7 +2856,7 @@ async function handleRebalanceCommand(confirm = false) {
           await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
           await new Promise(r => setTimeout(r, 30000));
           try {
-            await move.fn();
+            await executeRebalanceMove(move);
             await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
           } catch (err2) {
             logCrash('rebalance-retry:' + move.method, err2);
