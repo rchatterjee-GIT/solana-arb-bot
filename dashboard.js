@@ -85,26 +85,9 @@ async function fetchKraken() {
 async function fetchCoinbase() {
   try {
     if(!process.env.COINBASE_API_KEY||!process.env.COINBASE_API_SECRET) return null;
-    const keyName=process.env.COINBASE_API_KEY;
-    const keySecret=process.env.COINBASE_API_SECRET.trim();
-    const ts=Math.floor(Date.now()/1000);
-    const nonce=crypto.randomBytes(16).toString('hex');
-    const path='/api/v3/brokerage/accounts';
-    const uri='GET api.coinbase.com'+path;
-    const header=Buffer.from(JSON.stringify({typ:'JWT',alg:'EdDSA',kid:keyName,nonce})).toString('base64url');
-    const payload=Buffer.from(JSON.stringify({sub:keyName,iss:'cdp',nbf:ts,exp:ts+120,uri})).toString('base64url');
-    const msg=header+'.'+payload;
-    const keyBuf=Buffer.from(keySecret,'base64');
-    let privateKey;
-    try{privateKey=crypto.createPrivateKey({key:keyBuf,format:'der',type:'pkcs8'});}
-    catch{privateKey=crypto.createPrivateKey({key:'-----BEGIN PRIVATE KEY-----\n'+keySecret+'\n-----END PRIVATE KEY-----',format:'pem'});}
-    const sig=crypto.sign(null,Buffer.from(msg),privateKey);
-    const jwt=msg+'.'+sig.toString('base64url');
-    const r=await fetch('https://api.coinbase.com'+path,{headers:{'Authorization':'Bearer '+jwt}});
-    const j=await r.json();
-    const acc=(j.accounts||[]).find(a=>a.currency==='USDC');
-    return parseFloat(acc?.available_balance?.value||'0');
-  } catch(e){return null;}
+    const cb = require('./coinbase-scaffold');
+    return await cb.getCoinbaseBalance('USDC');
+  } catch(e){ return null; }
 }
 
 async function sendTG(text) {

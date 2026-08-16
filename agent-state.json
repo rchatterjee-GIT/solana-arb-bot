@@ -1,14 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-14T13:19:31.519Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: PNUT showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-14T14:13:31.567Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
@@ -799,15 +791,23 @@
         "Pre-session scan complete - W 6.0"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-16T13:00:39.571Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: W showing high scores"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T12:54:39.278Z",
-  "actionsToday": 33,
+  "lastRun": "2026-08-16T13:25:39.462Z",
+  "actionsToday": 34,
   "lastActionDate": "2026-08-16",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
-    "market-active-window": 1786798811687,
+    "market-active-window": 1786885239313,
     "market-avoid-signal": 1786298025632,
     "temp-skip-expiry": 1786809553113,
     "market-sentiment-report": 1786821375103,
@@ -827,7 +827,7 @@
     "dex-threshold-dynamic": 1786883244888,
     "pair-viability-weekly-test": 1786863620051
   },
-  "activeWindowAlerted": false,
+  "activeWindowAlerted": true,
   "lastSentimentTime": 1786821375117,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786877904255,
