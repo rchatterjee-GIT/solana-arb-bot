@@ -1,3 +1,4 @@
+const COINBASE_VERSION = 'v1.0';
 // coinbase-scaffold.js — Coinbase Advanced Trade integration
 // Pairs: JTO/USDC, PENGU/USDC, WIF/USDC, BONK/USDC, RAY/USDC etc
 // Fee: 0.60% taker (volume-based, reduces with volume)

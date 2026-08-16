@@ -1,3 +1,4 @@
+const HYGIENE_VERSION = 'v1.2';
 // hygiene.js — proactive fund management and dust clearing
 // Runs every 15 minutes via okx-arb.js require
 // Handles: OKX trading/funding cleanup, Bybit UNIFIED/FUND cleanup,

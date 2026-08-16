@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-16T13:27:36.288Z",
+  "fetchedAt": "2026-08-16T13:43:21.212Z",
   "summary": {
     "JTO": {
       "okxRate": 0.00005,
@@ -8,10 +8,10 @@
       "annualised": 5.5
     },
     "SOL": {
-      "okxRate": 0.0000426553871229,
-      "bybitRate": -0.00002325,
-      "avgRate": 0.000009702693561449999,
-      "annualised": 1.1
+      "okxRate": 0.0000402761733979,
+      "bybitRate": -0.00002607,
+      "avgRate": 0.0000071030866989500004,
+      "annualised": 0.8
     },
     "WIF": {
       "okxRate": 0.00005,
@@ -38,10 +38,10 @@
       "annualised": 5.5
     },
     "PNUT": {
-      "okxRate": -0.0000598417228247,
+      "okxRate": -0.0000534623558794,
       "bybitRate": 0.00005,
-      "avgRate": -0.00000492086141235,
-      "annualised": -0.5
+      "avgRate": -0.0000017311779397,
+      "annualised": -0.2
     },
     "GOAT": {
       "okxRate": null,
@@ -50,16 +50,16 @@
       "annualised": 5.6
     },
     "RAY": {
-      "okxRate": 0.0000559717900531,
+      "okxRate": 0.0000815441255067,
       "bybitRate": null,
-      "avgRate": 0.0000559717900531,
-      "annualised": 6.1
+      "avgRate": 0.0000815441255067,
+      "annualised": 8.9
     },
     "BONK": {
-      "okxRate": -0.0000210778975254,
+      "okxRate": -0.0000229024378794,
       "bybitRate": null,
-      "avgRate": -0.0000210778975254,
-      "annualised": -2.3
+      "avgRate": -0.0000229024378794,
+      "annualised": -2.5
     }
   },
   "signals": [],

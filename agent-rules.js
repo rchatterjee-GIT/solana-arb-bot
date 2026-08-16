@@ -300,13 +300,19 @@ module.exports = [
       const fires = ctx.fires.filter(f => new Date(f.date).getTime() > since);
       const failed = fires.filter(f => f.outcome === 'failed');
 
-      const msg = `📊 <b>Daily Report ${issues[0].date}</b>\n` +
-        `Fires: ${fires.length} | Failed: ${failed.length}\n` +
-        `Trades: ${trades.length} | Wins: ${wins.length}\n` +
-        `P&L: ${pnl>=0?'+':''}$${pnl.toFixed(2)}\n` +
-        `Total P&L: ${ctx.state.totalProfit>=0?'+':''}$${(ctx.state.totalProfit||0).toFixed(2)}\n` +
-        `ConsecWins: ${ctx.state.consecutiveWins||0}/10 | Clean: ${ctx.state.consecutiveClean||0}/20\n` +
-        `OKX: $${(ctx.balances.okx||0).toFixed(0)} | By: $${(ctx.balances.bybit||0).toFixed(0)} | Sol: $${(ctx.balances.solana||0).toFixed(0)}`;
+      const totalCap = (ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)+(ctx.balances.coinbase||0);
+      const startCap = 261.31; // initial capital
+      const roiPct = ((totalCap - startCap) / startCap * 100).toFixed(1);
+      const msg = '📊 <b>Daily Report ' + issues[0].date + '</b>\n' +
+        'Capital: $' + totalCap.toFixed(0) + ' (' + (totalCap>=startCap?'+':'') + roiPct + '%)\n' +
+        'Sol: $' + (ctx.balances.solana||0).toFixed(0) + ' | OKX: $' + (ctx.balances.okx||0).toFixed(0) + ' | Bybit: $' + (ctx.balances.bybit||0).toFixed(0) + '\n' +
+        'Kraken: $' + (ctx.balances.kraken||0).toFixed(0) + ' | Coinbase: $' + (ctx.balances.coinbase||0).toFixed(0) + '\n' +
+        '---\n' +
+        'Fires: ' + fires.length + ' | Failed: ' + failed.length + '\n' +
+        'Trades: ' + trades.length + ' | Wins: ' + wins.length + '\n' +
+        'P&L today: ' + (pnl>=0?'+':'') + '$' + pnl.toFixed(2) + '\n' +
+        'Total P&L: ' + (ctx.state.totalProfit>=0?'+':'') + '$' + (ctx.state.totalProfit||0).toFixed(2) + '\n' +
+        'ConsecWins: ' + (ctx.state.consecutiveWins||0) + '/10 | Clean: ' + (ctx.state.consecutiveClean||0);
 
       await ctx.sendTG(msg);
       ctx.agentState.lastDailyReport = Date.now();
