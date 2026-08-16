@@ -82,6 +82,31 @@ async function fetchKraken() {
   } catch(e){return null;}
 }
 
+async function fetchCoinbase() {
+  try {
+    if(!process.env.COINBASE_API_KEY||!process.env.COINBASE_API_SECRET) return null;
+    const keyName=process.env.COINBASE_API_KEY;
+    const keySecret=process.env.COINBASE_API_SECRET.trim();
+    const ts=Math.floor(Date.now()/1000);
+    const nonce=crypto.randomBytes(16).toString('hex');
+    const path='/api/v3/brokerage/accounts';
+    const uri='GET api.coinbase.com'+path;
+    const header=Buffer.from(JSON.stringify({typ:'JWT',alg:'EdDSA',kid:keyName,nonce})).toString('base64url');
+    const payload=Buffer.from(JSON.stringify({sub:keyName,iss:'cdp',nbf:ts,exp:ts+120,uri})).toString('base64url');
+    const msg=header+'.'+payload;
+    const keyBuf=Buffer.from(keySecret,'base64');
+    let privateKey;
+    try{privateKey=crypto.createPrivateKey({key:keyBuf,format:'der',type:'pkcs8'});}
+    catch{privateKey=crypto.createPrivateKey({key:'-----BEGIN PRIVATE KEY-----\n'+keySecret+'\n-----END PRIVATE KEY-----',format:'pem'});}
+    const sig=crypto.sign(null,Buffer.from(msg),privateKey);
+    const jwt=msg+'.'+sig.toString('base64url');
+    const r=await fetch('https://api.coinbase.com'+path,{headers:{'Authorization':'Bearer '+jwt}});
+    const j=await r.json();
+    const acc=(j.accounts||[]).find(a=>a.currency==='USDC');
+    return parseFloat(acc?.available_balance?.value||'0');
+  } catch(e){return null;}
+}
+
 async function sendTG(text) {
   try {
     await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_TOKEN+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:process.env.TELEGRAM_CHAT_ID,text,parse_mode:'HTML'})});
@@ -398,8 +423,9 @@ async function doLiveBalances(){
     if(d.okx!=null)document.getElementById('lo').textContent=fmt2(d.okx);
     if(d.bybit!=null)document.getElementById('lb').textContent=fmt2(d.bybit);
     if(d.kraken!=null&&d.kraken>0){document.getElementById('lk').textContent=fmt2(d.kraken);document.getElementById('ks').innerHTML='<span class="green">online</span>';}
-  var cbEnabled=d.config&&d.config.COINBASE_ENABLED;
-  if(d.coinbase!=null){document.getElementById('lcb')&&(document.getElementById('lcb').textContent=fmt2(d.coinbase));document.getElementById('cbs')&&(document.getElementById('cbs').innerHTML=cbEnabled?'<span class="green">online</span>':'<span class="dim">disabled</span>');}
+  var cbEnabled=d.coinbaseEnabled||false;
+  if(document.getElementById('lcb')){document.getElementById('lcb').textContent=d.coinbase!=null?fmt2(d.coinbase):'-';}
+  if(document.getElementById('cbs')){document.getElementById('cbs').innerHTML=!cbEnabled?'<span class="dim">disabled</span>':d.coinbase!=null?'<span class="green">online</span>':'<span class="yellow">-</span>';}
     var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
     document.getElementById('tc').textContent=fmt2(total);
     // OKX warning
@@ -420,7 +446,7 @@ function renderWallets(d){
   document.getElementById('w-okx').textContent=fmt2(d.okx);
   document.getElementById('w-bybit').textContent=fmt2(d.bybit);
   document.getElementById('w-kraken').textContent=d.kraken!=null?fmt2(d.kraken):'-';
-  document.getElementById('w-coinbase').textContent=d.coinbase!=null?fmt2(d.coinbase):'-';
+  document.getElementById('w-coinbase').textContent=d.coinbase!=null?fmt2(d.coinbase):d.coinbaseEnabled?'loading...':'-';
   // Tokens
   function renderToks(elId,toks){
     var el=document.getElementById(elId);
@@ -645,16 +671,21 @@ const server = http.createServer(async function(req,res) {
     try{
       const config=readJSON(CONFIG_FILE)||{};
       const krakenEnabled=config.KRAKEN_ENABLED||false;
+      const coinbaseEnabled=config.COINBASE_ENABLED||false;
       const [sol,okxData,bybitData]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
-      let kraken=null;
+      let kraken=null,coinbase=null;
       if(krakenEnabled){
         try{kraken=await fetchKraken();}catch{kraken=0;}
+      }
+      if(coinbaseEnabled){
+        try{coinbase=await fetchCoinbase();}catch{coinbase=0;}
       }
       res.end(JSON.stringify({
         solana:sol.usdc,solanaTokens:sol.tokens,
         okx:okxData.usdt,okxTokens:okxData.tokens,
         bybit:bybitData.usdt,bybitTokens:bybitData.tokens,
         kraken,krakenEnabled,
+        coinbase,coinbaseEnabled,
         fetchedAt:new Date().toISOString()
       }));
     }catch(e){res.end(JSON.stringify({error:e.message}));}

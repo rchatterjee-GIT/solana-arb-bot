@@ -87,5 +87,6 @@
     "BOME": 3.5,
     "MEW": 99,
     "ZEUS": 99
-  }
+  },
+  "COINBASE_ENABLED": true
 }

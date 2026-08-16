@@ -1,14 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-14T13:13:31.075Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-14T13:19:31.519Z",
       "rule": "market-active-window",
       "changes": [
@@ -799,11 +791,19 @@
         "PNUT DEX: 3% -> 3.5% (normal)"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-16T12:30:42.473Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "Pre-session scan complete - W 6.0"
+      ],
+      "severity": "info"
     }
   ],
   "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T12:28:24.903Z",
-  "actionsToday": 32,
+  "lastRun": "2026-08-16T12:54:39.278Z",
+  "actionsToday": 33,
   "lastActionDate": "2026-08-16",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
@@ -814,7 +814,7 @@
     "daily-performance-report": 1786860022469,
     "spread-duration-analysis": 1786371587448,
     "dry-spell-analysis": 1786877904247,
-    "pre-session-threshold-optimisation": 1786854618847,
+    "pre-session-threshold-optimisation": 1786883442304,
     "burst-event-monitor": 1786373172019,
     "kraken-window-prep": 1786855518979,
     "exchange-viability-scan": 1786459147209,
@@ -831,7 +831,7 @@
   "lastSentimentTime": 1786821375117,
   "lastSpreadAnalysis": 1786371587458,
   "lastDrySpellAlert": 1786877904255,
-  "lastPreSessionOpt": 1786854618854,
+  "lastPreSessionOpt": 1786883442315,
   "lastBurstAlert": "2026-08-07T08:04:25",
   "lastKrakenPrep": 1786855518988,
   "lastExchangeScan": 1786459147224,
