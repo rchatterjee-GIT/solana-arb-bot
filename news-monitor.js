@@ -208,7 +208,7 @@ async function runNewsTrawl(sendTG) {
   const urgent = scored.filter(i => i.urgent);
   if (urgent.length > 0 && sendTG) {
     for (const item of urgent.slice(0,2)) {
-      await sendTG('URGENT NEWS:\n' + item.title + '\n' + item.implications.join('\n') + '\n' + item.link);
+      await sendTG('🚨 [ALERT] Urgent News\n' + item.title + '\n' + item.implications.join('\n') + '\n' + item.link);
     }
   }
 
@@ -248,7 +248,7 @@ async function runNewsTrawl(sendTG) {
 
 function formatDigest(result) {
   if (!result || result.relevant === 0) return null;
-  let msg = '<b>News Digest</b>\n';
+  let msg = '📡 [MARKET] News Digest\n';
   msg += result.relevant + ' relevant articles from ' + RSS_SOURCES.length + ' sources\n\n';
   result.top.forEach(function(item) {
     msg += '<b>[' + item.source + ']</b> ' + item.title + '\n';

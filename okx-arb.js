@@ -245,7 +245,7 @@ async function checkOKXHealth() {
       console.log('✅ OKX REST back online');
       const downSecs = okxDownSince ? Math.round((Date.now() - okxDownSince) / 1000) : 0;
       if (okxDownSince && downSecs > 300) {
-        await sendAlert('✅ <b>OKX back online</b> — was down ' + Math.round(downSecs/60) + 'min');
+        await sendAlert('🤖 [BOT] OKX back online — was down ' + Math.round(downSecs/60) + 'min');
       }
       okxDownSince = null;
     } else if (wasHealthy && !okxHealthy) {
@@ -1438,7 +1438,7 @@ async function backgroundWalletClean() {
           const result = await okxPrivate('POST', '/api/v5/trade/order', { instId: d.ccy + '-USDT', tdMode: 'cash', side: 'sell', ordType: 'market', sz: sellQty, tgtCcy: 'base_ccy' });
           if (result.code === '0') {
             console.log('  ✅ OKX ' + d.ccy + ' sold');
-            await sendAlert('🧹 <b>Cleaned: ' + d.ccy + ' on OKX</b>\n$' + usdEst.toFixed(2) + ' → USDT');
+            await sendAlert('🤖 [BOT] Cleaned: ' + d.ccy + ' on OKX</b>\n$' + usdEst.toFixed(2) + ' → USDT');
           } else {
             console.log('  ⚠️  OKX ' + d.ccy + ' sell failed: ' + result.msg);
           }
@@ -1487,7 +1487,7 @@ async function backgroundWalletClean() {
         }
         if (sold) {
           console.log('  ✅ Bybit ' + c.coin + ' sold');
-          await sendAlert('🧹 <b>Cleaned: ' + c.coin + ' on Bybit</b>\n$' + usdEst.toFixed(2) + ' → USDT');
+          await sendAlert('🤖 [BOT] Cleaned: ' + c.coin + ' on Bybit</b>\n$' + usdEst.toFixed(2) + ' → USDT');
         } else {
           console.log('  ⚠️  Bybit ' + c.coin + ': will retry in 15min');
         }
@@ -1529,7 +1529,7 @@ async function backgroundWalletClean() {
         const { outAmount } = await jupiterSwapRaw(pair.outputMint, USDC_MINT, Math.floor(rawBal));
         const usdcOut = outAmount / 1e6;
         console.log('  ✅ Solana ' + pair.okxCcy + ' → $' + usdcOut.toFixed(2) + ' USDC');
-        await sendAlert('🧹 <b>Cleaned: ' + pair.okxCcy + ' on Solana</b>\n$' + usdEst.toFixed(2) + ' → $' + usdcOut.toFixed(2) + ' USDC');
+        await sendAlert('🤖 [BOT] Cleaned: ' + pair.okxCcy + ' on Solana</b>\n$' + usdEst.toFixed(2) + ' → $' + usdcOut.toFixed(2) + ' USDC');
       } catch (err) { logCrash('bgClean:Solana:' + pair.okxCcy, err); }
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -2199,10 +2199,11 @@ ${'─'.repeat(60)}`);
     const krakenStr = krakenBal2 !== null ? '$' + krakenBal2.toFixed(0) : 'syncing';
     const cbStr     = coinbaseBal2 !== null ? '$' + coinbaseBal2.toFixed(0) : 'syncing';
     const parts = [
-      BOT_VERSION + ' ' + (isActive?'[ACTIVE]':'[quiet]') + ' ' + timeStr,
+      '[BOT] ' + BOT_VERSION + ' | ' + (isActive?'ACTIVE':'quiet') + ' | ' + timeStr,
       'Sol:$' + w.usdc.toFixed(0) + ' OKX:$' + okxBals.usdt.toFixed(0) + (okxHealthy?'':' [DOWN]') + ' By:$' + bybitBal.toFixed(0),
-      'Kr:' + krakenStr + ' CB:' + cbStr + ' | Total:$' + knownTotal.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '%)',
-      'Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | ' + totalTrades + ' trades | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2),
+      'Kr:' + krakenStr + ' CB:' + cbStr,
+      'Total: $' + knownTotal.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '% ROI)',
+      'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | Trades: ' + totalTrades + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2),
     ];
     if (inFlight.length) parts.push('⏳ In flight:\n' + inFlight.join('\n'));
     if (peakReport && peakReport !== 'No positive spreads this period') parts.push('📡 ' + peakReport);
@@ -2941,7 +2942,7 @@ async function main() {
   } catch {}
 
   await sendAlert(
-    BOT_VERSION + ' online | OKX:' + (okxHealthy?'OK':'DOWN') + ' | Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
+    '[BOT] ' + BOT_VERSION + ' started | OKX: ' + (okxHealthy?'OK':'DOWN') + ' | Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
   );
     startOKXWS();
   startBybitWS();

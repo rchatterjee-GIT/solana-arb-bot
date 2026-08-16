@@ -49,9 +49,9 @@ async function sendTG(text) {
       signal: controller.signal
     });
     clearTimeout(timer);
-    // Log first line of message to agent feed
-    const preview = text.replace(/<[^>]+>/g,'').split('\n')[0].slice(0,60);
-    agentLog('TG: '+preview);
+    // Log to agent feed (suppress if it's already a log entry)
+    const preview = text.replace(/<[^>]+>/g,'').split('\n')[0].slice(0,80);
+    if (!preview.startsWith('TG:')) agentLog('TG sent: '+preview);
   } catch(e) { agentLog('Telegram send failed: '+e.message, 'WARN'); }
 }
 
@@ -300,7 +300,7 @@ async function runCycle(agentState) {
 
 async function main() {
   agentLog('Agent ' + AGENT_VERSION + ' starting...');
-  sendTG('Agent ' + AGENT_VERSION + ' online. Commands: /agent status | history | pause | resume | report').catch(function(){});
+  sendTG('[AGENT] ' + AGENT_VERSION + ' online | Commands: /agent status | report | macro | pause | resume').catch(function(){});
 
   let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
   // Clean up any stale TEMP_SKIPS on startup

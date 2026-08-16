@@ -93,7 +93,7 @@ async function cleanOKXTrading() {
         if (r.code === '0') {
           log(`OKX trading: sold ${d.availBal} ${d.ccy} (~$${parseFloat(d.eqUsd).toFixed(2)})`);
           // Check if this matches a known stuck trade and notify
-          await sendTG('Hygiene recovered stuck token: ' + d.availBal + ' ' + d.ccy + ' sold on OKX trading (~$' + parseFloat(d.eqUsd).toFixed(2) + ')');
+          await sendTG('🤖 [BOT] Hygiene recovered: ' + d.availBal + ' ' + d.ccy + ' sold on OKX trading (~$' + parseFloat(d.eqUsd).toFixed(2) + ')');
         } else log(`OKX trading: sell ${d.ccy} failed — ${r.msg}`);
       } catch(e) { log(`OKX trading: sell ${d.ccy} error — ${e.message}`); }
     }
@@ -184,7 +184,7 @@ async function cleanBybitUnified() {
         });
         if (r.retCode === 0) {
           log(`Bybit UNIFIED: sold ${qty} ${c.coin} (~$${parseFloat(c.usdValue).toFixed(2)})`);
-          await sendTG('Hygiene recovered stuck token: ' + qty + ' ' + c.coin + ' sold on Bybit (~$' + parseFloat(c.usdValue).toFixed(2) + ')');
+          await sendTG('🤖 [BOT] Hygiene recovered: ' + qty + ' ' + c.coin + ' sold on Bybit (~$' + parseFloat(c.usdValue).toFixed(2) + ')');
         } else log(`Bybit UNIFIED: sell ${c.coin} failed — ${r.retMsg}`);
       } catch(e) { log(`Bybit UNIFIED: sell ${c.coin} error — ${e.message}`); }
     }
@@ -237,7 +237,7 @@ async function cleanCoinbase() {
       const bal = await getCoinbaseBalance(sym).catch(() => 0);
       if (bal > 0.000001) {
         log('Coinbase: found ' + bal.toFixed(6) + ' ' + sym + ' — may be stuck');
-        await sendTG('Hygiene: ' + bal.toFixed(6) + ' ' + sym + ' found on Coinbase — possible stuck withdrawal');
+        await sendTG('⚠️ [WARN] Hygiene: ' + bal.toFixed(6) + ' ' + sym + ' found on Coinbase — possible stuck withdrawal');
       }
     }
   } catch(e) { log('Coinbase hygiene error: ' + e.message); }

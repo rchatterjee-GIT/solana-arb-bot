@@ -145,7 +145,7 @@ module.exports = [
     },
     async action(ctx, issues) {
       // Trigger rebalance via Telegram
-      await ctx.sendTG(`⚠️ Agent: OKX critically low $${issues[0].okx.toFixed(0)} — triggering rebalance`);
+      await ctx.sendTG(`⚠️ [WARN] OKX critically low $${issues[0].okx.toFixed(0)} — triggering rebalance`);
       await ctx.sendTG('/rb confirm');
       return [`OKX $${issues[0].okx.toFixed(0)} below minimum — rebalance triggered`];
     }
@@ -172,7 +172,7 @@ module.exports = [
     },
     async action(ctx, issues) {
       const msgs = issues.map(i => `${i.ex}: $${i.bal.toFixed(0)} vs target $${i.target} (${i.pct}% off)`);
-      await ctx.sendTG(`⚖️ Agent: Exchange imbalance detected\n${msgs.join('\n')}\nSending /rb`);
+      await ctx.sendTG(`⚠️ [WARN] Exchange imbalance detected\n${msgs.join('\n')}\nSending /rb`);
       await ctx.sendTG('/rb confirm');
       return [`Rebalance triggered: ${msgs.join(', ')}`];
     }
@@ -310,7 +310,7 @@ module.exports = [
       const totalCap = (ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)+(ctx.balances.coinbase||0);
       const startCap = 261.31; // initial capital
       const roiPct = ((totalCap - startCap) / startCap * 100).toFixed(1);
-      const msg = '📊 <b>Daily Report ' + issues[0].date + '</b>\n' +
+      const msg = '📊 [REPORT] Daily Performance — ' + issues[0].date + '\n' +
         'Capital: $' + totalCap.toFixed(0) + ' (' + (totalCap>=startCap?'+':'') + roiPct + '%)\n' +
         'Sol: $' + (ctx.balances.solana||0).toFixed(0) + ' | OKX: $' + (ctx.balances.okx||0).toFixed(0) + ' | Bybit: $' + (ctx.balances.bybit||0).toFixed(0) + '\n' +
         'Kraken: $' + (ctx.balances.kraken||0).toFixed(0) + ' | Coinbase: $' + (ctx.balances.coinbase||0).toFixed(0) + '\n' +
@@ -416,7 +416,7 @@ module.exports = [
       ctx.agentState.lastSentiment = conditions.sentiment;
       ctx.agentState.lastSentimentTime = Date.now();
       const emoji = conditions.sentiment === 'bullish' ? '🟢' : conditions.sentiment === 'bearish' ? '🔴' : '🟡';
-      await ctx.sendTG(emoji + ' <b>Market Sentiment: ' + conditions.sentiment.toUpperCase() + '</b>\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs + '\n' + balHeader(ctx));
+      await ctx.sendTG('📡 [MARKET] Sentiment: ' + conditions.sentiment.toUpperCase() + '\nAvg 24h: ' + conditions.avg24hChange + '% | Volatility: ' + conditions.avgVolatility.toFixed(1) + '\nBullish: ' + conditions.bullishPairs + ' | Bearish: ' + conditions.bearishPairs + '\n' + balHeader(ctx));
       return ['Sentiment changed to ' + conditions.sentiment];
     }
   },
@@ -541,7 +541,7 @@ module.exports = [
         else raised.push(adj.sym + ' ' + adj.suggested + '%');
       }
 
-      let msg = 'DEX threshold adjustments:\n';
+      let msg = '🔍 [AGENT] DEX Thresholds Updated\n';
       if (lowered.length) msg += 'Lowered (more active): ' + lowered.join(', ') + '\n';
       if (raised.length) msg += 'Raised (less active): ' + raised.join(', ') + '\n';
 
@@ -615,7 +615,7 @@ module.exports = [
       ctx.agentState.lastKrakenPrep = Date.now();
       const pengu = ctx.marketData?.pairs['PENGU'];
       const krakenBal = ctx.balances.kraken || 0;
-      const msg = 'Kraken PENGU window in 15min (05:00-06:00 UTC)\n' +
+      const msg = '📡 [MARKET] Kraken PENGU window in 15min (05:00-06:00 UTC)\n' +
         'PENGU 24h: ' + (pengu ? pengu.change24h.toFixed(1) + '%' : 'unknown') +
         ' | Volatility: ' + (pengu ? pengu.volatility.toFixed(1) : '?') + '\n' +
         'Kraken balance: $' + krakenBal.toFixed(0) + '\n' +
@@ -641,7 +641,7 @@ module.exports = [
       const { wins } = issues[0];
       ctx.agentState.lastWinMilestone = wins;
       await ctx.sendTG(
-        'Win streak: ' + wins + '/10\n' +
+        '⚡ [TRADE] Win Streak: ' + wins + '/10\n' +
         'P&L: +$' + (ctx.state.totalProfit || 0).toFixed(2) + '\n' +
         balHeader(ctx) + '\n' +
         (wins >= 10 ? 'TARGET REACHED - scale to $200 now' : (10-wins) + ' more to scale')
@@ -1007,7 +1007,7 @@ module.exports = [
       }
 
       await ctx.sendTG(
-        'Weekly Exchange Landscape\n' +
+        '📊 [REPORT] Weekly Exchange Landscape\n' +
         'Currently trading: OKX, Bybit, Kraken + DEX\n\n' +
         exchangeStatus +
         '\nReview: any exchange with improved UK compliance or Solana pairs worth adding?'
@@ -1047,7 +1047,7 @@ module.exports = [
       const sol = pairs['SOL'] || {};
       const sentEmoji = mc.sentiment==='bullish'?'[UP]':mc.sentiment==='bearish'?'[DN]':'[--]';
 
-      let msg1 = '<b>Daily Outlook ' + issues[0].date + '</b>\n\n';
+      let msg1 = '📊 [REPORT] Daily Outlook — ' + issues[0].date + '\n\n';
       msg1 += sentEmoji + ' <b>Market Sentiment: ' + (mc.sentiment||'unknown').toUpperCase() + '</b>\n';
       msg1 += 'BTC: ' + (btc.change24h>=0?'+':'') + (btc.change24h||0).toFixed(1) + '% (1h: ' + (btc.change1h>=0?'+':'') + (btc.change1h||0).toFixed(2) + '%)\n';
       msg1 += 'ETH: ' + (eth.change24h>=0?'+':'') + (eth.change24h||0).toFixed(1) + '% (1h: ' + (eth.change1h>=0?'+':'') + (eth.change1h||0).toFixed(2) + '%)\n';
@@ -1084,7 +1084,7 @@ module.exports = [
       const skipOKX = ctx.config.POLICY_SKIP_OKX || [];
       const skipBybit = ctx.config.POLICY_SKIP_BYBIT || [];
 
-      let msg2 = '<b>Top Pair Opportunities Today</b>\n';
+      let msg2 = '<b>📊 [REPORT] Top Pairs Today</b>\n';
       for (const opp of opps.slice(0,6)) {
         const skipped = skipOKX.includes(opp.symbol) && skipBybit.includes(opp.symbol);
         const signal = getPairSignal(opp.symbol);
@@ -1106,7 +1106,7 @@ module.exports = [
 
       // ── MESSAGE 3: Funding Rates & Profitability Forecast ────────────────
       const fundingSignals = getTopSignals(5);
-      let msg3 = '<b>Funding Rates & Profitability Forecast</b>\n';
+      let msg3 = '<b>📊 [REPORT] Funding & Forecast</b>\n';
 
       if (fundingSignals.length > 0) {
         msg3 += '<b>Active Funding Signals:</b>\n';
@@ -1147,7 +1147,7 @@ module.exports = [
         JSON.parse(require('fs').readFileSync(newPairsFile,'utf8')) : [];
       const activePairs = newPairs.filter(function(p){return p.expiresAt && new Date(p.expiresAt).getTime()>Date.now();});
 
-      let msg4 = '<b>New Listings & Watch List</b>\n';
+      let msg4 = '<b>📊 [REPORT] Listings & Watch</b>\n';
 
       if (activePairs.length > 0) {
         msg4 += '<b>Active New Listings (bot scanning):</b>\n';
@@ -1225,7 +1225,7 @@ module.exports = [
       }
 
       if (changes.length > 0) {
-        await ctx.sendTG('Macro insight applied:\n' + changes.join('\n'));
+        await ctx.sendTG('🔍 [AGENT] Macro Insight Applied\n' + changes.join('\n'));
       }
       return changes.length ? changes : ['Macro context reviewed — no config changes needed'];
     }
@@ -1298,7 +1298,7 @@ module.exports = [
       const killed   = results.filter(function(r){return r.action==='kill';}).map(function(r){return r.sym;}).join(', ');
       const noChain  = results.filter(function(r){return r.status==='NO_CHAIN'||r.status==='WD_DISABLED';}).map(function(r){return r.sym;}).join(', ');
 
-      const msg = 'Weekly Pair Viability Test\n' +
+      const msg = '📊 [REPORT] Weekly Pair Viability\n' +
         'Viable: ' + (viable||'none') + '\n' +
         'Marginal: ' + (marginal||'none') + '\n' +
         'Killed: ' + (killed||'none') + '\n' +
