@@ -2306,7 +2306,7 @@ async function runStartupChecks() {
   // Read Kraken + Coinbase from liveBalances (written by startup sync)
   let krakenSum = null, coinbaseSum = null;
   try {
-    const lb = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8')).liveBalances || {};
+    const lb = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8')).liveBalances || {};
     krakenSum   = typeof lb.kraken   === 'number' ? lb.kraken   : null;
     coinbaseSum = typeof lb.coinbase === 'number' ? lb.coinbase : null;
   } catch {}
@@ -2807,7 +2807,7 @@ async function handleRebalanceCommand(confirm = false) {
     const solana   = w.usdc;
     const okx      = okxBals.usdt;
     const bybit    = bybitBal;
-    const statusForBal = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
+    const statusForBal = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
     const krakenBal    = statusForBal.liveBalances?.kraken   || 0;
     const coinbaseBal2 = statusForBal.liveBalances?.coinbase || 0;
 
@@ -3022,7 +3022,7 @@ async function main() {
 
   // Populate Kraken + Coinbase balances immediately on startup
   try {
-    const statusInit = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
     if (!statusInit.liveBalances) statusInit.liveBalances = {};
     // Kraken
     try {
