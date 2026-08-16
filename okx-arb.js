@@ -2861,11 +2861,2247 @@ async function handleRebalanceCommand(confirm = false) {
     }
 
 
-    const statusMsg =
-      '\u2696\ufe0f <b>Rebalance Check</b>\n' +
-      'Sol: $' + solana.toFixed(0) + ' (target $' + tSolana + ')\n' +
-      'OKX: $' + okx.toFixed(0)    + ' (target $' + tOKX    + ')\n' +
-      'By:  $' + bybit.toFixed(0)  + ' (target $' + tBybit  + ')\n\n';
+    const statusMsg = '⚖️ <b>Rebalance Check</b>\nEqual share: 
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
+ + Math.round(equalShare) + ' each\nSol:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++solana.toFixed(0)+' OKX:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++okx.toFixed(0)+' By:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++bybit.toFixed(0)+'\nKr:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++krakenBal.toFixed(0)+' CB:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++coinbaseBal2.toFixed(0)+' Total:
+
+    if (moves.length === 0) {
+      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      return;
+    }
+
+    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
+    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+
+    if (!confirm) {
+      await sendAlert(planMsg + 'Reply /rb confirm to execute');
+      return;
+    }
+
+    rebalancing = true;
+    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await new Promise(r => setTimeout(r, 2000));
+
+    for (const move of moves) {
+      try {
+        if (move.method === 'sol-to-okx') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
+        } else if (move.method === 'sol-to-bybit') {
+          const usdtOut = await swapUSDCtoUSDT(move.amount);
+          await new Promise(r => setTimeout(r, 3000));
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await sendUSDTOnSolana(usdtOut, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
+        } else if (move.method === 'bybit-to-okx') {
+          // Withdraw USDT from Bybit to OKX deposit address on Solana
+          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
+          await withdrawUSDTFromBybit(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
+        } else if (move.method === 'bybit-to-sol') {
+          // Withdraw USDT from Bybit to bot wallet
+          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
+        } else if (move.method === 'okx-to-bybit') {
+          const depositAddr = await getBybitDepositAddress('USDT');
+          await withdrawUSDTFromOKX(move.amount, depositAddr);
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
+        } else if (move.method === 'okx-to-sol') {
+          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
+        }
+      } catch (err) {
+        logCrash('rebalance:' + move.method, err);
+        const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
+        if (isSimFail) {
+          // Retry once after 30s — simulation failures are often transient
+          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await new Promise(r => setTimeout(r, 30000));
+          try {
+            await executeRebalanceMove(move);
+            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+          } catch (err2) {
+            logCrash('rebalance-retry:' + move.method, err2);
+            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+          }
+        } else {
+          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+        }
+      }
+    }
+
+    await sendAlert('\u2705 Rebalance complete');
+
+  } catch (err) {
+    logCrash('handleRebalanceCommand', err);
+    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+  } finally {
+    rebalancing = false;
+    console.log('Rebalancing complete — scanning resumed');
+  }
+}
+
+// ── Helper: send USDT on Solana to an address ─────────────────────────────────
+async function sendUSDTOnSolana(amount, toAddr) {
+  const usdtMintPk = new PublicKey(USDT_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDT    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdtMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdtMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDT));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+}
+
+// ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+async function withdrawUSDTFromBybit(amount, toAddr) {
+  const transferId = crypto.randomUUID();
+  const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
+    transferId, coin: 'USDT', amount: amount.toString(),
+    fromAccountType: 'UNIFIED', toAccountType: 'FUND',
+  });
+  if (t.retCode !== 0) throw new Error('Bybit UNIFIED->FUND: ' + t.retMsg);
+  await new Promise(r => setTimeout(r, 3000));
+  const r = await bybitPrivate('POST', '/v5/asset/withdraw/create', {
+    coin: 'USDT', chain: 'SOL', address: toAddr,
+    amount: amount.toString(), timestamp: Date.now(), accountType: 'FUND',
+  });
+  if (r.retCode !== 0) throw new Error('Bybit withdraw: ' + r.retMsg);
+}
+
+// ── Helper: withdraw USDT from OKX to any address ────────────────────────────
+async function withdrawUSDTFromOKX(amount, toAddr) {
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
+    amt: amount.toString(), toAddr,
+    fee: '1',
+  });
+  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+}
+
+
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const dexOn = PAIRS.filter(p => p.buyDexEnabled !== false).map(p => p.okxCcy);
+  console.log(`⚡ OKX + Bybit Arb Bot — ${BOT_VERSION}`);
+  console.log(`   Trade size:      $${TRADE_SIZE_USD}`);
+  console.log(`   Clean messaging: 1 fire alert + 1 outcome per trade ✅`);
+  console.log(`   Live config:     arb-config.json (no restart needed) ✅`);
+  console.log(`   Recovery:        auto-scan OKX + Bybit + wallet ✅`);
+  console.log(`   OKX health:      health check + silent REST drops ✅`);
+  console.log(`   OKX WS:          port 443, 10s ping, 1s reconnect ✅`);
+  console.log(`   Smart sell:      hold until spread recovers ✅`);
+  console.log(`   Morning report:  07:00 UTC daily ✅`);
+  console.log(`   Fire logging:    fires.json ✅`);
+  console.log(`   Exchange tests:  /test command, weekly Sunday 06:00 UTC ✅`);
+  console.log(`   Wallet cleaner:  background every 15min ✅`);
+  console.log(`   Dynamic pairs:   /addpair /removepair /pairs ✅`);
+  console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
+  console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
+  console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
+
+  await sendAlert(
+    (function() {
+      var statusFile = require('path').join(__dirname,'bot-status.json');
+      var lb = {}; try { lb = JSON.parse(require('fs').readFileSync(statusFile,'utf8')).liveBalances || {}; } catch {}
+      var sc = startCapital || 261.31;
+      var tot = (lb.solana||0) + (lb.okx||0) + (lb.bybit||0) + (lb.kraken||0) + (lb.coinbase||0);
+      var roi = ((tot - sc) / sc * 100).toFixed(1);
+      return '🤖 [BOT] ' + BOT_VERSION + ' started\n' +
+        'OKX: ' + (okxHealthy?'OK':'DOWN') +
+        ' | Bybit: OK | Kraken: ' + (lb.kraken!=null?'$'+lb.kraken.toFixed(0):'syncing') +
+        ' | CB: ' + (lb.coinbase!=null?'$'+lb.coinbase.toFixed(0):'syncing') + '\n' +
+        'Total: $' + tot.toFixed(0) + ' (' + (tot>=sc?'+':'') + roi + '% ROI)\n' +
+        'Wins: ' + consecutiveWins + '/' + WINS_TARGET + ' | P&L: ' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2);
+    })()
+  );
+    startOKXWS();
+  startBybitWS();
+  loadLiveConfig(); // ensure config loaded before Kraken check
+  // Start Kraken WS if enabled
+  if (liveConfig.KRAKEN_ENABLED && getKraken()) {
+    console.log('🔄 Starting Kraken WebSocket...');
+    getKraken().startKrakenWS();
+    await getKraken().refreshKrakenViability();
+  }
+
+  console.log('⏳ Waiting for price feeds...');
+  await new Promise(r => setTimeout(r, 3000));
+  feedsReady = true;
+  console.log('✅ Price feeds ready — scanning active');
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await pollTelegramCommands(); }
+    catch (err) { logCrash('pollTelegramCommands', err); }
+  }, 5000);
+
+  setInterval(async () => {
+    try { await checkAndExecute(); }
+    catch (err) { logCrash('checkAndExecute interval', err); }
+  }, 2000);
+
+  setInterval(async () => {
+    try { await maybeReport(); }
+    catch (err) { logCrash('maybeReport interval', err); }
+  }, 60 * 1000);
+
+  // Dedicated morning report check — runs every minute to ensure 07:00 UTC fires
+  setInterval(async () => {
+    try { await maybeSendDailySummary(); }
+    catch (err) { logCrash('morningReport interval', err); }
+  }, 60 * 1000);
+
+  // Weekly exchange test — Sunday 06:00 UTC
+  setInterval(async () => {
+    try { await maybeRunWeeklyTest(); }
+    catch (err) { logCrash('maybeRunWeeklyTest', err); }
+  }, 60 * 1000);
+
+  setInterval(async () => {
+    try {
+      const to = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000));
+      await Promise.race([checkAndRebalance(), to]);
+    }
+    catch (err) { logCrash('checkAndRebalance', err); }
+  }, 30 * 60 * 1000);
+
+  // Hygiene cycle every 15 minutes — cleans dust, maintains Bybit FUND buffer
+  setInterval(async () => {
+    try { await runHygiene(); }
+    catch(err) { logCrash('hygiene', err); }
+  }, 15 * 60 * 1000);
+
+  // Balance sync every 5 minutes — keeps dashboard accurate
+  setInterval(async () => {
+    try {
+      const [w, okxBals, bybitBal] = await Promise.all([
+        getWalletBalances(),
+        getOKXBalances(),
+        getBybitBalance('USDT'),
+      ]);
+      // Write live balances to bot-status so dashboard stays current
+      const statusFile = path.join(__dirname, 'bot-status.json');
+      const existing = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
+      // Also fetch Kraken balance for agent/dashboard
+      let krakenBal = null;
+      try {
+        const kNonce = '' + Date.now();
+        const kData  = 'nonce=' + kNonce;
+        const kHash  = crypto.createHash('sha256').update(kNonce + kData).digest('binary');
+        const kHmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+        kHmac.update('/0/private/Balance', 'binary'); kHmac.update(kHash, 'binary');
+        const kSig = kHmac.digest('base64');
+        const kR = await fetch('https://api.kraken.com/0/private/Balance', {
+          method: 'POST', headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': kSig, 'Content-Type': 'application/x-www-form-urlencoded' }, body: kData
+        });
+        const kJ = await kR.json();
+        krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
+      } catch {}
+
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
+      existing.liveBalances = {
+        solana: w.usdc,
+        okx: okxBals.usdt,
+        bybit: bybitBal,
+        kraken: krakenBal,
+        coinbase: coinbaseBal,
+        updatedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));
+    } catch(err) { logCrash('balanceSync', err); }
+  }, 5 * 60 * 1000);
+
+  // Background wallet cleaner — every 15 minutes
+  setInterval(async () => {
+    try { await backgroundWalletClean(); }
+    catch (err) { logCrash('backgroundWalletClean', err); }
+  }, 60 * 1000);
+
+  await reportBalances();
+  lastReportTime = Date.now();
+}
+
+main().catch(err => logCrash('main', err));async function getBybitEquity() {
+  try {
+    const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
+    const coins = r.result?.list?.[0]?.coin || [];
+    const usdt = coins.find(c => c.coin === 'USDT');
+    return parseFloat(usdt?.equity || usdt?.walletBalance || '0');
+  } catch { return 0; }
+}
+
+
++Math.round(total5)+'\n\n';
 
     if (moves.length === 0) {
       await sendAlert(statusMsg + '\u2705 All balances within target range');
