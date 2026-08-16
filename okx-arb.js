@@ -2859,10 +2859,7 @@ async function handleRebalanceCommand(confirm = false) {
         }
       }
     }
-    // Coinbase short — alert to top up manually (deposit address not stable)
-    if (tCoinbase - coinbaseBal2 > 20) {
-      moves.push({ from: 'Manual', to: 'Coinbase', amount: Math.round(tCoinbase - coinbaseBal2), method: 'sol-to-coinbase', note: 'Manual deposit required' });
-    }
+
 
     const statusMsg =
       '\u2696\ufe0f <b>Rebalance Check</b>\n' +
