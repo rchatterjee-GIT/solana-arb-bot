@@ -446,7 +446,7 @@ function renderWallets(d){
   renderToks('w-bybit-toks',d.bybitTokens);
   // Rebalance table
   var cfg=readConfig||{};
-  // Equal-share rebalancing — target is total/5 for each exchange
+  // Equal-share rebalancing - target is total/5 for each exchange
   var total5=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
   var equalShare=Math.round(total5/5);
   var rows=[
