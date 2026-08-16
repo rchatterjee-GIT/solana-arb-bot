@@ -577,11 +577,11 @@ function render(d){
   // Don't blank Kraken balance on refresh - keep last known value
   var kvr=document.getElementById('kvr');if(krakenOn){kvr.style.display='';document.getElementById('kv').innerHTML='<span class="badge bg">SOL</span><span class="badge bg">PENGU</span>';}else kvr.style.display='none';
   var cvr=document.getElementById('cvr');var cbOn=d.config&&d.config.COINBASE_ENABLED;if(cbOn){cvr.style.display='';document.getElementById('cbv').innerHTML='<span class="badge bg">JTO</span><span class="badge bg">WIF</span><span class="badge bg">BONK</span><span class="badge bg">PENGU</span><span class="badge bg">PNUT</span><span class="badge bg">W</span><span class="badge bg">RENDER</span><span class="badge bg">TRUMP</span><span class="badge bg">PYTH</span><span class="badge bg">SOL</span>';}else cvr.style.display='none';
-  var allOKX=['SOL','JTO','WIF','W','MEW','PNUT','GOAT','PENGU','PYTH','RAY'];
-  var allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU'];
+  var allOKX=['SOL','JTO','WIF','W','PNUT','GOAT','PENGU','PYTH','RAY','JUP','BONK','TRUMP','BOME','RENDER'];
+  var allBybit=['SOL','JTO','WIF','W','RENDER','PNUT','PENGU','JUP','BONK','TRUMP','BOME','GOAT'];
   var skipOKX=st&&st.skipOKX||[],skipBybit=st&&st.skipBybit||[];
   document.getElementById('ov').innerHTML=allOKX.map(function(t){return '<span class="badge '+(skipOKX.indexOf(t)<0?'bg':'br')+'">'+t+'</span>';}).join('');
-  document.getElementById('bv').innerHTML=allBybit.map(function(t){return '<span class="badge '+(skipBybit.indexOf(t)<0?'bg':'br')+'">'+t+'</span>';}).join('');
+  document.getElementById('byv').innerHTML=allBybit.map(function(t){return '<span class="badge '+(skipBybit.indexOf(t)<0?'bg':'br')+'">'+t+'</span>';}).join('');
   var pend=(st&&st.pendingDex||[]).concat(st&&st.pendingOkx||[]).concat(st&&st.pendingBybit||[]);
   if(pend.length>0){
     document.getElementById('ifsec').style.display='';
