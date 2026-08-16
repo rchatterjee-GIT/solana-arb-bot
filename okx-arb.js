@@ -2184,16 +2184,20 @@ ${'─'.repeat(60)}`);
     let krakenBal2 = null, coinbaseBal2 = null;
     try {
       const statusNow = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
-      krakenBal2   = statusNow.liveBalances?.kraken   || null;
-      coinbaseBal2 = statusNow.liveBalances?.coinbase  || null;
+      krakenBal2   = typeof statusNow.liveBalances?.kraken   === 'number' ? statusNow.liveBalances.kraken   : null;
+      coinbaseBal2 = typeof statusNow.liveBalances?.coinbase === 'number' ? statusNow.liveBalances.coinbase  : null;
     } catch {}
-    const total2 = total + (krakenBal2||0) + (coinbaseBal2||0);
-    const gain2  = total2 - (startCapital || 261.31);
-    const gainPct2 = (gain2/(startCapital||261.31)*100).toFixed(1);
+    // Only include exchanges with known balances in total
+    const knownTotal = total + (krakenBal2 !== null ? krakenBal2 : 0) + (coinbaseBal2 !== null ? coinbaseBal2 : 0);
+    const sc = startCapital || 261.31;
+    const gain2 = knownTotal - sc;
+    const gainPct2 = (gain2 / sc * 100).toFixed(1);
+    const krakenStr = krakenBal2 !== null ? '$' + krakenBal2.toFixed(0) : 'syncing';
+    const cbStr     = coinbaseBal2 !== null ? '$' + coinbaseBal2.toFixed(0) : 'syncing';
     const parts = [
       BOT_VERSION + ' ' + (isActive?'[ACTIVE]':'[quiet]') + ' ' + timeStr,
-      'Sol:$' + w.usdc.toFixed(0) + ' OKX:$' + okxBals.usdt.toFixed(0) + (okxHealthy?'':' [down]') + ' By:$' + bybitBal.toFixed(0),
-      'Kr:$' + (krakenBal2!=null?krakenBal2.toFixed(0):'-') + ' CB:$' + (coinbaseBal2!=null?coinbaseBal2.toFixed(0):'-') + ' | Total:$' + total2.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '%)',
+      'Sol:$' + w.usdc.toFixed(0) + ' OKX:$' + okxBals.usdt.toFixed(0) + (okxHealthy?'':' [DOWN]') + ' By:$' + bybitBal.toFixed(0),
+      'Kr:' + krakenStr + ' CB:' + cbStr + ' | Total:$' + knownTotal.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '%)',
       'Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | ' + totalTrades + ' trades | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2),
     ];
     if (inFlight.length) parts.push('⏳ In flight:\n' + inFlight.join('\n'));
@@ -2906,6 +2910,31 @@ async function main() {
   console.log(`   Static pairs:    ${PAIRS.length}\n`);
 
   await runStartupChecks();
+
+  // Populate Kraken + Coinbase balances immediately on startup
+  try {
+    const statusInit = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
+    if (!statusInit.liveBalances) statusInit.liveBalances = {};
+    // Kraken
+    try {
+      const kNonce=''+Date.now(),kData='nonce='+kNonce;
+      const kHash=crypto.createHash('sha256').update(kNonce+kData).digest('binary');
+      const kHmac=crypto.createHmac('sha512',Buffer.from(process.env.KRAKEN_API_SECRET,'base64'));
+      kHmac.update('/0/private/Balance','binary');kHmac.update(kHash,'binary');
+      const kSig=kHmac.digest('base64');
+      const kR=await fetch('https://api.kraken.com/0/private/Balance',{method:'POST',headers:{'API-Key':process.env.KRAKEN_API_KEY,'API-Sign':kSig,'Content-Type':'application/x-www-form-urlencoded'},body:kData});
+      const kJ=await kR.json();
+      statusInit.liveBalances.kraken = parseFloat(kJ.result?.USDT||0)+parseFloat(kJ.result?.ZUSD||0);
+    } catch {}
+    // Coinbase
+    try {
+      if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+        statusInit.liveBalances.coinbase = await getCoinbase().getCoinbaseBalance('USDC');
+      }
+    } catch {}
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(statusInit,null,2));
+    console.log('Startup balances: Kr:$'+(statusInit.liveBalances.kraken||0).toFixed(0)+' CB:$'+(statusInit.liveBalances.coinbase||0).toFixed(0));
+  } catch {}
 
   await sendAlert(
     BOT_VERSION + ' online | OKX:' + (okxHealthy?'OK':'DOWN') + ' | Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
