@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-16T08:24:23.528Z",
+  "fetchedAt": "2026-08-16T11:52:27.513Z",
   "summary": {
     "JTO": {
       "okxRate": 0.00005,
@@ -8,10 +8,10 @@
       "annualised": 5.5
     },
     "SOL": {
-      "okxRate": 0.0000691584703231,
-      "bybitRate": 0.00001173,
-      "avgRate": 0.00004044423516155,
-      "annualised": 4.4
+      "okxRate": 0.000070357177289,
+      "bybitRate": -0.00002805,
+      "avgRate": 0.000021153588644499998,
+      "annualised": 2.3
     },
     "WIF": {
       "okxRate": 0.00005,
@@ -20,16 +20,16 @@
       "annualised": 5.5
     },
     "PENGU": {
-      "okxRate": 0.000002751840254,
-      "bybitRate": 0.0000465,
-      "avgRate": 0.000024625920127,
-      "annualised": 2.7
+      "okxRate": 0.00005,
+      "bybitRate": 0.00005,
+      "avgRate": 0.00005,
+      "annualised": 5.5
     },
     "W": {
-      "okxRate": 0.000041099850421,
+      "okxRate": 0.00005,
       "bybitRate": 0.00005,
-      "avgRate": 0.000045549925210500004,
-      "annualised": 5
+      "avgRate": 0.00005,
+      "annualised": 5.5
     },
     "RENDER": {
       "okxRate": 0.00005,
@@ -38,10 +38,10 @@
       "annualised": 5.5
     },
     "PNUT": {
-      "okxRate": -0.0000040352125921,
-      "bybitRate": 0.00005,
-      "avgRate": 0.00002298239370395,
-      "annualised": 2.5
+      "okxRate": -0.000167854575302,
+      "bybitRate": -0.00014821,
+      "avgRate": -0.00015803228765099998,
+      "annualised": -17.3
     },
     "GOAT": {
       "okxRate": null,
@@ -50,16 +50,16 @@
       "annualised": 5.6
     },
     "RAY": {
-      "okxRate": 0.0001,
+      "okxRate": 0.0000530604744492,
       "bybitRate": null,
-      "avgRate": 0.0001,
-      "annualised": 11
+      "avgRate": 0.0000530604744492,
+      "annualised": 5.8
     },
     "BONK": {
-      "okxRate": -0.0000845425586132,
+      "okxRate": -0.0000668507169784,
       "bybitRate": null,
-      "avgRate": -0.0000845425586132,
-      "annualised": -9.3
+      "avgRate": -0.0000668507169784,
+      "annualised": -7.3
     }
   },
   "signals": [],

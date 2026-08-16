@@ -1,62 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-14T05:03:56.118Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T05:03:56.118Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T05:23:55.802Z",
-      "rule": "market-sentiment-report",
-      "changes": [
-        "Sentiment changed to bearish"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T06:00:59.048Z",
-      "rule": "daily-performance-report",
-      "changes": [
-        "Daily report sent"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T06:05:56.533Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 3% (medium vol $13M + volatility 3.7)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T07:07:33.093Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 5% -> 3.8% (medium vol $36M + volatility 3.8)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T07:07:33.093Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-14T08:00:32.523Z",
       "rule": "daily-outlook-report",
       "changes": [
@@ -799,11 +743,67 @@
         "PNUT DEX: 4% -> 3.5% (normal)"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-16T09:13:21.594Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T09:13:21.594Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T09:13:21.594Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T09:13:21.594Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T10:15:22.091Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T10:15:22.091Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 4% -> 3.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T10:58:24.434Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Market very quiet (avg volatility 1.4). Consider waiting."
+      ],
+      "severity": "warn"
     }
   ],
   "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T08:30:20.724Z",
-  "actionsToday": 18,
+  "lastRun": "2026-08-16T11:53:24.658Z",
+  "actionsToday": 25,
   "lastActionDate": "2026-08-16",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
@@ -813,7 +813,7 @@
     "market-sentiment-report": 1786821375103,
     "daily-performance-report": 1786860022469,
     "spread-duration-analysis": 1786371587448,
-    "dry-spell-analysis": 1786743574798,
+    "dry-spell-analysis": 1786877904247,
     "pre-session-threshold-optimisation": 1786854618847,
     "burst-event-monitor": 1786373172019,
     "kraken-window-prep": 1786855518979,
@@ -824,19 +824,19 @@
     "daily-outlook-report": 1786867220497,
     "pair-consecutive-losses": 1786809613122,
     "pair-threshold-too-low": 1786636617360,
-    "dex-threshold-dynamic": 1786867880919,
+    "dex-threshold-dynamic": 1786875321918,
     "pair-viability-weekly-test": 1786863620051
   },
   "activeWindowAlerted": false,
   "lastSentimentTime": 1786821375117,
   "lastSpreadAnalysis": 1786371587458,
-  "lastDrySpellAlert": 1786743574807,
+  "lastDrySpellAlert": 1786877904255,
   "lastPreSessionOpt": 1786854618854,
   "lastBurstAlert": "2026-08-07T08:04:25",
   "lastKrakenPrep": 1786855518988,
   "lastExchangeScan": 1786459147224,
   "lastMacroInsight": 1786836376728,
   "lastOutlookReport": 1786867220507,
-  "lastDexAdjust": 1786867880930,
+  "lastDexAdjust": 1786875321925,
   "lastViabilityTest": 1786863620059
 }

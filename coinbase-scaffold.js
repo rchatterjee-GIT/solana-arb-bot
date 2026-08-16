@@ -27,8 +27,22 @@ function buildJWT(method, path) {
   const payload = Buffer.from(JSON.stringify({ sub: keyName, iss: 'cdp', nbf: ts, exp: ts + 120, uri })).toString('base64url');
   const msg     = header + '.' + payload;
 
-  // Parse PEM private key
-  const privateKey = crypto.createPrivateKey({ key: keySecret, format: 'pem' });
+  // Handle both PEM format and raw base64 secret
+  let privateKey;
+  const secret = keySecret.trim();
+  if (secret.includes('BEGIN')) {
+    // PEM format
+    privateKey = crypto.createPrivateKey({ key: secret, format: 'pem' });
+  } else {
+    // Raw base64 — wrap in PEM
+    const pem = '-----BEGIN EC PRIVATE KEY-----\n' + secret + '\n-----END EC PRIVATE KEY-----';
+    try {
+      privateKey = crypto.createPrivateKey({ key: pem, format: 'pem' });
+    } catch {
+      // Try as PKCS8 DER
+      privateKey = crypto.createPrivateKey({ key: Buffer.from(secret, 'base64'), format: 'der', type: 'pkcs8' });
+    }
+  }
   const sig = crypto.sign('SHA256', Buffer.from(msg), { key: privateKey, dsaEncoding: 'ieee-p1363' });
   return msg + '.' + sig.toString('base64url');
 }
