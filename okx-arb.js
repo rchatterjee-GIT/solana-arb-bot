@@ -1811,7 +1811,10 @@ async function checkAndExecute() {
         const estDex   = (spreadDex   / 100) * TRADE_SIZE_USD - (DEX_FEE * 2 * TRADE_SIZE_USD) - 0.15;
         const estOKX   = (spreadOKX   / 100) * TRADE_SIZE_USD - (OKX_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
         const estBybit = (spreadBybit / 100) * TRADE_SIZE_USD - (BYBIT_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
-        console.log(`[${timestamp}] ${pair.name.padEnd(11)}${!okxViable?'[Os]':''}${!bybitViable&&pair.bybitCcy?'[Bs]':''}${!dexEnabled?'[Ds]':''}${!okxHealthy?'[Ox]':''} OKX:$${okx.bid}/$${okx.ask} ${bybit?`By:$${bybit.bid}/$${bybit.ask}`:'By:--'} →OKX:${spreadOKX.toFixed(2)}% →By:${bybit?spreadBybit.toFixed(2):'--'}% →DEX:${spreadDex.toFixed(2)}%(≥${dexThresh}%)`);
+        const cbViable2 = COINBASE_PAIRS.has(pair.okxCcy) && (liveConfig.COINBASE_ENABLED||false);
+        const cbThreshLog = (liveConfig.MIN_SPREAD_COINBASE||1.2) * (1+(liveConfig.MIN_SPREAD_BUFFER_PCT||12)/100);
+        const cbSpreadLog = cbViable2 ? spreadDex : null; // CB buys on CEX sells on DEX - same direction as DEX
+        console.log(`[${timestamp}] ${pair.name.padEnd(11)}${!okxViable?'[Os]':''}${!bybitViable&&pair.bybitCcy?'[Bs]':''}${!dexEnabled?'[Ds]':''}${!okxHealthy?'[Ox]':''} OKX:$${okx.bid}/$${okx.ask} ${bybit?`By:$${bybit.bid}/$${bybit.ask}`:'By:--'} →OKX:${spreadOKX.toFixed(2)}% →By:${bybit?spreadBybit.toFixed(2):'--'}% →DEX:${spreadDex.toFixed(2)}%(≥${dexThresh}%)${cbViable2?' →CB:'+spreadDex.toFixed(2)+'%(≥'+cbThreshLog.toFixed(1)+'%)':''}`);
         return { pair, okx, bybit, quoteBuy, tokenOut, dexAsk, bestBidCex, dexThresh, dexEnabled, okxViable, bybitViable, spreadOKX, netOKX, spreadBybit, netBybit, spreadDex, netDex, estOKX, estBybit, estDex };
       })
     );
