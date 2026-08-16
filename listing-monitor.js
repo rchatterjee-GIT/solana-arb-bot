@@ -473,7 +473,7 @@ async function run() {
   return result;
 }
 
-module.exports = { run, scanNewListings, checkNews };
+module.exports = { run, scanNewListings, checkNews, getCoinbasePairs };
 
 if (require.main === module) {
   run().then(r => console.log('Scan complete:', r)).catch(e => console.error(e.message));
