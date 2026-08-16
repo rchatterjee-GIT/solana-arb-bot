@@ -477,6 +477,8 @@ async function doRebalance(){
     h+='<tr><td class="dim">Solana</td><td>$'+d.solana.toFixed(0)+'</td><td class="dim">target $'+d.targetSolana+'</td></tr>';
     h+='<tr><td class="dim">OKX</td><td>$'+d.okx.toFixed(0)+'</td><td class="dim">target $'+d.targetOKX+'</td></tr>';
     h+='<tr><td class="dim">Bybit</td><td>$'+d.bybit.toFixed(0)+'</td><td class="dim">target $'+d.targetBybit+'</td></tr>';
+    h+='<tr><td class="dim">Kraken</td><td>'+(d.kraken!=null?'$'+d.kraken.toFixed(0):'-')+'</td><td class="dim">target $'+d.targetKraken+'</td></tr>';
+    h+='<tr><td class="dim">Coinbase</td><td>'+(d.coinbase!=null?'$'+d.coinbase.toFixed(0):'-')+'</td><td class="dim">target $'+d.targetCoinbase+'</td></tr>';
     h+='</table>';
     if(!d.moves||d.moves.length===0){
       h+='<span class="green">All balances within target range</span>';
@@ -720,11 +722,16 @@ const server = http.createServer(async function(req,res) {
     try{
       const cfg=readJSON(CONFIG_FILE)||{};
       const tSol=cfg.REBALANCE_TARGET_SOLANA||200,tOKX=cfg.REBALANCE_TARGET_OKX||350,tBybit=cfg.REBALANCE_TARGET_BYBIT||300;
+      const tKraken=cfg.REBALANCE_TARGET_KRAKEN||300,tCoinbase=cfg.REBALANCE_TARGET_COINBASE||200;
       const [sol,okxData,bybitData]=await Promise.all([fetchSolana(),fetchOKX(),fetchBybit()]);
+      const lb=readJSON(path.join(__dirname,'bot-status.json'))?.liveBalances||{};
       const solana=sol.usdc||0,okx=okxData.usdt||0,bybit=bybitData.usdt||0;
+      const kraken=lb.kraken||0,coinbase=lb.coinbase||0;
       const buf=0.05;
       const solEx=Math.max(0,solana-tSol*(1+buf)),okxEx=Math.max(0,okx-tOKX*(1+buf)),bybitEx=Math.max(0,bybit-tBybit*(1+buf));
       const solSh=Math.max(0,tSol-solana),okxSh=Math.max(0,tOKX-okx),bybitSh=Math.max(0,tBybit-bybit);
+      const krakenSh=Math.max(0,tKraken-kraken),krakenEx=Math.max(0,kraken-tKraken*(1+buf));
+      const coinbaseSh=Math.max(0,tCoinbase-coinbase),coinbaseEx=Math.max(0,coinbase-tCoinbase*(1+buf));
       const moves=[];
       if(bybitEx>20&&okxSh>20)moves.push({from:'Bybit',to:'OKX',amount:Math.round(Math.min(bybitEx,okxSh))});
       if(bybitEx>20&&solSh>20)moves.push({from:'Bybit',to:'Solana',amount:Math.round(Math.min(bybitEx,solSh))});
@@ -732,7 +739,11 @@ const server = http.createServer(async function(req,res) {
       if(okxEx>20&&solSh>20)moves.push({from:'OKX',to:'Solana',amount:Math.round(Math.min(okxEx,solSh))});
       if(solEx>20&&okxSh>20)moves.push({from:'Solana',to:'OKX',amount:Math.round(Math.min(solEx,okxSh))});
       if(solEx>20&&bybitSh>20)moves.push({from:'Solana',to:'Bybit',amount:Math.round(Math.min(solEx,bybitSh))});
-      res.end(JSON.stringify({solana,okx,bybit,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,moves,needed:moves.length>0}));
+      if(okxEx>20&&krakenSh>20)moves.push({from:'OKX',to:'Kraken',amount:Math.round(Math.min(okxEx,krakenSh)),note:'via ERC-20'});
+      if(krakenEx>20)moves.push({from:'Kraken',to:'Solana',amount:Math.round(krakenEx),note:'USDT withdrawal'});
+      if(coinbaseEx>20)moves.push({from:'Coinbase',to:'Solana',amount:Math.round(coinbaseEx),note:'USDC withdrawal'});
+      if(coinbaseSh>20)moves.push({from:'Manual',to:'Coinbase',amount:Math.round(coinbaseSh),note:'Manual deposit required'});
+      res.end(JSON.stringify({solana,okx,bybit,kraken,coinbase,targetSolana:tSol,targetOKX:tOKX,targetBybit:tBybit,targetKraken:tKraken,targetCoinbase:tCoinbase,moves,needed:moves.length>0}));
     }catch(e){res.end(JSON.stringify({error:e.message}));}
 
   }else if(url==='/api/rebalance-execute'&&req.method==='POST'){

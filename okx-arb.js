@@ -962,6 +962,54 @@ async function withdrawFromBybit(ccy, chain, grossAmount) {
   return r.result?.id;
 }
 
+// ── Kraken deposit address ───────────────────────────────────────────────────
+async function getKrakenDepositAddress() {
+  // Kraken uses a fixed deposit address per user — get it from the API
+  const crypto = require('crypto');
+  const nonce = '' + Date.now();
+  const data  = 'nonce=' + nonce;
+  const hash  = crypto.createHash('sha256').update(nonce + data).digest('binary');
+  const hmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+  hmac.update('/0/private/DepositAddresses', 'binary');
+  hmac.update(hash, 'binary');
+  const sig = hmac.digest('base64');
+  const r = await fetch('https://api.kraken.com/0/private/DepositAddresses', {
+    method: 'POST',
+    headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': sig, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: data + '&asset=USDT&method=Tether+USD+%28ERC20%29'
+  });
+  const j = await r.json();
+  if (j.error?.length) throw new Error('Kraken deposit address error: ' + j.error[0]);
+  return j.result?.[0]?.address;
+}
+
+// ── Withdraw USDT from OKX to Kraken ─────────────────────────────────────────
+async function withdrawUSDTFromOKXToKraken(amount) {
+  const addr = await getKrakenDepositAddress();
+  if (!addr) throw new Error('Could not get Kraken deposit address');
+  // Kraken accepts ERC-20 USDT — use OKX ERC20 chain
+  await withdrawUSDTFromOKX(amount, addr, 'USDT-ERC20');
+}
+
+// ── Coinbase USDC rebalance helpers ──────────────────────────────────────────
+async function getCoinbaseDepositAddress() {
+  // Coinbase wallet address is fixed — use the Coinbase account's crypto address
+  // This requires a separate API call to get the wallet address
+  const cb = getCoinbase();
+  if (!cb) throw new Error('Coinbase module not available');
+  // For now, rebalance TO Coinbase by buying USDC on Coinbase from Solana
+  // and rebalance FROM Coinbase by withdrawing to Solana wallet
+  throw new Error('Use withdrawFromCoinbaseToSolana or topUpCoinbaseFromOKX');
+}
+
+async function withdrawFromCoinbaseToSolana(amount) {
+  // Coinbase → Solana wallet (USDC)
+  const cb = getCoinbase();
+  if (!cb) throw new Error('Coinbase module not available');
+  // Withdraw USDC from Coinbase to Solana wallet
+  await cb.coinbaseWithdraw('USDC', amount.toString(), wallet.publicKey.toString());
+}
+
 async function getBybitDepositAddress(ccy) {
   try { const r = await bybitPrivate('GET', '/v5/asset/deposit/query-address', { coin: ccy, chainType: 'SOL' }); return r.result?.chains?.[0]?.addressDeposit; }
   catch { return null; }
@@ -2729,6 +2777,18 @@ async function executeRebalanceMove(move) {
   } else if (move.method === 'bybit-to-okx') {
     const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
     await withdrawUSDTFromBybit(move.amount, depositAddr);
+  } else if (move.method === 'okx-to-kraken') {
+    await withdrawUSDTFromOKXToKraken(move.amount);
+  } else if (move.method === 'kraken-to-sol') {
+    const kraken = getKraken();
+    if (!kraken) throw new Error('Kraken module not available');
+    await kraken.withdrawFromKraken('USDT', move.amount.toString());
+  } else if (move.method === 'coinbase-to-sol') {
+    await withdrawFromCoinbaseToSolana(move.amount);
+  } else if (move.method === 'sol-to-coinbase') {
+    // Send USDC from Solana to Coinbase — user must have Coinbase USDC deposit address
+    // For now alert to do manually — Coinbase deposit addresses change
+    throw new Error('sol-to-coinbase: deposit $' + move.amount + ' USDC manually to Coinbase Advanced Trade');
   } else {
     throw new Error('Unknown rebalance method: ' + move.method);
   }
@@ -2795,6 +2855,32 @@ async function handleRebalanceCommand(confirm = false) {
     if (solanaExcess > 20 && bybitShort > 20) {
       const amt = Math.min(solanaExcess, bybitShort);
       moves.push({ from: 'Solana', to: 'Bybit', amount: Math.round(amt), method: 'sol-to-bybit' });
+    }
+
+    // OKX excess → Kraken (OKX withdraws USDT via ERC-20 to Kraken)
+    const tKraken = liveConfig.REBALANCE_TARGET_KRAKEN || 300;
+    const statusForKr = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
+    const krakenBal = statusForKr.liveBalances?.kraken || 0;
+    const krakenShort = tKraken - krakenBal;
+    const okxExcess2 = (okxBal || 0) - tOKX;
+    if (krakenShort > 20 && okxExcess2 > 20) {
+      const amt = Math.min(krakenShort, okxExcess2);
+      moves.push({ from: 'OKX', to: 'Kraken', amount: Math.round(amt), method: 'okx-to-kraken', note: 'via ERC-20 USDT' });
+    }
+    // Kraken excess → Solana
+    if (krakenBal - tKraken > 20) {
+      moves.push({ from: 'Kraken', to: 'Solana', amount: Math.round(krakenBal - tKraken), method: 'kraken-to-sol', note: 'USDT withdrawal' });
+    }
+
+    // Coinbase excess → Solana (USDC withdrawal)
+    const tCoinbase = liveConfig.REBALANCE_TARGET_COINBASE || 200;
+    const coinbaseBal2 = statusForKr.liveBalances?.coinbase || 0;
+    if (coinbaseBal2 - tCoinbase > 20) {
+      moves.push({ from: 'Coinbase', to: 'Solana', amount: Math.round(coinbaseBal2 - tCoinbase), method: 'coinbase-to-sol', note: 'USDC withdrawal' });
+    }
+    // Coinbase short — alert to top up manually (deposit address not stable)
+    if (tCoinbase - coinbaseBal2 > 20) {
+      moves.push({ from: 'Manual', to: 'Coinbase', amount: Math.round(tCoinbase - coinbaseBal2), method: 'sol-to-coinbase', note: 'Manual deposit required' });
     }
 
     const statusMsg =

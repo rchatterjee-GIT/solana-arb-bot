@@ -1,126 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-14T18:13:33.469Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T18:13:33.469Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T18:29:34.024Z",
-      "rule": "market-sentiment-report",
-      "changes": [
-        "Sentiment changed to neutral"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T19:13:33.929Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T19:13:33.929Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T20:13:34.574Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "W DEX: 3.2% -> 3.5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T20:13:34.574Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-14T21:39:34.994Z",
-      "rule": "dry-spell-analysis",
-      "changes": [
-        "Dry spell alert sent — Market very quiet (avg volatility 1.9). Consider waiting."
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-14T22:06:35.528Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 3.8% (medium vol $42M + volatility 4.8)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T00:10:36.487Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: JTO showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T00:10:36.633Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3.8% -> 3% (high vol $53M + volatility 5.4)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T00:10:36.633Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T01:12:39.847Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T02:13:39.224Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 3.8% (medium vol $52M + volatility 3.2)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T03:15:39.962Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3.8% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-15T03:25:39.570Z",
       "rule": "macro-structural-insight",
       "changes": [
@@ -799,11 +679,131 @@
         "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
       ],
       "severity": "info"
+    },
+    {
+      "time": "2026-08-16T15:21:00.748Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 202s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:24:13.721Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 395s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:25:16.863Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 459s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:26:15.936Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 518s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:27:16.152Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 578s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:28:27.871Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 650s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:29:28.070Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 710s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:30:28.111Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 770s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:31:33.783Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 835s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:32:45.088Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 907s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:33:45.319Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 967s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:34:25.963Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1007s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:35:26.264Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1068s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:36:26.236Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1128s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:37:26.235Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 1188s — alert sent"
+      ],
+      "severity": "critical"
     }
   ],
   "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T15:16:07.941Z",
-  "actionsToday": 41,
+  "lastRun": "2026-08-16T15:54:26.617Z",
+  "actionsToday": 56,
   "lastActionDate": "2026-08-16",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
@@ -819,7 +819,7 @@
     "kraken-window-prep": 1786855518979,
     "exchange-viability-scan": 1786459147209,
     "macro-structural-insight": 1786836376720,
-    "bot-stale": 1786791910562,
+    "bot-stale": 1786894646051,
     "exchange-severely-imbalanced": 1786791582950,
     "daily-outlook-report": 1786867220497,
     "pair-consecutive-losses": 1786883244888,

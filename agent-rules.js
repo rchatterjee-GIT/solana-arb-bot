@@ -158,9 +158,11 @@ module.exports = [
     detect(ctx) {
       const issues = [];
       const checks = [
-        { ex: 'solana', target: ctx.config.REBALANCE_TARGET_SOLANA || 200 },
-        { ex: 'okx',    target: ctx.config.REBALANCE_TARGET_OKX    || 350 },
-        { ex: 'bybit',  target: ctx.config.REBALANCE_TARGET_BYBIT  || 300 },
+        { ex: 'solana',   target: ctx.config.REBALANCE_TARGET_SOLANA   || 200 },
+        { ex: 'okx',      target: ctx.config.REBALANCE_TARGET_OKX      || 350 },
+        { ex: 'bybit',    target: ctx.config.REBALANCE_TARGET_BYBIT    || 300 },
+        { ex: 'kraken',   target: ctx.config.REBALANCE_TARGET_KRAKEN   || 300 },
+        { ex: 'coinbase', target: ctx.config.REBALANCE_TARGET_COINBASE || 200 },
       ];
       for (const { ex, target } of checks) {
         const bal = ctx.balances[ex];

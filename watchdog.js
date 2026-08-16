@@ -185,8 +185,26 @@ async function pollTelegram() {
 
 // ── Bot process management ────────────────────────────────────────────────────
 function killExisting() {
-  try { execSync('taskkill /F /IM node.exe /FI "WINDOWTITLE eq okx-arb*" 2>nul', { stdio: 'pipe' }); } catch {}
-  try { execSync('taskkill /F /IM node.exe /T 2>nul', { stdio: 'pipe' }); } catch {}
+  // Use WMIC to find only okx-arb.js node processes
+  try {
+    const result = execSync(
+      'wmic process where (name="node.exe") get ProcessId,CommandLine 2>nul',
+      { stdio: 'pipe', encoding: 'utf8' }
+    );
+    const lines = result.split('\n');
+    let killed = 0;
+    for (const line of lines) {
+      if (line.includes('okx-arb') && !line.includes('watchdog')) {
+        const m = line.match(/(\d+)\s*$/);
+        if (m) {
+          try { execSync('taskkill /F /PID ' + m[1], { stdio: 'pipe' }); killed++; } catch {}
+        }
+      }
+    }
+    if (killed) console.log('Killed ' + killed + ' existing okx-arb process(es)');
+  } catch(e) {
+    console.log('killExisting error (non-fatal):', e.message);
+  }
 }
 
 function start() {
