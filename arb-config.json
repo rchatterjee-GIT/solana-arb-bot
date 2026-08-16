@@ -1,18 +1,14 @@
 {
   "POLICY_SKIP_OKX": [
-    "BOME",
     "POPCAT",
     "ZEUS",
+    "MEW",
+    "RENDER",
     "GOAT"
   ],
   "POLICY_SKIP_BYBIT": [
-    "BOME",
-    "BONK",
-    "GOAT",
-    "JUP",
     "MEW",
     "POPCAT",
-    "TRUMP",
     "ZEUS"
   ],
   "RECOVERY_SKIP_BYBIT": [
@@ -70,7 +66,7 @@
     "BONK": 3
   },
   "TEMP_SKIPS": {
-    "GOAT:POLICY_SKIP_OKX": 1786896013132
+    "GOAT:POLICY_SKIP_OKX": 1786969644894
   },
   "TRADE_SIZE_BYBIT": 200,
   "MIN_SPREAD_KRAKEN": 1.2,

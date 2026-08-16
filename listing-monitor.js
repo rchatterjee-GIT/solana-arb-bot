@@ -164,8 +164,8 @@ async function scanNewListings() {
   const config = readJSON(CONFIG_FILE) || {};
 
   // Get current pair lists
-  const [okxPairs, bybitPairs, krakenPairs] = await Promise.all([
-    getOKXPairs(), getBybitPairs(), getKrakenPairs()
+  const [okxPairs, bybitPairs, krakenPairs, coinbasePairs] = await Promise.all([
+    getOKXPairs(), getBybitPairs(), getKrakenPairs(), getCoinbasePairs()
   ]);
 
   const okxSymbols    = new Set(okxPairs.map(p => p.symbol));
@@ -173,9 +173,10 @@ async function scanNewListings() {
   const krakenSymbols = new Set(krakenPairs.map(p => p.symbol));
 
   // Find new listings on each exchange
-  const newOKX    = okxPairs.filter(p => !(known.okx||[]).includes(p.symbol));
-  const newBybit  = bybitPairs.filter(p => !(known.bybit||[]).includes(p.symbol));
-  const newKraken = krakenPairs.filter(p => !(known.kraken||[]).includes(p.symbol));
+  const newOKX      = okxPairs.filter(p => !(known.okx||[]).includes(p.symbol));
+  const newBybit    = bybitPairs.filter(p => !(known.bybit||[]).includes(p.symbol));
+  const newKraken   = krakenPairs.filter(p => !(known.kraken||[]).includes(p.symbol));
+  const newCoinbase = coinbasePairs.filter(p => !(known.coinbase||[]).includes(p.symbol));
 
   // Process new listings — only if we have a previous baseline
   if (known.okx && known.okx.length > 0) {
@@ -194,6 +195,18 @@ async function scanNewListings() {
   } else {
     log('First Bybit scan — baseline set (' + bybitPairs.length + ' pairs, no alerts)');
   }
+  // Process new Coinbase listings
+  if (known.coinbase && known.coinbase.length > 0 && newCoinbase.length > 0 && newCoinbase.length < 10) {
+    const coinbaseSymbols = new Set(coinbasePairs.map(p => p.symbol));
+    for (const pair of newCoinbase) {
+      log('New Coinbase listing: ' + pair.symbol);
+      await processNewListing(pair.symbol, 'Coinbase', config, newPairs, okxSymbols, bybitSymbols, coinbaseSymbols);
+    }
+  } else if (!known.coinbase || newCoinbase.length >= 10) {
+    known.coinbase = coinbasePairs.map(p => p.symbol);
+    log('Coinbase baseline set (' + coinbasePairs.length + ' pairs)');
+  }
+
   // Process new Kraken listings through full viability framework
   if (known.kraken && known.kraken.length > 0 && newKraken.length > 0 && newKraken.length < 10) {
     for (const pair of newKraken) {
@@ -224,7 +237,7 @@ async function scanNewListings() {
   writeJSON(KNOWN_FILE, known);
   writeJSON(NEW_FILE, newPairs.filter(p => p.addedAt >= cutoff));
 
-  return { newOKX: newOKX.length, newBybit: newBybit.length, newKraken: newKraken.length };
+  return { newOKX: newOKX.length, newBybit: newBybit.length, newKraken: newKraken.length, newCoinbase: newCoinbase.length };
 }
 
 async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, config, newPairs) {

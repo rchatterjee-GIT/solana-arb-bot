@@ -227,6 +227,21 @@ async function cleanSolanaUSDT() {
 }
 
 // ── Main hygiene run ──────────────────────────────────────────────────────────
+async function cleanCoinbase() {
+  if (!process.env.COINBASE_API_KEY) return;
+  try {
+    const { getCoinbaseBalance } = require('./coinbase-scaffold');
+    const TOKENS = ['JTO','WIF','BONK','PENGU','PNUT','W','RENDER','TRUMP','PYTH'];
+    for (const sym of TOKENS) {
+      const bal = await getCoinbaseBalance(sym).catch(() => 0);
+      if (bal > 0.000001) {
+        log('Coinbase: found ' + bal.toFixed(6) + ' ' + sym + ' — may be stuck');
+        await sendTG('Hygiene: ' + bal.toFixed(6) + ' ' + sym + ' found on Coinbase — possible stuck withdrawal');
+      }
+    }
+  } catch(e) { log('Coinbase hygiene error: ' + e.message); }
+}
+
 async function runHygiene() {
   log('--- Hygiene cycle start ---');
   await cleanSolanaUSDT();
@@ -234,6 +249,7 @@ async function runHygiene() {
   await cleanOKXFunding();
   await cleanBybitUnified();
   await maintainBybitFund();
+  await cleanCoinbase();
   log('--- Hygiene cycle complete ---');
 }
 

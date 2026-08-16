@@ -55,7 +55,7 @@ const FILES = [
   {
     file: 'listing-monitor.js',
     minLines: 150,
-    required: ['scanNewListings','checkNews','processNewListing','getKrakenPairs'],
+    required: ['scanNewListings','checkNews','processNewListing','getKrakenPairs','getCoinbasePairs'],
   },
   {
     file: 'spread-analysis.js',
@@ -75,7 +75,7 @@ const FILES = [
   {
     file: 'coinbase-scaffold.js',
     minLines: 150,
-    required: ['getCoinbaseBalance','getCoinbaseTicker','coinbaseMarketBuy','coinbaseWithdraw','calcCoinbaseSpread'],
+    required: ['getCoinbaseBalance','getCoinbaseTicker','coinbaseMarketBuy','coinbaseWithdraw','coinbaseWithdraw','buildJWT','getCoinbaseSolanaProducts'],
   },
   {
     file: 'news-monitor.js',

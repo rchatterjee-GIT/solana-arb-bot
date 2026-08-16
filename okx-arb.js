@@ -37,7 +37,16 @@ const wallet     = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.
 console.log('🔑 Wallet loaded:', wallet.publicKey.toString());
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BOT_VERSION            = 'v4.15';
+const BOT_VERSION            = 'v4.16';
+
+// Coinbase token decimals (needed for rawAmount calculation in Leg B)
+const COINBASE_DECIMALS = {
+  'JTO': 9, 'WIF': 6, 'BONK': 5, 'PENGU': 6, 'PNUT': 6,
+  'W': 6, 'RENDER': 8, 'TRUMP': 6, 'PYTH': 6, 'SOL': 9,
+};
+
+// Coinbase-eligible pairs (USDC pairs confirmed)
+const COINBASE_PAIRS = new Set(['JTO','WIF','BONK','PENGU','PNUT','W','RENDER','TRUMP','PYTH','SOL']);
 const TRADE_SIZE_USD         = 120;
 const MIN_SPREAD_CEX         = 1.00;
 const MAX_RETRIES            = 3;
@@ -1759,7 +1768,8 @@ async function checkAndExecute() {
   const canBybit  = !executingBybit   && !bybitLock  && pendingBybit.length  === 0;
   const canKraken = !executingKraken  && !krakenLock && (liveConfig.KRAKEN_ENABLED || false) && getKraken()?.krakenHealthy();
   const krakenSynthetic = liveConfig.KRAKEN_SYNTHETIC || false;
-  if (!canDex && !canOkx && !canBybit && !canKraken) return;
+  const canCoinbase = !executingCoinbase && !coinbaseLock && (liveConfig.COINBASE_ENABLED || false) && getCoinbase();
+  if (!canDex && !canOkx && !canBybit && !canKraken && !canCoinbase) return;
   if (Date.now() - lastCoinRefresh > COIN_REFRESH_MS) await refreshCoinViability();
   await loadDynamicPairs();
   const allPairs    = [...PAIRS, ...dynamicPairs];
@@ -1767,7 +1777,7 @@ async function checkAndExecute() {
   if (activePairs.length === 0) return;
   try {
     const timestamp = new Date().toLocaleTimeString();
-    let bestDex = null, bestOkx = null, bestBybit = null;
+    let bestDex = null, bestOkx = null, bestBybit = null, bestCoinbase = null;
     const pairResults = await Promise.allSettled(
       activePairs.map(async (pair) => {
         const okx = okxPrices[pair.okxInstId];
@@ -1797,6 +1807,7 @@ async function checkAndExecute() {
         if (dexEnabled)           updatePeakSpread(pair.name, 'BUY_DEX',   spreadDex);
         if (okxViable)            updatePeakSpread(pair.name, 'BUY_OKX',   spreadOKX);
         if (bybit && bybitViable) updatePeakSpread(pair.name, 'BUY_BYBIT', spreadBybit);
+        const cbViable = COINBASE_PAIRS.has(pair.okxCcy) && dexEnabled && !(liveConfig.POLICY_SKIP_COINBASE||[]).includes(pair.okxCcy);
         const estDex   = (spreadDex   / 100) * TRADE_SIZE_USD - (DEX_FEE * 2 * TRADE_SIZE_USD) - 0.15;
         const estOKX   = (spreadOKX   / 100) * TRADE_SIZE_USD - (OKX_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
         const estBybit = (spreadBybit / 100) * TRADE_SIZE_USD - (BYBIT_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
@@ -1856,21 +1867,30 @@ async function checkAndExecute() {
           bestBybit = { pair: r.pair, direction: 'BUY_BYBIT', spreadPct: r.spreadBybit, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Bybit', tradeSizeUsd: bybitTradeSize };
         }
       }
+      // Coinbase: buy on Coinbase (USDC), sell on DEX
+      const cbThresh = (liveConfig.MIN_SPREAD_COINBASE || liveConfig.MIN_SPREAD_CEX || 1.5) * (1 + (liveConfig.MIN_SPREAD_BUFFER_PCT || 12) / 100);
+      const cbTradeSize = liveConfig.TRADE_SIZE_COINBASE || TRADE_SIZE_USD;
+      if (canCoinbase && r.cbViable && r.dexEnabled && r.spreadDex > cbThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT) {
+        if (!bestCoinbase || r.spreadDex > bestCoinbase.spreadPct)
+          bestCoinbase = { pair: r.pair, direction: 'BUY_COINBASE', spreadPct: r.spreadDex, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Coinbase', tradeSizeUsd: cbTradeSize };
+      }
     }
     consecutiveErrors = 0;
-    const toFire = [bestDex, bestOkx, bestBybit].filter(Boolean);
+    const toFire = [bestDex, bestOkx, bestBybit, bestCoinbase].filter(Boolean);
     if (toFire.length > 0) {
       // Claim ALL locks atomically before ANY execution begins
       // This prevents concurrent scans from firing on the same opportunities
       if (bestDex)   { dexLock   = true; executingDex   = true; }
-      if (bestOkx)   { okxLock   = true; executingOkx   = true; }
-      if (bestBybit) { bybitLock = true; executingBybit = true; }
+      if (bestOkx)      { okxLock      = true; executingOkx      = true; }
+      if (bestBybit)    { bybitLock    = true; executingBybit    = true; }
+      if (bestCoinbase) { coinbaseLock = true; executingCoinbase = true; }
       console.log(`\n🚨 Firing ${toFire.length} trade(s): ${toFire.map(t => `${t.direction}:${t.pair.name}`).join(', ')}`);
       await Promise.allSettled(toFire.map(opp => executeArb(opp)));
       // Release all locks and executing flags
       if (bestDex)   { dexLock   = false; executingDex   = false; }
-      if (bestOkx)   { okxLock   = false; executingOkx   = false; }
-      if (bestBybit) { bybitLock = false; executingBybit = false; }
+      if (bestOkx)      { okxLock      = false; executingOkx      = false; }
+      if (bestBybit)    { bybitLock    = false; executingBybit    = false; }
+      if (bestCoinbase) { coinbaseLock = false; executingCoinbase = false; }
     }
 
     // ── Kraken synthetic simulation (runs alongside real trades) ──────────────
@@ -1924,8 +1944,9 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
   const logger  = new TradeLogger(tradeId, pair.name, direction, spreadPct, TRADE_SIZE_USD);
 
   if (direction === 'BUY_DEX')   executingDex   = true;
-  if (direction === 'BUY_OKX')   executingOkx   = true;
-  if (direction === 'BUY_BYBIT') executingBybit = true;
+  if (direction === 'BUY_OKX')      executingOkx      = true;
+  if (direction === 'BUY_BYBIT')    executingBybit    = true;
+  if (direction === 'BUY_COINBASE') executingCoinbase = true;
 
   try {
     const w        = await getWalletBalances();
@@ -2046,6 +2067,45 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
       pendingBybit.push(tradeEntry);
       saveState();
       waitAndSwapBack(tradeEntry, ctx).catch(async (err) => { logCrash(`BUY_BYBIT legB [${tradeId}]`, err); removePending('bybit', tradeId); saveState(); await ctx.fail({ reason: err.message, fundsAffected: true, autoFixed: 'Will auto-recover on restart' }); });
+
+    } else if (direction === 'BUY_COINBASE') {
+      const cb = getCoinbase();
+      if (!cb) { await ctx.fail({ reason: 'Coinbase module not available', fundsAffected: false }); return; }
+      const cbTradeSize = tradeSizeUsd || TRADE_SIZE_USD;
+      const cbBal = await cb.getCoinbaseBalance('USDC');
+      if (cbBal < cbTradeSize * 1.01) {
+        await ctx.fail({ reason: `Insufficient Coinbase USDC: $${cbBal.toFixed(2)}`, fundsAffected: false });
+        return;
+      }
+      const productId = symbol + '-USDC';
+      ctx.log(`Placing Coinbase order: $${cbTradeSize} ${productId}`);
+      const orderId = await cb.coinbaseMarketBuy(symbol, cbTradeSize);
+      totalTrades++;
+      await new Promise(r => setTimeout(r, 3000));
+      // Get filled amount
+      const order = await cb.getCoinbaseOrder(orderId);
+      const filledQty = parseFloat(order?.filled_size || '0');
+      if (filledQty < 0.000001) {
+        await ctx.fail({ reason: 'Coinbase order did not fill', fundsAffected: false });
+        totalTrades--;
+        return;
+      }
+      ctx.log(`Coinbase filled: ${filledQty.toFixed(4)} ${symbol} — withdrawing`);
+      const cbDecimals   = COINBASE_DECIMALS[symbol] || pair.decimals || 6;
+      const rawExpected  = Math.floor(filledQty * Math.pow(10, cbDecimals));
+      const legStartTime = Date.now();
+      try {
+        await cb.coinbaseWithdraw(symbol, filledQty.toFixed(8), wallet.publicKey.toString());
+        ctx.log(`Withdrew ${symbol} from Coinbase (~21s) — polling Solana`);
+      } catch (err) {
+        logCrash(`BUY_COINBASE withdrawal [${tradeId}]`, err);
+        await ctx.alert(`Coinbase withdrawal failed: ${err.message}`);
+      }
+      const cbEntryPrice = filledQty > 0 ? cbTradeSize / filledQty : 0;
+      const tradeEntry = { tradeId, symbol, direction: 'BUY_COINBASE', exchange: 'Coinbase', startTime: legStartTime, pair, expectedRawAmount: rawExpected, tradeSizeUsd: cbTradeSize, spreadPct, entryPrice: cbEntryPrice, logger };
+      pendingOkx.push(tradeEntry); // reuse OKX pending pool for polling
+      saveState();
+      waitAndSwapBack(tradeEntry, ctx).catch(async (err) => { logCrash(`BUY_COINBASE legB [${tradeId}]`, err); removePending('okx', tradeId); saveState(); await ctx.fail({ reason: err.message, fundsAffected: true }); });
     }
 
     if (totalProfit <= -SESSION_STOP_LOSS) { await sendAlert(`⛔ <b>Stop loss hit</b> — down $${Math.abs(totalProfit).toFixed(2)}`); process.exit(1); }
@@ -2054,8 +2114,9 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
     consecutiveClean = 0; // reset — trade failed, may need intervention
   } finally {
     if (direction === 'BUY_DEX')   executingDex   = false;
-    if (direction === 'BUY_OKX')   executingOkx   = false;
-    if (direction === 'BUY_BYBIT') executingBybit = false;
+    if (direction === 'BUY_OKX')      executingOkx      = false;
+    if (direction === 'BUY_BYBIT')    executingBybit    = false;
+    if (direction === 'BUY_COINBASE') executingCoinbase = false;
   }
 }
 
@@ -2294,6 +2355,8 @@ async function pollTelegramCommands() {
 let testRunning  = false;
 let rebalancing  = false;
 let okxLock      = false; // atomic lock — prevents race condition on concurrent scans
+let coinbaseLock = false;
+let executingCoinbase = false;
 let lastOkxWsMsg = Date.now();  // WS watchdog — tracks last message received
 let bybitLock    = false;
 let dexLock      = false;
@@ -2306,6 +2369,14 @@ function getKraken() {
     try { _krakenMod = require('./kraken-scaffold'); } catch { return null; }
   }
   return _krakenMod;
+}
+
+let _coinbaseMod = null;
+function getCoinbase() {
+  if (!_coinbaseMod) {
+    try { _coinbaseMod = require('./coinbase-scaffold'); } catch { return null; }
+  }
+  return _coinbaseMod;
 }
 let lastTestDate = null;
 
@@ -2916,11 +2987,20 @@ async function main() {
         krakenBal = parseFloat(kJ.result?.USDT || 0) + parseFloat(kJ.result?.ZUSD || 0);
       } catch {}
 
+      // Coinbase balance
+      let coinbaseBal = null;
+      try {
+        if (liveConfig.COINBASE_ENABLED && getCoinbase()) {
+          coinbaseBal = await getCoinbase().getCoinbaseBalance('USDC');
+        }
+      } catch {}
+
       existing.liveBalances = {
         solana: w.usdc,
         okx: okxBals.usdt,
         bybit: bybitBal,
         kraken: krakenBal,
+        coinbase: coinbaseBal,
         updatedAt: new Date().toISOString(),
       };
       fs.writeFileSync(statusFile, JSON.stringify(existing, null, 2));

@@ -5,7 +5,7 @@ const path   = require('path');
 const crypto = require('crypto');
 
 const PORT        = 3001;
-const VERSION     = 'v5.1';
+const VERSION     = 'v5.2';
 const STATE_FILE  = path.join(__dirname, 'arb-state.json');
 const TRADES_FILE = path.join(__dirname, 'trades.json');
 const FIRES_FILE  = path.join(__dirname, 'fires.json');
@@ -274,6 +274,10 @@ tr:hover td{background:#14141f}
     </div>
     <div class="card">
       <div class="val" id="w-kraken">-</div>
+    <div class="card">
+      <div class="val" id="w-coinbase">-</div>
+      <div class="lbl">Coinbase USDC</div>
+    </div>
       <div class="lbl">Kraken USDT</div>
     </div>
   </div>
@@ -394,7 +398,9 @@ async function doLiveBalances(){
     if(d.okx!=null)document.getElementById('lo').textContent=fmt2(d.okx);
     if(d.bybit!=null)document.getElementById('lb').textContent=fmt2(d.bybit);
     if(d.kraken!=null&&d.kraken>0){document.getElementById('lk').textContent=fmt2(d.kraken);document.getElementById('ks').innerHTML='<span class="green">online</span>';}
-    var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0);
+  var cbEnabled=d.config&&d.config.COINBASE_ENABLED;
+  if(d.coinbase!=null){document.getElementById('lcb')&&(document.getElementById('lcb').textContent=fmt2(d.coinbase));document.getElementById('cbs')&&(document.getElementById('cbs').innerHTML=cbEnabled?'<span class="green">online</span>':'<span class="dim">disabled</span>');}
+    var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
     document.getElementById('tc').textContent=fmt2(total);
     // OKX warning
     var okxCard=document.getElementById('okx-card');
@@ -414,6 +420,7 @@ function renderWallets(d){
   document.getElementById('w-okx').textContent=fmt2(d.okx);
   document.getElementById('w-bybit').textContent=fmt2(d.bybit);
   document.getElementById('w-kraken').textContent=d.kraken!=null?fmt2(d.kraken):'-';
+  document.getElementById('w-coinbase').textContent=d.coinbase!=null?fmt2(d.coinbase):'-';
   // Tokens
   function renderToks(elId,toks){
     var el=document.getElementById(elId);
@@ -433,7 +440,8 @@ function renderWallets(d){
     {ex:'Solana',cur:d.solana,tgt:tSol},
     {ex:'OKX',cur:d.okx,tgt:tOKX},
     {ex:'Bybit',cur:d.bybit,tgt:tBybit},
-    {ex:'Kraken',cur:d.kraken,tgt:cfg.REBALANCE_TARGET_KRAKEN||300}
+    {ex:'Kraken',cur:d.kraken,tgt:cfg.REBALANCE_TARGET_KRAKEN||300},
+    {ex:'Coinbase',cur:d.coinbase,tgt:cfg.REBALANCE_TARGET_COINBASE||200}
   ];
   document.getElementById('rebal-table').innerHTML=rows.map(function(r){
     if(r.cur==null)return '<tr><td>'+r.ex+'</td><td class="dim">-</td><td>$'+r.tgt+'</td><td class="dim">-</td><td></td></tr>';

@@ -14,36 +14,26 @@ const TAKER_FEE = 0.006; // 0.60% taker — reduces at higher volume tiers
 
 // ── JWT Auth (Coinbase CDP API key format) ────────────────────────────────────
 function buildJWT(method, path) {
-  if (!process.env.COINBASE_API_KEY || !process.env.COINBASE_API_SECRET) {
-    throw new Error('COINBASE_API_KEY and COINBASE_API_SECRET required in .env');
-  }
   const keyName   = process.env.COINBASE_API_KEY;
-  const keySecret = process.env.COINBASE_API_SECRET;
+  const keySecret = process.env.COINBASE_API_SECRET.trim();
   const ts        = Math.floor(Date.now() / 1000);
   const nonce     = crypto.randomBytes(16).toString('hex');
-  const uri       = method.toUpperCase() + ' api.coinbase.com' + path;
+  const uri       = method.toUpperCase() + ' api.coinbase.com' + path.split('?')[0];
 
-  const header  = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'ES256', kid: keyName, nonce })).toString('base64url');
+  const header  = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'EdDSA', kid: keyName, nonce })).toString('base64url');
   const payload = Buffer.from(JSON.stringify({ sub: keyName, iss: 'cdp', nbf: ts, exp: ts + 120, uri })).toString('base64url');
   const msg     = header + '.' + payload;
 
-  // Handle both PEM format and raw base64 secret
-  let privateKey;
-  const secret = keySecret.trim();
-  if (secret.includes('BEGIN')) {
-    // PEM format
-    privateKey = crypto.createPrivateKey({ key: secret, format: 'pem' });
-  } else {
-    // Raw base64 — wrap in PEM
-    const pem = '-----BEGIN EC PRIVATE KEY-----\n' + secret + '\n-----END EC PRIVATE KEY-----';
-    try {
-      privateKey = crypto.createPrivateKey({ key: pem, format: 'pem' });
-    } catch {
-      // Try as PKCS8 DER
-      privateKey = crypto.createPrivateKey({ key: Buffer.from(secret, 'base64'), format: 'der', type: 'pkcs8' });
-    }
-  }
-  const sig = crypto.sign('SHA256', Buffer.from(msg), { key: privateKey, dsaEncoding: 'ieee-p1363' });
+  // Coinbase Ed25519 key: 88-char base64 = 64 bytes (seed + pubkey)
+  // Need to wrap as PKCS8 for Node.js crypto
+  const rawKey = Buffer.from(keySecret, 'base64');
+  // Ed25519 PKCS8 header: 302e020100300506032b657004220420
+  const pkcs8Header = Buffer.from('302e020100300506032b657004220420', 'hex');
+  const seed = rawKey.length >= 32 ? rawKey.slice(0, 32) : rawKey;
+  const pkcs8 = Buffer.concat([pkcs8Header, seed]);
+  const privateKey = crypto.createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' });
+
+  const sig = crypto.sign(null, Buffer.from(msg), privateKey);
   return msg + '.' + sig.toString('base64url');
 }
 
@@ -136,11 +126,23 @@ function calcCoinbaseSpread(cbAsk, dexBid, tradeSizeUsd) {
 
 // ── Get all available Solana-network products ─────────────────────────────────
 async function getCoinbaseSolanaProducts() {
-  const j = await cbRequest('GET', '/api/v3/brokerage/products?product_type=SPOT&quote_currency_id=USDC&limit=250');
-  const products = j.products || [];
-  // Filter to known Solana ecosystem tokens
   const SOLANA_TOKENS = ['JTO','WIF','BONK','PENGU','RAY','SOL','PNUT','W','JUP','RENDER','GOAT','TRUMP','PYTH'];
-  return products.filter(p => SOLANA_TOKENS.includes(p.base_currency_id));
+  // Fetch all products in one call and filter
+  const j = await cbRequest('GET', '/api/v3/brokerage/products?limit=500');
+  const all = j.products || [];
+  const matched = all.filter(p =>
+    SOLANA_TOKENS.includes((p.base_currency_id||'').toUpperCase()) &&
+    p.product_type === 'SPOT' &&
+    p.status === 'online'
+  );
+  const results = { usdc: [], usd: [], usdt: [] };
+  matched.forEach(p => {
+    const q = (p.quote_currency_id||'').toUpperCase();
+    if (q === 'USDC') results.usdc.push(p);
+    else if (q === 'USD') results.usd.push(p);
+    else if (q === 'USDT') results.usdt.push(p);
+  });
+  return results;
 }
 
 // ── Fee tier info ─────────────────────────────────────────────────────────────
@@ -179,7 +181,10 @@ async function runTests() {
   // Test 3: Available Solana products
   try {
     const products = await getCoinbaseSolanaProducts();
-    console.log('✅ Solana products available:', products.map(p => p.base_currency_id).join(', '));
+    const usdc = products.usdc.map(p => p.base_currency_id);
+    const usd  = products.usd.map(p => p.base_currency_id);
+    console.log('✅ USDC pairs ('+usdc.length+'):', usdc.join(', ') || 'none');
+    console.log('   USD pairs  ('+usd.length+'):', usd.join(', ') || 'none');
   } catch(e) { console.log('❌ Products:', e.message); }
 
   // Test 4: Fee info

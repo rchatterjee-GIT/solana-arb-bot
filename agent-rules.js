@@ -959,10 +959,10 @@ module.exports = [
 
       // Fetch exchange news from CryptoPanic if available
       const exchanges = [
-        { name: 'Bitget',   url: 'https://www.bitget.com', note: 'Low fees (0.01%), MiCA compliant, Solana withdrawals' },
-        { name: 'Binance',  url: 'https://www.binance.com', note: 'Best liquidity — UK access restricted, monitor for changes' },
-        { name: 'Coinbase', url: 'https://www.coinbase.com', note: 'UK compliant — limited Solana pairs, higher fees' },
-        { name: 'Gate.io',  url: 'https://www.gate.io', note: 'Parked — KYC issues, revisit if resolved' },
+        { name: 'Bitget',   url: 'https://www.bitget.com', note: 'FCA warning — parked' },
+        { name: 'Binance',  url: 'https://www.binance.com', note: 'Best liquidity — UK restricted, monitor for changes' },
+        { name: 'Coinbase', url: 'https://www.coinbase.com', note: 'ACTIVE — FCA+MiCA, 10 USDC pairs, 21s withdrawal, 1.03% break-even' },
+        { name: 'Gate.io',  url: 'https://www.gate.io', note: 'Parked — KYC issues' },
         { name: 'MEXC',     url: 'https://www.mexc.com', note: 'Wide pair selection, check UK compliance' },
         { name: 'Kucoin',   url: 'https://www.kucoin.com', note: 'Solana pairs available, check UK FCA status' },
       ];
@@ -1158,9 +1158,9 @@ module.exports = [
       });
 
       msg4 += '\n<b>Bot Status:</b>\n';
-      msg4 += 'Capital: ~$' + Math.round((ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)) + '\n';
-      msg4 += 'OKX: $' + Math.round(ctx.balances.okx||0) + ' | Bybit: $' + Math.round(ctx.balances.bybit||0) + ' | Sol: $' + Math.round(ctx.balances.solana||0) + '\n';
-      msg4 += 'Consecutive clean: ' + (ctx.state.consecutiveClean||0) + '/20';
+      msg4 += 'Capital: ~$' + Math.round((ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)+(ctx.balances.coinbase||0)) + '\n';
+      msg4 += 'OKX: $' + Math.round(ctx.balances.okx||0) + ' | Bybit: $' + Math.round(ctx.balances.bybit||0) + ' | Kraken: $' + Math.round(ctx.balances.kraken||0) + ' | CB: $' + Math.round(ctx.balances.coinbase||0) + '\n';
+      msg4 += 'ConsecWins: ' + (ctx.state.consecutiveWins||0) + '/10 | ConsecClean: ' + (ctx.state.consecutiveClean||0);
 
       await ctx.sendTG(msg4);
 
