@@ -446,13 +446,15 @@ function renderWallets(d){
   renderToks('w-bybit-toks',d.bybitTokens);
   // Rebalance table
   var cfg=readConfig||{};
-  var tSol=cfg.REBALANCE_TARGET_SOLANA||200,tOKX=cfg.REBALANCE_TARGET_OKX||350,tBybit=cfg.REBALANCE_TARGET_BYBIT||300;
+  // Equal-share rebalancing — target is total/5 for each exchange
+  var total5=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
+  var equalShare=Math.round(total5/5);
   var rows=[
-    {ex:'Solana',cur:d.solana,tgt:tSol},
-    {ex:'OKX',cur:d.okx,tgt:tOKX},
-    {ex:'Bybit',cur:d.bybit,tgt:tBybit},
-    {ex:'Kraken',cur:d.kraken,tgt:cfg.REBALANCE_TARGET_KRAKEN||300},
-    {ex:'Coinbase',cur:d.coinbase,tgt:cfg.REBALANCE_TARGET_COINBASE||200}
+    {ex:'Solana',cur:d.solana,tgt:equalShare},
+    {ex:'OKX',cur:d.okx,tgt:equalShare},
+    {ex:'Bybit',cur:d.bybit,tgt:equalShare},
+    {ex:'Kraken',cur:d.kraken,tgt:equalShare},
+    {ex:'Coinbase',cur:d.coinbase,tgt:equalShare}
   ];
   document.getElementById('rebal-table').innerHTML=rows.map(function(r){
     if(r.cur==null)return '<tr><td>'+r.ex+'</td><td class="dim">-</td><td>$'+r.tgt+'</td><td class="dim">-</td><td></td></tr>';

@@ -2801,82 +2801,63 @@ async function handleRebalanceCommand(confirm = false) {
     // Use equity for Bybit (walletBalance can be stale after trades)
     const bybitBal = await getBybitEquity();
     
+    // ── Equal-share rebalancing ──────────────────────────────────────────────
+    // All 5 exchanges share total capital equally — no fixed targets
+    // Excess on any exchange gets distributed evenly to those below equal share
     const solana   = w.usdc;
     const okx      = okxBals.usdt;
     const bybit    = bybitBal;
-    const total    = solana + okx + bybit;
+    const statusForBal = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
+    const krakenBal    = statusForBal.liveBalances?.kraken   || 0;
+    const coinbaseBal2 = statusForBal.liveBalances?.coinbase || 0;
 
-    const tSolana  = liveConfig.REBALANCE_TARGET_SOLANA ?? 200;
-    const tOKX     = liveConfig.REBALANCE_TARGET_OKX    ?? 350;
-    const tBybit   = liveConfig.REBALANCE_TARGET_BYBIT  ?? 300;
-    const buffer   = 0.05; // 5% tolerance before rebalancing
-
-    // Calculate excess and shortfall per exchange
-    const solanaExcess  = Math.max(0, solana - tSolana * (1 + buffer));
-    const okxExcess     = Math.max(0, okx    - tOKX   * (1 + buffer));
-    const bybitExcess   = Math.max(0, bybit  - tBybit * (1 + buffer));
-    const solanaShort   = Math.max(0, tSolana - solana);
-    const okxShort      = Math.max(0, tOKX    - okx);
-    const bybitShort    = Math.max(0, tBybit  - bybit);
+    const balances5 = { Solana: solana, OKX: okx, Bybit: bybit, Kraken: krakenBal, Coinbase: coinbaseBal2 };
+    const total5    = solana + okx + bybit + krakenBal + coinbaseBal2;
+    const equalShare = total5 / 5;
+    const buffer     = 0.08; // 8% tolerance — don't move for tiny differences
 
     const moves = [];
 
-    // Bybit excess → OKX (via Bybit withdraw to OKX deposit address)
-    if (bybitExcess > 20 && okxShort > 20) {
-      const amt = Math.min(bybitExcess, okxShort);
-      moves.push({ from: 'Bybit', to: 'OKX', amount: Math.round(amt), method: 'bybit-to-okx' });
-    }
+    // Find who is over and who is under the equal share
+    const over  = Object.entries(balances5).filter(([,b]) => b > equalShare * (1 + buffer));
+    const under = Object.entries(balances5).filter(([,b]) => b < equalShare * (1 - buffer));
 
-    // Bybit excess → Solana (via Bybit withdraw to Solana wallet)
-    if (bybitExcess > 20 && solanaShort > 20) {
-      const amt = Math.min(bybitExcess, solanaShort);
-      moves.push({ from: 'Bybit', to: 'Solana', amount: Math.round(amt), method: 'bybit-to-sol' });
-    }
-
-    // OKX excess → Bybit (via OKX withdraw to Bybit deposit address)
-    if (okxExcess > 20 && bybitShort > 20) {
-      const amt = Math.min(okxExcess, bybitShort);
-      moves.push({ from: 'OKX', to: 'Bybit', amount: Math.round(amt), method: 'okx-to-bybit' });
-    }
-
-    // OKX excess → Solana
-    if (okxExcess > 20 && solanaShort > 20) {
-      const amt = Math.min(okxExcess, solanaShort);
-      moves.push({ from: 'OKX', to: 'Solana', amount: Math.round(amt), method: 'okx-to-sol' });
-    }
-
-    // Solana excess → OKX
-    if (solanaExcess > 20 && okxShort > 20) {
-      const amt = Math.min(solanaExcess, okxShort);
-      moves.push({ from: 'Solana', to: 'OKX', amount: Math.round(amt), method: 'sol-to-okx' });
-    }
-
-    // Solana excess → Bybit
-    if (solanaExcess > 20 && bybitShort > 20) {
-      const amt = Math.min(solanaExcess, bybitShort);
-      moves.push({ from: 'Solana', to: 'Bybit', amount: Math.round(amt), method: 'sol-to-bybit' });
-    }
-
-    // OKX excess → Kraken (OKX withdraws USDT via ERC-20 to Kraken)
-    const tKraken = liveConfig.REBALANCE_TARGET_KRAKEN || 300;
-    const statusForKr = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
-    const krakenBal = statusForKr.liveBalances?.kraken || 0;
-    const krakenShort = tKraken - krakenBal;
-    const okxExcess2 = (okxBal || 0) - tOKX;
-    if (krakenShort > 20 && okxExcess2 > 20) {
-      const amt = Math.min(krakenShort, okxExcess2);
-      moves.push({ from: 'OKX', to: 'Kraken', amount: Math.round(amt), method: 'okx-to-kraken', note: 'via ERC-20 USDT' });
-    }
-    // Kraken excess → Solana
-    if (krakenBal - tKraken > 20) {
-      moves.push({ from: 'Kraken', to: 'Solana', amount: Math.round(krakenBal - tKraken), method: 'kraken-to-sol', note: 'USDT withdrawal' });
-    }
-
-    // Coinbase excess → Solana (USDC withdrawal)
-    const tCoinbase = liveConfig.REBALANCE_TARGET_COINBASE || 200;
-    const coinbaseBal2 = statusForKr.liveBalances?.coinbase || 0;
-    if (coinbaseBal2 - tCoinbase > 20) {
-      moves.push({ from: 'Coinbase', to: 'Solana', amount: Math.round(coinbaseBal2 - tCoinbase), method: 'coinbase-to-sol', note: 'USDC withdrawal' });
+    // For each over-funded exchange, distribute excess to under-funded ones
+    for (const [fromEx, fromBal] of over) {
+      let remaining = fromBal - equalShare;
+      for (const [toEx, toBal] of under) {
+        if (remaining < 20) break;
+        const needed = equalShare - toBal;
+        if (needed < 20) continue;
+        const amt = Math.round(Math.min(remaining, needed));
+        // Determine method
+        const methodKey = fromEx.toLowerCase().replace('solana','sol').replace('coinbase','cb') +
+                          '-to-' + toEx.toLowerCase().replace('solana','sol').replace('coinbase','cb');
+        const methodMap = {
+          'okx-to-sol':     'okx-to-sol',
+          'okx-to-bybit':   'okx-to-bybit',
+          'okx-to-kraken':  'okx-to-kraken',
+          'okx-to-cb':      'sol-to-coinbase', // OKX→Coinbase: OKX→Sol→CB manual
+          'bybit-to-sol':   'bybit-to-sol',
+          'bybit-to-okx':   'bybit-to-okx',
+          'bybit-to-kraken':'okx-to-kraken',   // via OKX intermediate
+          'sol-to-okx':     'sol-to-okx',
+          'sol-to-bybit':   'sol-to-bybit',
+          'sol-to-kraken':  'okx-to-kraken',   // Sol→OKX first, then OKX→Kraken
+          'sol-to-cb':      'sol-to-coinbase',
+          'kraken-to-sol':  'kraken-to-sol',
+          'kraken-to-okx':  'kraken-to-sol',   // Kraken→Sol first
+          'kraken-to-bybit':'kraken-to-sol',   // Kraken→Sol first
+          'cb-to-sol':      'coinbase-to-sol',
+          'cb-to-okx':      'coinbase-to-sol', // CB→Sol first
+          'cb-to-bybit':    'coinbase-to-sol', // CB→Sol first
+        };
+        const method = methodMap[methodKey];
+        if (method) {
+          moves.push({ from: fromEx, to: toEx, amount: amt, method, note: 'equal-share rebalance' });
+          remaining -= amt;
+        }
+      }
     }
     // Coinbase short — alert to top up manually (deposit address not stable)
     if (tCoinbase - coinbaseBal2 > 20) {

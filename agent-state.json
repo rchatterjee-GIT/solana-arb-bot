@@ -1,30 +1,6 @@
 {
   "history": [
     {
-      "time": "2026-08-15T03:25:39.570Z",
-      "rule": "macro-structural-insight",
-      "changes": [
-        "DEX threshold lowered to 0.9% (macro: DEX structurally favoured)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T04:17:40.278Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 3.8% (medium vol $52M + volatility 3.8)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T04:30:40.023Z",
-      "rule": "pre-session-threshold-optimisation",
-      "changes": [
-        "Pre-session scan complete - PENGU 4.2, JTO 4.2"
-      ],
-      "severity": "info"
-    },
-    {
       "time": "2026-08-15T04:45:40.064Z",
       "rule": "kraken-window-prep",
       "changes": [
@@ -799,11 +775,35 @@
         "Bot stale 1188s — alert sent"
       ],
       "severity": "critical"
+    },
+    {
+      "time": "2026-08-16T15:58:45.712Z",
+      "rule": "winning-pair-threshold-opportunity",
+      "changes": [
+        "Threshold opportunity identified: JTO"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T15:58:45.972Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 3% -> 2.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-16T16:01:45.899Z",
+      "rule": "exchange-severely-imbalanced",
+      "changes": [
+        "Rebalance triggered: okx: $650 vs target $350 (86% off)"
+      ],
+      "severity": "warn"
     }
   ],
   "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T15:54:26.617Z",
-  "actionsToday": 56,
+  "lastRun": "2026-08-16T16:17:45.669Z",
+  "actionsToday": 59,
   "lastActionDate": "2026-08-16",
   "lastSentiment": "neutral",
   "ruleCooldowns": {
@@ -820,13 +820,13 @@
     "exchange-viability-scan": 1786459147209,
     "macro-structural-insight": 1786836376720,
     "bot-stale": 1786894646051,
-    "exchange-severely-imbalanced": 1786791582950,
+    "exchange-severely-imbalanced": 1786896105555,
     "daily-outlook-report": 1786867220497,
     "pair-consecutive-losses": 1786883244888,
     "pair-threshold-too-low": 1786892275662,
-    "dex-threshold-dynamic": 1786892275662,
+    "dex-threshold-dynamic": 1786895925546,
     "pair-viability-weekly-test": 1786863620051,
-    "winning-pair-threshold-opportunity": 1786892275662
+    "winning-pair-threshold-opportunity": 1786895925546
   },
   "activeWindowAlerted": true,
   "lastSentimentTime": 1786821375117,
@@ -838,6 +838,6 @@
   "lastExchangeScan": 1786459147224,
   "lastMacroInsight": 1786836376728,
   "lastOutlookReport": 1786867220507,
-  "lastDexAdjust": 1786892275889,
+  "lastDexAdjust": 1786895925748,
   "lastViabilityTest": 1786863620059
 }

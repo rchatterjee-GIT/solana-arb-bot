@@ -61,7 +61,7 @@
     "RAY": 3,
     "PENGU": 5,
     "W": 3.5,
-    "WIF": 3
+    "WIF": 2.5
   },
   "COINBASE_ENABLED": true,
   "MIN_SPREAD_COINBASE": 1.2,

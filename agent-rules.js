@@ -157,12 +157,15 @@ module.exports = [
     severity: 'warn',
     detect(ctx) {
       const issues = [];
+      // Equal-share — target is total capital / 5
+      const total5 = (ctx.balances.solana||0)+(ctx.balances.okx||0)+(ctx.balances.bybit||0)+(ctx.balances.kraken||0)+(ctx.balances.coinbase||0);
+      const equalShare = total5 / 5;
       const checks = [
-        { ex: 'solana',   target: ctx.config.REBALANCE_TARGET_SOLANA   || 200 },
-        { ex: 'okx',      target: ctx.config.REBALANCE_TARGET_OKX      || 350 },
-        { ex: 'bybit',    target: ctx.config.REBALANCE_TARGET_BYBIT    || 300 },
-        { ex: 'kraken',   target: ctx.config.REBALANCE_TARGET_KRAKEN   || 300 },
-        { ex: 'coinbase', target: ctx.config.REBALANCE_TARGET_COINBASE || 200 },
+        { ex: 'solana',   target: equalShare },
+        { ex: 'okx',      target: equalShare },
+        { ex: 'bybit',    target: equalShare },
+        { ex: 'kraken',   target: equalShare },
+        { ex: 'coinbase', target: equalShare },
       ];
       for (const { ex, target } of checks) {
         const bal = ctx.balances[ex];
