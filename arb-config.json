@@ -47,7 +47,7 @@
   "note": "Edit via node command only. Changes take effect within 30s.",
   "MAX_CONCURRENT_TRADES": 2,
   "MIN_SPREAD_BUFFER_PCT": 20,
-  "KRAKEN_ENABLED": false,
+  "KRAKEN_ENABLED": true,
   "REBALANCE_TARGET_SOLANA": 200,
   "REBALANCE_TARGET_OKX": 350,
   "REBALANCE_TARGET_BYBIT": 300,
@@ -62,5 +62,9 @@
     "PENGU": 5,
     "W": 3.5,
     "WIF": 3
-  }
+  },
+  "COINBASE_ENABLED": true,
+  "MIN_SPREAD_COINBASE": 1.2,
+  "TRADE_SIZE_COINBASE": 120,
+  "REBALANCE_TARGET_COINBASE": 200
 }
