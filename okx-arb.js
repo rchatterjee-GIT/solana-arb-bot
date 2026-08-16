@@ -2180,10 +2180,21 @@ ${'─'.repeat(60)}`);
 `);
 
     // Telegram — compact single message
+    // Get Kraken and Coinbase from liveBalances
+    let krakenBal2 = null, coinbaseBal2 = null;
+    try {
+      const statusNow = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+      krakenBal2   = statusNow.liveBalances?.kraken   || null;
+      coinbaseBal2 = statusNow.liveBalances?.coinbase  || null;
+    } catch {}
+    const total2 = total + (krakenBal2||0) + (coinbaseBal2||0);
+    const gain2  = total2 - (startCapital || 261.31);
+    const gainPct2 = (gain2/(startCapital||261.31)*100).toFixed(1);
     const parts = [
-      `💼 <b>${BOT_VERSION}</b> ${isActive?'🟢':'🌙'} ${timeStr}`,
-      `Sol:$${w.usdc.toFixed(0)} OKX:$${okxBals.usdt.toFixed(0)}${!okxHealthy?'🔴':''} By:$${bybitBal.toFixed(0)} | <b>$${total.toFixed(0)}</b> ${gain>=0?'+':''}$${gain.toFixed(0)} (${gainPct}%)`,
-      `🎯 ${winsBar} ${consecutiveWins}/${WINS_TARGET} | ${totalTrades}T ${winningTrades}W P&L:${totalProfit>=0?'+':''}$${totalProfit.toFixed(2)}`,
+      BOT_VERSION + ' ' + (isActive?'[ACTIVE]':'[quiet]') + ' ' + timeStr,
+      'Sol:$' + w.usdc.toFixed(0) + ' OKX:$' + okxBals.usdt.toFixed(0) + (okxHealthy?'':' [down]') + ' By:$' + bybitBal.toFixed(0),
+      'Kr:$' + (krakenBal2!=null?krakenBal2.toFixed(0):'-') + ' CB:$' + (coinbaseBal2!=null?coinbaseBal2.toFixed(0):'-') + ' | Total:$' + total2.toFixed(0) + ' (' + (gain2>=0?'+':'') + gainPct2 + '%)',
+      'Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | ' + totalTrades + ' trades | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2),
     ];
     if (inFlight.length) parts.push('⏳ In flight:\n' + inFlight.join('\n'));
     if (peakReport && peakReport !== 'No positive spreads this period') parts.push('📡 ' + peakReport);
@@ -2897,7 +2908,7 @@ async function main() {
   await runStartupChecks();
 
   await sendAlert(
-    `✅ <b>${BOT_VERSION} online</b> | ${okxHealthy?'OKX ✅':'OKX 🔴'} | Wins:${consecutiveWins}/${WINS_TARGET} | P&L:${totalProfit>=0?'+':''}$${totalProfit.toFixed(2)}`
+    BOT_VERSION + ' online | OKX:' + (okxHealthy?'OK':'DOWN') + ' | Wins:' + consecutiveWins + '/' + WINS_TARGET + ' | P&L:' + (totalProfit>=0?'+':'') + '$' + totalProfit.toFixed(2)
   );
     startOKXWS();
   startBybitWS();
