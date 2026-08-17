@@ -2795,161 +2795,129 @@ async function executeRebalanceMove(move) {
 }
 
 async function handleRebalanceCommand(confirm = false) {
+  if (rebalancing) { await sendAlert('⚠️ [WARN] Rebalance already in progress'); return; }
   try {
-    const w        = await getWalletBalances();
-    const okxBals  = await getOKXBalances();
-    // Use equity for Bybit (walletBalance can be stale after trades)
-    const bybitBal = await getBybitEquity();
-    
-    // ── Equal-share rebalancing ──────────────────────────────────────────────
-    // All 5 exchanges share total capital equally — no fixed targets
-    // Excess on any exchange gets distributed evenly to those below equal share
-    const solana   = w.usdc;
-    const okx      = okxBals.usdt;
-    const bybit    = bybitBal;
-    const statusForBal = JSON.parse(fs.readFileSync(STATUS_FILE,'utf8'));
-    const krakenBal    = statusForBal.liveBalances?.kraken   || 0;
-    const coinbaseBal2 = statusForBal.liveBalances?.coinbase || 0;
+    // ── Step 1: Gather all balances ──────────────────────────────────────────
+    const w       = await getWalletBalances();
+    const okxData = await getOKXBalances();
+    const bybit   = await getBybitEquity();
+    const statusData = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
+    const lb = statusData.liveBalances || {};
 
-    const balances5 = { Solana: solana, OKX: okx, Bybit: bybit, Kraken: krakenBal, Coinbase: coinbaseBal2 };
-    const total5    = solana + okx + bybit + krakenBal + coinbaseBal2;
-    const equalShare = total5 / 5;
-    const buffer     = 0.08; // 8% tolerance — don't move for tiny differences
+    const balances = {
+      Solana:   w.usdc              || 0,
+      OKX:      okxData.usdt        || 0,
+      Bybit:    bybit               || 0,
+      Kraken:   lb.kraken           || 0,
+      Coinbase: lb.coinbase         || 0,
+    };
+
+    const total      = Object.values(balances).reduce((a, b) => a + b, 0);
+    const equalShare = total / Object.keys(balances).length;
+    const THRESHOLD  = 0.08; // 8% tolerance — don't move for small differences
+    const MIN_MOVE   = 20;   // minimum $20 to bother moving
+
+    // ── Step 2: Calculate moves (excess → short) ─────────────────────────────
+    const over  = Object.entries(balances).filter(([, b]) => b > equalShare * (1 + THRESHOLD));
+    const under = Object.entries(balances).filter(([, b]) => b < equalShare * (1 - THRESHOLD));
+
+    // Route map: which method to use for each exchange pair
+    // Key: fromEx-toEx, Value: method string for executeRebalanceMove
+    const ROUTES = {
+      'OKX-Solana':      'okx-to-sol',
+      'OKX-Bybit':       'okx-to-bybit',
+      // 'OKX-Kraken': 'okx-to-kraken', // disabled - needs Kraken withdraw permission
+      'Bybit-Solana':    'bybit-to-sol',
+      'Bybit-OKX':       'bybit-to-okx',
+      'Solana-OKX':      'sol-to-okx',
+      'Solana-Bybit':    'sol-to-bybit',
+      // 'Kraken-Solana': 'kraken-to-sol', // disabled - needs Kraken withdraw permission
+      'Coinbase-Solana': 'coinbase-to-sol',
+    };
 
     const moves = [];
-
-    // Find who is over and who is under the equal share
-    const over  = Object.entries(balances5).filter(([,b]) => b > equalShare * (1 + buffer));
-    const under = Object.entries(balances5).filter(([,b]) => b < equalShare * (1 - buffer));
-
-    // For each over-funded exchange, distribute excess to under-funded ones
     for (const [fromEx, fromBal] of over) {
-      let remaining = fromBal - equalShare;
+      let remaining = Math.round(fromBal - equalShare);
       for (const [toEx, toBal] of under) {
-        if (remaining < 20) break;
-        const needed = equalShare - toBal;
-        if (needed < 20) continue;
-        const amt = Math.round(Math.min(remaining, needed));
-        // Determine method
-        const methodKey = fromEx.toLowerCase().replace('solana','sol').replace('coinbase','cb') +
-                          '-to-' + toEx.toLowerCase().replace('solana','sol').replace('coinbase','cb');
-        const methodMap = {
-          'okx-to-sol':     'okx-to-sol',
-          'okx-to-bybit':   'okx-to-bybit',
-          'okx-to-kraken':  'okx-to-kraken',
-          'okx-to-cb':      'sol-to-coinbase', // OKX→Coinbase: OKX→Sol→CB manual
-          'bybit-to-sol':   'bybit-to-sol',
-          'bybit-to-okx':   'bybit-to-okx',
-          'bybit-to-kraken':'okx-to-kraken',   // via OKX intermediate
-          'sol-to-okx':     'sol-to-okx',
-          'sol-to-bybit':   'sol-to-bybit',
-          'sol-to-kraken':  'okx-to-kraken',   // Sol→OKX first, then OKX→Kraken
-          'sol-to-cb':      'sol-to-coinbase',
-          'kraken-to-sol':  'kraken-to-sol',
-          'kraken-to-okx':  'kraken-to-sol',   // Kraken→Sol first
-          'kraken-to-bybit':'kraken-to-sol',   // Kraken→Sol first
-          'cb-to-sol':      'coinbase-to-sol',
-          'cb-to-okx':      'coinbase-to-sol', // CB→Sol first
-          'cb-to-bybit':    'coinbase-to-sol', // CB→Sol first
-        };
-        const method = methodMap[methodKey];
-        if (method) {
-          moves.push({ from: fromEx, to: toEx, amount: amt, method, note: 'equal-share rebalance' });
-          remaining -= amt;
+        if (remaining < MIN_MOVE) break;
+        const needed = Math.round(equalShare - toBal);
+        if (needed < MIN_MOVE) continue;
+        const routeKey = fromEx + '-' + toEx;
+        const method   = ROUTES[routeKey];
+        if (!method) {
+          // No direct route — note it but skip
+          console.log('No direct route: ' + routeKey);
+          continue;
         }
+        const amt = Math.min(remaining, needed);
+        moves.push({ from: fromEx, to: toEx, amount: Math.round(amt), method });
+        remaining -= amt;
       }
     }
-    // Coinbase short — alert to top up manually (deposit address not stable)
-    if (tCoinbase - coinbaseBal2 > 20) {
-      moves.push({ from: 'Manual', to: 'Coinbase', amount: Math.round(tCoinbase - coinbaseBal2), method: 'sol-to-coinbase', note: 'Manual deposit required' });
-    }
+
+    // ── Step 3: Build status message ─────────────────────────────────────────
+    const balLines = Object.entries(balances)
+      .map(([ex, bal]) => ex.padEnd(9) + '$' + bal.toFixed(0).padStart(5) + ' ' +
+        (bal > equalShare * (1 + THRESHOLD) ? '(+$' + Math.round(bal - equalShare) + ' excess)' :
+         bal < equalShare * (1 - THRESHOLD) ? '(-$' + Math.round(equalShare - bal) + ' short)' : '(ok)'))
+      .join('\n');
 
     const statusMsg =
       '<b>Rebalance Check</b>\n' +
-      'Equal share: $' + Math.round(equalShare) + ' each\n' +
-      'Sol:$' + solana.toFixed(0) + ' OKX:$' + okx.toFixed(0) + ' By:$' + bybit.toFixed(0) + '\n' +
-      'Kr:$' + krakenBal.toFixed(0) + ' CB:$' + coinbaseBal2.toFixed(0) + ' Total:$' + Math.round(total5) + '\n\n';
+      balLines + '\n' +
+      'Equal share: $' + Math.round(equalShare) + ' | Total: $' + Math.round(total) + '\n\n';
 
     if (moves.length === 0) {
-      await sendAlert(statusMsg + '\u2705 All balances within target range');
+      await sendAlert(statusMsg + '✅ All balances within 8% of equal share');
       return;
     }
 
-    const planLines = moves.map(m => '\u2192 Move $' + m.amount + ' ' + m.from + ' \u2192 ' + m.to).join('\n');
-    const planMsg = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
+    const planLines = moves.map(m => '→ $' + m.amount + ' ' + m.from + ' → ' + m.to).join('\n');
+    const planMsg   = statusMsg + '<b>Plan:</b>\n' + planLines + '\n\n';
 
     if (!confirm) {
       await sendAlert(planMsg + 'Reply /rb confirm to execute');
       return;
     }
 
+    // ── Step 4: Execute ───────────────────────────────────────────────────────
     rebalancing = true;
-    await sendAlert(planMsg + '\u23f3 Executing... (scanning paused)');
+    await sendAlert(planMsg + '⏳ Executing...');
     await new Promise(r => setTimeout(r, 2000));
 
     for (const move of moves) {
       try {
-        if (move.method === 'sol-to-okx') {
-          const usdtOut = await swapUSDCtoUSDT(move.amount);
-          await new Promise(r => setTimeout(r, 3000));
-          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
-          await sendUSDTOnSolana(usdtOut, depositAddr);
-          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 OKX');
-        } else if (move.method === 'sol-to-bybit') {
-          const usdtOut = await swapUSDCtoUSDT(move.amount);
-          await new Promise(r => setTimeout(r, 3000));
-          const depositAddr = await getBybitDepositAddress('USDT');
-          await sendUSDTOnSolana(usdtOut, depositAddr);
-          await sendAlert('\u2705 Sent $' + move.amount + ' Solana \u2192 Bybit');
-        } else if (move.method === 'bybit-to-okx') {
-          // Withdraw USDT from Bybit to OKX deposit address on Solana
-          const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
-          await withdrawUSDTFromBybit(move.amount, depositAddr);
-          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 OKX');
-        } else if (move.method === 'bybit-to-sol') {
-          // Withdraw USDT from Bybit to bot wallet
-          await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
-          await sendAlert('\u2705 Sent $' + move.amount + ' Bybit \u2192 Solana');
-        } else if (move.method === 'okx-to-bybit') {
-          const depositAddr = await getBybitDepositAddress('USDT');
-          await withdrawUSDTFromOKX(move.amount, depositAddr);
-          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Bybit');
-        } else if (move.method === 'okx-to-sol') {
-          await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
-          await sendAlert('\u2705 Sent $' + move.amount + ' OKX \u2192 Solana');
-        }
+        await executeRebalanceMove(move);
+        await sendAlert('✅ $' + move.amount + ' ' + move.from + ' → ' + move.to);
       } catch (err) {
         logCrash('rebalance:' + move.method, err);
         const isSimFail = err.message?.includes('Simulation failed') || err.message?.includes('Transaction simulation');
         if (isSimFail) {
-          // Retry once after 30s — simulation failures are often transient
-          await sendAlert('\u26a0\ufe0f Rebalance sim failed: ' + move.from + ' \u2192 ' + move.to + ' — retrying in 30s');
+          await sendAlert('⚠️ [WARN] Sim failed: ' + move.from + ' → ' + move.to + ' — retrying in 30s');
           await new Promise(r => setTimeout(r, 30000));
           try {
             await executeRebalanceMove(move);
-            await sendAlert('\u2705 Rebalance retry succeeded: ' + move.from + ' \u2192 ' + move.to);
+            await sendAlert('✅ Retry succeeded: ' + move.from + ' → ' + move.to);
           } catch (err2) {
             logCrash('rebalance-retry:' + move.method, err2);
-            await sendAlert('\u274c Rebalance retry failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err2.message.slice(0, 60));
+            await sendAlert('❌ Retry failed: ' + move.from + ' → ' + move.to + ': ' + err2.message.slice(0, 80));
           }
         } else {
-          await sendAlert('\u26a0\ufe0f Failed: ' + move.from + ' \u2192 ' + move.to + ': ' + err.message.slice(0, 80));
+          await sendAlert('❌ Failed: ' + move.from + ' → ' + move.to + ': ' + err.message.slice(0, 80));
         }
       }
     }
 
-    await sendAlert('\u2705 Rebalance complete');
+    await sendAlert('✅ Rebalance complete');
 
   } catch (err) {
     logCrash('handleRebalanceCommand', err);
-    await sendAlert('\u26a0\ufe0f Rebalance error: ' + err.message.slice(0, 100));
+    await sendAlert('❌ Rebalance error: ' + err.message.slice(0, 100));
   } finally {
     rebalancing = false;
-    console.log('Rebalancing complete — scanning resumed');
   }
 }
 
-// ── Helper: send USDT on Solana to an address ─────────────────────────────────
 async function sendUSDTOnSolana(amount, toAddr) {
   const usdtMintPk = new PublicKey(USDT_MINT);
   const destPubkey = new PublicKey(toAddr);
