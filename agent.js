@@ -139,6 +139,42 @@ function handleTelegramCommand(text, agentState) {
   }
   if (text === '/agent report') return '__FORCE_REPORT__';
   if (text === '/agent macro') return '__SHOW_MACRO__';
+  if (text === '/agent approve-thresholds') {
+    // Read fresh from file — in-memory agentState may not have latest
+    const freshState = readJSON(AGENT_FILE) || {};
+    const pending = freshState.pendingThresholdChanges || [];
+    if (!pending.length) return '🔍 [AGENT] No pending threshold changes\nSend /agent thresholds to check status';
+    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname,'arb-config.json'),'utf8'));
+    if (!cfg.DEX_THRESHOLD_OVERRIDES) cfg.DEX_THRESHOLD_OVERRIDES = {};
+    const changes = pending.map(p => {
+      cfg.DEX_THRESHOLD_OVERRIDES[p.symbol] = p.to;
+      return p.symbol + ': ' + p.from + '% → ' + p.to + '%';
+    });
+    fs.writeFileSync(path.join(__dirname,'arb-config.json'), JSON.stringify(cfg, null, 2));
+    freshState.pendingThresholdChanges = [];
+    writeJSON(AGENT_FILE, freshState);
+    agentLog('Thresholds approved: ' + changes.join(', '));
+    return '🔍 [AGENT] Thresholds applied:\n' + changes.join('\n') + '\nConfig reloads in 30s.';
+  }
+  if (text === '/agent listings') {
+    try {
+      const lm=require('./listing-monitor');
+      return lm.generateListingReport();
+    } catch(e) { return '🔍 [AGENT] Listing report error: '+e.message; }
+  }
+  if (text === '/agent skip-thresholds') {
+    const freshState = readJSON(AGENT_FILE) || {};
+    freshState.pendingThresholdChanges = [];
+    writeJSON(AGENT_FILE, freshState);
+    return '🔍 [AGENT] Threshold recommendations dismissed';
+  }
+  if (text === '/agent thresholds') {
+    const freshState = readJSON(AGENT_FILE) || {};
+    const pending = freshState.pendingThresholdChanges || [];
+    if (!pending.length) return '🔍 [AGENT] No pending threshold recommendations';
+    const lines = pending.map(p => p.symbol + ': ' + p.from + '% → ' + p.to + '%\n  Reason: ' + p.reason).join('\n');
+    return '🔍 [AGENT] Pending threshold changes:\n' + lines + '\n\n/agent approve-thresholds to apply\n/agent skip-thresholds to dismiss';
+  }
   return null;
 }
 
