@@ -58,10 +58,12 @@
     "GOAT": 2
   },
   "DEX_THRESHOLD_OVERRIDES": {
-    "RAY": 3,
+    "RAY": 2.5,
     "PENGU": 5,
     "W": 3.5,
-    "WIF": 2.5
+    "WIF": 2.5,
+    "PNUT": 3.5,
+    "JTO": 1.8
   },
   "COINBASE_ENABLED": true,
   "MIN_SPREAD_COINBASE": 1.2,
