@@ -1865,6 +1865,18 @@ async function checkAndExecute() {
         const netOKX      = spreadOKX - (OKX_FEE + DEX_FEE) * 100;
         const spreadBybit = bybit ? ((dexBid - bybit.ask) / bybit.ask) * 100 : -999;
         const netBybit    = spreadBybit - (BYBIT_FEE + DEX_FEE) * 100;
+        const bestBidCex  = Math.max(okx.bid, bybit?.bid || 0);
+        const spreadDex   = ((dexBid - bestBidCex) / bestBidCex) * 100;
+        const netDex      = spreadDex - DEX_FEE * 200;
+        const estOKX      = (spreadOKX   / 100) * TRADE_SIZE_USD - (OKX_FEE   + DEX_FEE) * TRADE_SIZE_USD - 0.15;
+        const estBybit    = (spreadBybit / 100) * TRADE_SIZE_USD - (BYBIT_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
+        const estDex      = (spreadDex   / 100) * TRADE_SIZE_USD - DEX_FEE * 2 * TRADE_SIZE_USD - 0.15;
+        const dexThresh   = thresholdEngine.getThreshold(pair.okxCcy);
+        const dexEnabled  = !liveConfig.DISABLE_BUY_DEX && !(liveConfig.POLICY_SKIP_DEX||[]).includes(pair.okxCcy);
+        const okxViable   = !liveConfig.DISABLE_BUY_OKX && !(liveConfig.POLICY_SKIP_OKX||[]).includes(pair.okxCcy);
+        const bybitViable = bybit && !liveConfig.DISABLE_BUY_BYBIT && !(liveConfig.POLICY_SKIP_BYBIT||[]).includes(pair.okxCcy);
+        const cbViable    = COINBASE_PAIRS.has(pair.okxCcy) && dexEnabled && !(liveConfig.POLICY_SKIP_COINBASE||[]).includes(pair.okxCcy);
+        const cbBid = null, cbAsk = null, spreadSellCoinbase = -999, estSellCoinbase = -999;
         return { pair, okx, bybit, quoteBuy, tokenOut, dexAsk, bestBidCex, dexThresh, dexEnabled, okxViable, bybitViable, spreadOKX, netOKX, spreadBybit, netBybit, spreadDex, netDex, estOKX, estBybit, estDex, cbBid, cbAsk, spreadSellCoinbase, estSellCoinbase, cbViable };
       })
     );
