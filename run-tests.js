@@ -92,6 +92,18 @@ async function runAll() {
       'ACTIVE_REGIME must be BULL/NEUTRAL/BEAR or undefined');
   });
 
+  test('POLICY_SKIP_DEX defined', () => {
+    const cfg = JSON.parse(fs.readFileSync('arb-config.json', 'utf8'));
+    assert(Array.isArray(cfg.POLICY_SKIP_DEX), 'POLICY_SKIP_DEX must be array — DEX direction has no skip list without it');
+  });
+
+  test('JTO not in any skip list (best performing pair)', () => {
+    const cfg = JSON.parse(fs.readFileSync('arb-config.json', 'utf8'));
+    assert(!cfg.POLICY_SKIP_OKX?.includes('JTO'), 'JTO in SKIP_OKX — removes best pair from OKX');
+    assert(!cfg.POLICY_SKIP_BYBIT?.includes('JTO'), 'JTO in SKIP_BYBIT — removes best pair from Bybit');
+    assert(!cfg.POLICY_SKIP_DEX?.includes('JTO'), 'JTO in SKIP_DEX — removes best pair from DEX');
+  });
+
   test('No conflicting disable flags', () => {
     const cfg = JSON.parse(fs.readFileSync('arb-config.json', 'utf8'));
     // In NEUTRAL, BUY_DEX should be enabled
@@ -290,7 +302,30 @@ async function runAll() {
   }
 
   // ── Summary ──────────────────────────────────────────────────────────────────
-  await new Promise(r => setTimeout(r, 100)); // let async tests settle
+  // ── 9. Runtime scan validation ─────────────────────────────────────────────
+  const STATIC_ONLY = process.argv.includes('--static-only');
+  if (!STATIC_ONLY) {
+    console.log('\n[9] Runtime scan validation');
+    test('arb-live.json has pairs (scan is running)', () => {
+      const d = JSON.parse(fs.readFileSync('arb-live.json', 'utf8'));
+      const age = (Date.now() - new Date(d.timestamp).getTime()) / 1000;
+      assert(age < 30, 'arb-live.json is stale (' + age.toFixed(0) + 's) — bot not scanning');
+      assert(d.pairs && d.pairs.length > 0, 'arb-live.json has 0 pairs — scan returning null for all pairs');
+    });
+    test('arb-live.json pairs have required fields', () => {
+      const d = JSON.parse(fs.readFileSync('arb-live.json', 'utf8'));
+      if (!d.pairs || d.pairs.length === 0) return;
+      const p = d.pairs[0];
+      assert(p.name, 'pair missing name');
+      assert(typeof p.spreadOKX === 'number', 'pair missing spreadOKX');
+      assert(typeof p.spreadDex === 'number', 'pair missing spreadDex');
+      assert(typeof p.dexThresh === 'number', 'pair missing dexThresh');
+    });
+  } else {
+    console.log('\n[9] Runtime scan validation — SKIPPED (--static-only)');
+  }
+
+    await new Promise(r => setTimeout(r, 100)); // let async tests settle
   console.log('\n' + '='.repeat(50));
   console.log(`Results: ${passed} passed, ${failed} failed`);
   if (failures.length > 0) {
