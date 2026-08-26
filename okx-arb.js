@@ -1912,7 +1912,7 @@ async function checkAndExecute() {
       const pairMin        = pairMinSpreads[r.pair.okxCcy] || 0;
       const okxThreshFinal   = Math.max(okxThresh,   pairMin);
       const bybitThreshFinal = Math.max(bybitThresh, pairMin);
-      if (canOkx && r.okxViable && r.spreadOKX > okxThreshFinal && r.netOKX > 0 && r.estOKX >= MIN_PROFIT) {
+      if (!liveConfig.DISABLE_BUY_OKX && canOkx && r.okxViable && r.spreadOKX > okxThreshFinal && r.netOKX > 0 && r.estOKX >= MIN_PROFIT) {
         if (!bestOkx || r.spreadOKX > bestOkx.spreadPct)
           bestOkx = { pair: r.pair, direction: 'BUY_OKX', spreadPct: r.spreadOKX, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'OKX' };
       }

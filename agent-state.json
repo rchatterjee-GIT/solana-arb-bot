@@ -1,95 +1,63 @@
 {
   "history": [
     {
-      "time": "2026-08-15T04:45:40.064Z",
-      "rule": "kraken-window-prep",
-      "changes": [
-        "Kraken window prep sent — $0 WARNING below minimum"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T05:19:40.751Z",
+      "time": "2026-08-23T17:30:23.747Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 3.8% -> 4.5% (normal)"
+        "PENGU DEX: 3% -> 3.8% (medium vol $211M + volatility 21.9)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T06:00:43.690Z",
-      "rule": "daily-performance-report",
-      "changes": [
-        "Daily report sent"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T06:21:41.293Z",
+      "time": "2026-08-23T17:30:23.747Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "RAY DEX: 3% -> 2.5% (normal)"
+        "WIF DEX: 2.3% -> 3% (low vol/extreme move)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T06:21:41.293Z",
+      "time": "2026-08-23T17:30:23.747Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 4.5% -> 3.8% (medium vol $42M + volatility 3.7)"
+        "PNUT DEX: 3% -> 4% (low vol/extreme move)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T06:21:41.293Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-23T17:34:23.785Z",
+      "rule": "exchange-severely-imbalanced",
       "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
+        "Rebalance triggered: solana: $124 vs target $332.59868920907 (63% off), okx: $453 vs target $332.59868920907 (36% off)"
       ],
-      "severity": "info"
+      "severity": "warn"
     },
     {
-      "time": "2026-08-15T07:23:41.781Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-23T17:35:26.037Z",
+      "rule": "raydium-native-monitor",
       "changes": [
-        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
+        "Raydium scan: nothing new"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T07:23:41.781Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-23T18:02:23.956Z",
+      "rule": "burst-event-monitor",
       "changes": [
-        "PENGU DEX: 3.8% -> 4.5% (normal)"
+        "Burst event at 2026-08-23T18:02:21: 3 fires, 1 duplicates"
       ],
-      "severity": "info"
+      "severity": "warn"
     },
     {
-      "time": "2026-08-15T07:23:41.781Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-23T18:04:23.996Z",
+      "rule": "exchange-severely-imbalanced",
       "changes": [
-        "PNUT DEX: 4% -> 3.5% (normal)"
+        "Rebalance triggered: solana: $124 vs target $332.59868920907 (63% off), okx: $453 vs target $332.59868920907 (36% off)"
       ],
-      "severity": "info"
+      "severity": "warn"
     },
     {
-      "time": "2026-08-15T08:00:44.988Z",
-      "rule": "daily-outlook-report",
-      "changes": [
-        "Daily outlook report sent (4 messages)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T08:56:45.299Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "JTO DEX: 2.5% -> 2.3% (medium vol $30M + volatility 8.0)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T09:27:42.721Z",
+      "time": "2026-08-23T18:30:24.188Z",
       "rule": "market-sentiment-report",
       "changes": [
         "Sentiment changed to bullish"
@@ -97,7 +65,7 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-15T09:58:42.922Z",
+      "time": "2026-08-23T18:30:24.461Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
         "JTO DEX: 2.3% -> 2.5% (normal)"
@@ -105,135 +73,23 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-15T10:58:43.090Z",
+      "time": "2026-08-23T18:30:24.461Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 4.5% -> 3.8% (medium vol $40M + volatility 3.1)"
+        "PENGU DEX: 3.8% -> 3% (high vol $223M + volatility 9.5)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T10:59:43.276Z",
-      "rule": "exchange-severely-imbalanced",
-      "changes": [
-        "Rebalance triggered: solana: $337 vs target $200 (68% off), okx: $121 vs target $350 (66% off), bybit: $171 vs target $300 (43% off)"
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-15T11:01:43.144Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 214s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-15T11:02:43.158Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 274s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-15T11:03:43.148Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 334s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-15T11:04:46.075Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 397s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-15T11:05:10.763Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 422s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-15T11:59:11.447Z",
+      "time": "2026-08-23T18:30:24.461Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 3.8% -> 4.5% (normal)"
+        "WIF DEX: 3% -> 2.3% (medium vol $52M + volatility 3.4)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T12:30:11.685Z",
-      "rule": "pre-session-threshold-optimisation",
-      "changes": [
-        "Pre-session scan complete - JTO 7.3, W 5.0"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T12:59:11.937Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T13:00:11.933Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: JTO showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T13:59:12.363Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T14:59:12.860Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T14:59:12.860Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 5% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T15:59:13.118Z",
-      "rule": "temp-skip-expiry",
-      "changes": [
-        "GOAT removed from POLICY_SKIP_OKX (24hr temp skip expired)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T15:59:13.420Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T15:59:13.420Z",
+      "time": "2026-08-23T18:30:24.461Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
         "PNUT DEX: 4% -> 3.5% (normal)"
@@ -241,87 +97,87 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-15T16:00:13.132Z",
-      "rule": "pair-consecutive-losses",
+      "time": "2026-08-23T18:32:24.220Z",
+      "rule": "burst-event-monitor",
       "changes": [
-        "GOAT added to POLICY_SKIP_OKX (24hr temp skip — 3 consecutive losses)"
+        "Burst event at 2026-08-23T18:09:42: 3 fires, 1 duplicates"
       ],
       "severity": "warn"
     },
     {
-      "time": "2026-08-15T16:59:13.829Z",
+      "time": "2026-08-23T18:34:24.240Z",
+      "rule": "exchange-severely-imbalanced",
+      "changes": [
+        "Rebalance triggered: solana: $124 vs target $332.59868920907 (63% off), okx: $453 vs target $332.59868920907 (36% off)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-23T18:35:25.797Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-23T19:04:24.444Z",
+      "rule": "exchange-severely-imbalanced",
+      "changes": [
+        "Rebalance triggered: solana: $124 vs target $332.65063746507 (63% off), okx: $453 vs target $332.65063746507 (36% off)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-23T19:30:27.045Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+        "JTO DEX: 2.5% -> 2.3% (medium vol $44M + volatility 3.8)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T17:59:14.321Z",
+      "time": "2026-08-23T19:30:27.045Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
+        "PENGU DEX: 3% -> 3.8% (medium vol $255M + volatility 24.5)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T19:16:15.295Z",
-      "rule": "market-sentiment-report",
+      "time": "2026-08-23T19:34:27.239Z",
+      "rule": "exchange-severely-imbalanced",
       "changes": [
-        "Sentiment changed to neutral"
+        "Rebalance triggered: solana: $124 vs target $332.65063746507 (63% off), okx: $453 vs target $332.65063746507 (36% off)"
       ],
-      "severity": "info"
+      "severity": "warn"
     },
     {
-      "time": "2026-08-15T19:16:15.470Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-23T19:35:28.627Z",
+      "rule": "raydium-native-monitor",
       "changes": [
-        "PENGU DEX: 5% -> 4.5% (normal)"
+        "Raydium scan: nothing new"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T20:18:15.893Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-25T17:01:34.668Z",
+      "rule": "bot-stale",
       "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+        "Bot stale 364s — alert sent"
       ],
-      "severity": "info"
+      "severity": "critical"
     },
     {
-      "time": "2026-08-15T20:18:15.893Z",
-      "rule": "dex-threshold-dynamic",
+      "time": "2026-08-25T17:01:34.713Z",
+      "rule": "exchange-viability-scan",
       "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
+        "Exchange viability report sent"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-15T21:20:16.253Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 5% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T21:20:16.253Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T22:22:16.731Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-15T23:26:16.953Z",
+      "time": "2026-08-25T17:01:34.739Z",
       "rule": "macro-structural-insight",
       "changes": [
         "DEX threshold lowered to 0.9% (macro: DEX structurally favoured)"
@@ -329,239 +185,39 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-16T00:26:17.712Z",
+      "time": "2026-08-25T17:01:34.770Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T17:02:33.405Z",
+      "rule": "bot-stale",
+      "changes": [
+        "Bot stale 423s — alert sent"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-25T17:32:11.722Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 5% -> 3.8% (medium vol $34M + volatility 3.3)"
+        "RAY DEX: 2.3% -> 2% (high vol $31M + volatility 5.4)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T00:26:17.712Z",
+      "time": "2026-08-25T17:32:11.722Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
+        "PENGU DEX: 1.8% -> 3% (high vol $435M + volatility 6.7)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T01:28:20.987Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T01:28:20.987Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3.8% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T02:30:18.608Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T02:30:18.608Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T03:30:18.603Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 4% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T04:30:19.014Z",
-      "rule": "pre-session-threshold-optimisation",
-      "changes": [
-        "Pre-session scan complete - BONK 4.3"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T04:30:19.166Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T04:45:19.123Z",
-      "rule": "kraken-window-prep",
-      "changes": [
-        "Kraken window prep sent — $0 WARNING below minimum"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T05:30:19.574Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T05:30:19.574Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 4% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T06:00:22.685Z",
-      "rule": "daily-performance-report",
-      "changes": [
-        "Daily report sent"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T06:30:20.042Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 5% -> 4.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T06:30:20.042Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T07:00:29.617Z",
-      "rule": "pair-viability-weekly-test",
-      "changes": [
-        "Viability test: 12 viable, 3 killed"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T08:00:23.923Z",
-      "rule": "daily-outlook-report",
-      "changes": [
-        "Daily outlook report sent (4 messages)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T08:11:21.070Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 4% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T09:13:21.594Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "JTO DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T09:13:21.594Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T09:13:21.594Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T09:13:21.594Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 3.5% -> 4% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T10:15:22.091Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "JTO DEX: 3% -> 2.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T10:15:22.091Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PNUT DEX: 4% -> 3.5% (normal)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T10:58:24.434Z",
-      "rule": "dry-spell-analysis",
-      "changes": [
-        "Dry spell alert sent — Market very quiet (avg volatility 1.4). Consider waiting."
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-16T12:27:24.894Z",
-      "rule": "pair-consecutive-losses",
-      "changes": [
-        "GOAT added to POLICY_SKIP_OKX (24hr temp skip — 3 consecutive losses)"
-      ],
-      "severity": "warn"
-    },
-    {
-      "time": "2026-08-16T12:27:24.909Z",
-      "rule": "pair-threshold-too-low",
-      "changes": [
-        "W PAIR_MIN_SPREAD raised: 2.5% → 3.2% (losses at high spread)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T12:27:25.125Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "RAY DEX: 2% -> 3% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T12:27:25.125Z",
-      "rule": "dex-threshold-dynamic",
-      "changes": [
-        "PENGU DEX: 3.5% -> 5% (low vol/extreme move)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T12:27:25.125Z",
+      "time": "2026-08-25T17:32:11.722Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
         "W DEX: 2.5% -> 3.5% (low vol/extreme move)"
@@ -569,79 +225,63 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-16T12:27:25.125Z",
+      "time": "2026-08-25T17:32:11.722Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
+        "WIF DEX: 2% -> 2.3% (medium vol $90M + volatility 4.7)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T12:27:25.125Z",
+      "time": "2026-08-25T17:32:11.722Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PNUT DEX: 3% -> 3.5% (normal)"
+        "PNUT DEX: 2% -> 3% (medium vol $15M + volatility 7.4)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T12:30:42.473Z",
-      "rule": "pre-session-threshold-optimisation",
+      "time": "2026-08-25T18:01:59.583Z",
+      "rule": "raydium-native-monitor",
       "changes": [
-        "Pre-session scan complete - W 6.0"
+        "Raydium scan: nothing new"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T13:00:39.571Z",
-      "rule": "market-active-window",
-      "changes": [
-        "Active window: W showing high scores"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T14:57:55.668Z",
-      "rule": "pair-threshold-too-low",
-      "changes": [
-        "W PAIR_MIN_SPREAD raised: 1% → 3.2% (losses at high spread)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T14:57:55.668Z",
-      "rule": "pair-threshold-too-low",
-      "changes": [
-        "GOAT PAIR_MIN_SPREAD raised: 1% → 2% (losses at high spread)"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T14:57:55.861Z",
-      "rule": "winning-pair-threshold-opportunity",
-      "changes": [
-        "Threshold opportunity identified: JTO"
-      ],
-      "severity": "info"
-    },
-    {
-      "time": "2026-08-16T14:57:56.034Z",
+      "time": "2026-08-25T18:32:57.686Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "RAY DEX: 2.5% -> 3% (low vol/extreme move)"
+        "PENGU DEX: 3% -> 3.8% (medium vol $433M + volatility 3.0)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T14:57:56.034Z",
+      "time": "2026-08-25T18:32:57.686Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "PENGU DEX: 4.5% -> 5% (low vol/extreme move)"
+        "W DEX: 3.5% -> 3.2% (normal)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T14:57:56.034Z",
+      "time": "2026-08-25T19:02:00.383Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T19:32:58.082Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3.8% -> 3% (high vol $442M + volatility 11.2)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T19:32:58.082Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
         "W DEX: 3.2% -> 3.5% (low vol/extreme move)"
@@ -649,195 +289,571 @@
       "severity": "info"
     },
     {
-      "time": "2026-08-16T14:57:56.034Z",
+      "time": "2026-08-25T19:32:58.082Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "WIF DEX: 2.5% -> 3% (low vol/extreme move)"
+        "WIF DEX: 2.3% -> 2.5% (normal)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T15:21:00.748Z",
-      "rule": "bot-stale",
+      "time": "2026-08-25T20:02:00.509Z",
+      "rule": "raydium-native-monitor",
       "changes": [
-        "Bot stale 202s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:24:13.721Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 395s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:25:16.863Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 459s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:26:15.936Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 518s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:27:16.152Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 578s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:28:27.871Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 650s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:29:28.070Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 710s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:30:28.111Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 770s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:31:33.783Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 835s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:32:45.088Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 907s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:33:45.319Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 967s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:34:25.963Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 1007s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:35:26.264Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 1068s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:36:26.236Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 1128s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:37:26.235Z",
-      "rule": "bot-stale",
-      "changes": [
-        "Bot stale 1188s — alert sent"
-      ],
-      "severity": "critical"
-    },
-    {
-      "time": "2026-08-16T15:58:45.712Z",
-      "rule": "winning-pair-threshold-opportunity",
-      "changes": [
-        "Threshold opportunity identified: JTO"
+        "Raydium scan: nothing new"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T15:58:45.972Z",
+      "time": "2026-08-25T20:37:59.088Z",
       "rule": "dex-threshold-dynamic",
       "changes": [
-        "WIF DEX: 3% -> 2.5% (normal)"
+        "PENGU DEX: 3% -> 3.8% (medium vol $431M + volatility 3.9)"
       ],
       "severity": "info"
     },
     {
-      "time": "2026-08-16T16:01:45.899Z",
-      "rule": "exchange-severely-imbalanced",
+      "time": "2026-08-25T20:37:59.088Z",
+      "rule": "dex-threshold-dynamic",
       "changes": [
-        "Rebalance triggered: okx: $650 vs target $350 (86% off)"
+        "WIF DEX: 2.5% -> 2.3% (medium vol $90M + volatility 3.1)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T21:01:59.659Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T21:37:59.158Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3.8% -> 3% (high vol $424M + volatility 7.0)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T21:37:59.158Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "W DEX: 3.5% -> 3.2% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T21:37:59.158Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.3% -> 2% (high vol $90M + volatility 6.8)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T22:02:01.754Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T22:37:59.539Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2% -> 2.3% (medium vol $29M + volatility 3.7)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T22:37:59.539Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 3% -> 4.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T22:37:59.539Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 3% -> 3.5% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T23:01:59.765Z",
+      "rule": "market-sentiment-report",
+      "changes": [
+        "Sentiment changed to bearish"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T23:02:02.584Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T23:03:59.704Z",
+      "rule": "dry-spell-analysis",
+      "changes": [
+        "Dry spell alert sent — Bearish market — spreads may not materialise. Holding thresholds."
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-25T23:37:59.950Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2.3% -> 2% (high vol $32M + volatility 6.4)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T23:37:59.950Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2% -> 2.3% (medium vol $93M + volatility 3.4)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-25T23:37:59.950Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 3.5% -> 3% (medium vol $15M + volatility 4.5)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T00:02:02.384Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T00:15:00.642Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 13.5% → 14.5% (market: Strong downtrend (-10.6% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T00:15:00.788Z",
+      "rule": "market-active-window",
+      "changes": [
+        "Active window: PENGU, SOL showing high scores"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T00:38:00.425Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 1.8% -> 2.3% (medium vol $72M + volatility 12.1)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T00:38:00.425Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 4.5% -> 3% (high vol $405M + volatility 12.2)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T00:38:00.425Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.3% -> 2% (high vol $93M + volatility 6.8)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T01:02:01.824Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T01:38:01.012Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2.3% -> 2% (high vol $71M + volatility 14.5)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T01:48:04.072Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 14.5% → 15.5% (market: Strong downtrend (-10.3% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T02:02:03.614Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T02:19:01.532Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 15.5% → 16.5% (market: Strong downtrend (-11.3% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T02:38:01.434Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2% -> 2.3% (medium vol $68M + volatility 13.4)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T02:38:01.434Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2% -> 2.3% (medium vol $22M + volatility 4.6)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T02:50:04.896Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 16.5% → 17.5% (market: Strong downtrend (-11.3% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T03:02:03.861Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T03:21:01.986Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 17.5% → 18.5% (market: Strong downtrend (-11.9% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T03:38:01.908Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2% -> 2.3% (medium vol $82M + volatility 15.1)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T03:52:02.271Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 18.5% → 19.5% (market: Strong downtrend (-12.9% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T04:02:04.925Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T04:23:03.228Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 19.5% → 20.5% (market: Strong downtrend (-13.4% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T04:30:02.424Z",
+      "rule": "pre-session-threshold-optimisation",
+      "changes": [
+        "JTO re-enabled for session (score 11.4, 24h -13.4%)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T04:30:02.604Z",
+      "rule": "catastrophic-loss-detection",
+      "changes": [
+        "Killed: JTO (worst: $-11.20, 1 losses)"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-26T04:31:02.358Z",
+      "rule": "catastrophic-loss-detection",
+      "changes": [
+        "Killed: JTO (worst: $-11.20, 1 losses)"
+      ],
+      "severity": "critical"
+    },
+    {
+      "time": "2026-08-26T04:38:02.411Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2.3% -> 2% (high vol $76M + volatility 12.6)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T04:45:02.473Z",
+      "rule": "kraken-window-prep",
+      "changes": [
+        "Kraken window prep sent — $371 ready"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T04:54:02.826Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 20.5% → 21.5% (market: Strong downtrend (-12.6% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T05:02:04.073Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T05:25:03.291Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 21.5% → 22.5% (market: Strong downtrend (-13.2% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T05:38:02.938Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2% -> 2.3% (medium vol $72M + volatility 16.2)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T05:56:03.246Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 22.5% → 23.5% (market: Strong downtrend (-11.5% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T06:00:03.049Z",
+      "rule": "daily-performance-report",
+      "changes": [
+        "Daily report sent"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T06:02:05.224Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T06:27:03.437Z",
+      "rule": "market-avoid-signal",
+      "changes": [
+        "JTO threshold raised 23.5% → 24.5% (market: Strong downtrend (-10.7% 24h) — momentum against us)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T06:58:03.881Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "JTO DEX: 2.3% -> 2% (high vol $56M + volatility 9.0)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:02:04.391Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:12:47.369Z",
+      "rule": "market-regime-detector",
+      "changes": [
+        "Regime check: NEUTRAL | BTC $78,971.4 (NaN%)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T07:43:09.371Z",
+      "rule": "market-regime-detector",
+      "changes": [
+        "Regime check: NEUTRAL | BTC $79,014.3 (NaN%)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T07:58:07.630Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "RAY DEX: 2.5% -> 2.3% (medium vol $16M + volatility 5.7)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:58:07.630Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PENGU DEX: 1.8% -> 3% (high vol $322M + volatility 6.4)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:58:07.630Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "W DEX: 2.5% -> 3.2% (normal)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:58:07.630Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "WIF DEX: 2% -> 2.3% (medium vol $63M + volatility 10.9)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T07:58:07.630Z",
+      "rule": "dex-threshold-dynamic",
+      "changes": [
+        "PNUT DEX: 2% -> 3% (medium vol $12M + volatility 6.2)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T08:00:10.927Z",
+      "rule": "daily-outlook-report",
+      "changes": [
+        "Daily outlook report sent (4 messages)"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T08:02:09.755Z",
+      "rule": "raydium-native-monitor",
+      "changes": [
+        "Raydium scan: nothing new"
+      ],
+      "severity": "info"
+    },
+    {
+      "time": "2026-08-26T08:13:09.676Z",
+      "rule": "market-regime-detector",
+      "changes": [
+        "Regime check: NEUTRAL | BTC $79,111.7 (NaN%)"
+      ],
+      "severity": "warn"
+    },
+    {
+      "time": "2026-08-26T08:43:09.845Z",
+      "rule": "market-regime-detector",
+      "changes": [
+        "Regime check: NEUTRAL | BTC $78,960.3 (NaN%)"
       ],
       "severity": "warn"
     }
   ],
-  "lastDailyReport": 1786860022685,
-  "lastRun": "2026-08-16T16:20:45.695Z",
-  "actionsToday": 59,
-  "lastActionDate": "2026-08-16",
-  "lastSentiment": "neutral",
+  "lastDailyReport": 1787724003049,
+  "lastRun": "2026-08-26T08:50:07.890Z",
+  "actionsToday": 46,
+  "lastActionDate": "2026-08-26",
   "ruleCooldowns": {
-    "market-active-window": 1786885239313,
-    "market-avoid-signal": 1786298025632,
-    "temp-skip-expiry": 1786809553113,
-    "market-sentiment-report": 1786821375103,
-    "daily-performance-report": 1786860022469,
-    "spread-duration-analysis": 1786371587448,
-    "dry-spell-analysis": 1786877904247,
-    "pre-session-threshold-optimisation": 1786883442304,
-    "burst-event-monitor": 1786373172019,
-    "kraken-window-prep": 1786855518979,
-    "exchange-viability-scan": 1786459147209,
-    "macro-structural-insight": 1786836376720,
-    "bot-stale": 1786894646051,
-    "exchange-severely-imbalanced": 1786896105555,
-    "daily-outlook-report": 1786867220497,
-    "pair-consecutive-losses": 1786883244888,
-    "pair-threshold-too-low": 1786892275662,
-    "dex-threshold-dynamic": 1786895925546,
-    "pair-viability-weekly-test": 1786863620051,
-    "winning-pair-threshold-opportunity": 1786895925546
+    "market-active-window": 1787703300618,
+    "market-avoid-signal": 1787725623427,
+    "temp-skip-expiry": 1787482163295,
+    "market-sentiment-report": 1787698919571,
+    "daily-performance-report": 1787724002920,
+    "spread-duration-analysis": 1787498422618,
+    "dry-spell-analysis": 1787699039575,
+    "pre-session-threshold-optimisation": 1787718602220,
+    "burst-event-monitor": 1787509944029,
+    "kraken-window-prep": 1787719502331,
+    "exchange-viability-scan": 1787677294622,
+    "macro-structural-insight": 1787677294622,
+    "bot-stale": 1787677353210,
+    "exchange-severely-imbalanced": 1787513666889,
+    "daily-outlook-report": 1787731207508,
+    "pair-consecutive-losses": 1787734087890,
+    "pair-threshold-too-low": 1787424673462,
+    "dex-threshold-dynamic": 1787731087496,
+    "pair-viability-weekly-test": 1787468478834,
+    "winning-pair-threshold-opportunity": 1787040266510,
+    "raydium-native-monitor": 1787731327532,
+    "daily-listing-report": 1787475619783,
+    "macro-btc-eth-alert": 1787378526168,
+    "stuck-trade": 1787460737929,
+    "catastrophic-loss-detection": 1787718662200,
+    "win-streak-report": 1787383326297,
+    "zero-spread-fire-detection": 1787497462507,
+    "weekly-okx-universe-scan": 1787472019308,
+    "pair-high-loss-rate": 1787734087890,
+    "market-regime-detector": 1787733787825
   },
-  "activeWindowAlerted": true,
-  "lastSentimentTime": 1786821375117,
-  "lastSpreadAnalysis": 1786371587458,
-  "lastDrySpellAlert": 1786877904255,
-  "lastPreSessionOpt": 1786883442315,
-  "lastBurstAlert": "2026-08-07T08:04:25",
-  "lastKrakenPrep": 1786855518988,
-  "lastExchangeScan": 1786459147224,
-  "lastMacroInsight": 1786836376728,
-  "lastOutlookReport": 1786867220507,
-  "lastDexAdjust": 1786895925748,
-  "lastViabilityTest": 1786863620059
+  "activeWindowAlerted": false,
+  "lastSentimentTime": 1787698919581,
+  "lastSpreadAnalysis": 1787498422645,
+  "lastDrySpellAlert": 1787699039584,
+  "lastPreSessionOpt": 1787718602226,
+  "lastBurstAlert": "2026-08-23T18:09:42",
+  "lastKrakenPrep": 1787719502340,
+  "lastExchangeScan": 1787677294705,
+  "lastMacroInsight": 1787677294729,
+  "lastOutlookReport": 1787731207515,
+  "lastDexAdjust": 1787731087503,
+  "lastViabilityTest": 1787468478840,
+  "lastRaydiumScan": 1787731327540,
+  "lastListingReport": 1787475619791,
+  "lastMacroAlert": 1787378526221,
+  "lastWinMilestone": 2,
+  "lastOKXUniverseScan": 1787472022825,
+  "lastSentiment": "bearish",
+  "lastRegimeCheck": 1787733787835
 }

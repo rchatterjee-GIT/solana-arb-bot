@@ -2,25 +2,129 @@
   "lastUpdated": "2026-08-08",
   "themes": [
     {
-      "date": "2026-08-08",
-      "source": "Motley Fool",
-      "headline": "Crypto Exchanges Seeing Less Activity — DEX Share at 24% All-Time High",
+      "date": "2026-08-26",
+      "source": "CoinDesk",
+      "headline": "XRP’s 44% rally brings leverage back, raising risk of sharper pullback",
       "implications": [
-        "DEX volume share at all-time high (24%) — our DEX leg structurally advantaged",
-        "Solana DEX cleared $50.8B in June — Jupiter liquidity improving",
-        "CEX spot volume declining — CEX arb windows may be shorter/fewer",
-        "Perpetuals volume holding up — funding rates increasingly important signal",
-        "Bear market end signal — volume bottoming, recovery expected",
-        "Tokenized stocks growing — new asset class emerging on-chain"
+        "General market development — monitor for spread impact"
       ],
-      "botActions": [
-        "Prioritise DEX trades over CEX trades where both available",
-        "Monitor funding rates closely as leading indicator",
-        "Prepare for increased activity as bear market turns",
-        "Consider DEX-only pairs with good Solana liquidity"
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 15,
+      "link": "https://www.coindesk.com/markets/2026/08/26/xrp-s-44-rally-brings-leverage-back-raising-risk-of-sharper-pullback"
+    },
+    {
+      "date": "2026-08-26",
+      "source": "Decrypt",
+      "headline": "Coldcard Adds New Security Measures After $130 Million Bitcoin Exploit",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
       ],
-      "sentiment": "cautiously_bullish",
-      "timeframe": "weeks_to_months"
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 17,
+      "link": "https://decrypt.co/376270/coldcard-new-security-after-bitcoin-exploit"
+    },
+    {
+      "date": "2026-08-26",
+      "source": "FT Markets",
+      "headline": "Bessent’s bond intervention puts US Treasury on collision course with Fed",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "moderate_impact",
+      "score": 18,
+      "link": "https://www.ft.com/content/a50df99b-0621-44ea-a7c7-c9c685e2eba1?syn-25a6b1a6=1"
+    },
+    {
+      "date": "2026-08-26",
+      "source": "CoinDesk",
+      "headline": "U.S. state banking associations plan to launch their own nationwide blockchain network",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 24,
+      "link": "https://www.coindesk.com/policy/2026/08/25/u-s-state-banking-associations-plan-to-launch-their-own-nationwide-blockchain-network"
+    },
+    {
+      "date": "2026-08-26",
+      "source": "CoinDesk",
+      "headline": "Bitcoin holds $79,000, ether, solana slip as traders bank a week of gains",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 27,
+      "link": "https://www.coindesk.com/markets/2026/08/26/bitcoin-holds-usd79-000-ether-solana-slip-4-as-traders-bank-a-week-of-gains"
+    },
+    {
+      "date": "2026-08-25",
+      "source": "CoinDesk",
+      "headline": "Solana ETFs extend growth streak to 5 days after year's biggest inflows",
+      "implications": [
+        "Solana volume movement — may affect DEX spread windows"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 22,
+      "link": "https://www.coindesk.com/markets/2026/08/25/solana-etfs-extend-growth-streak-to-5-days-after-year-s-biggest-inflows"
+    },
+    {
+      "date": "2026-08-25",
+      "source": "Decrypt",
+      "headline": "Hugging Face Explores $13 Billion Sale a Month After a Rogue OpenAI Agent Hacked It",
+      "implications": [
+        "URGENT: Market impact — review positions",
+        "Regulatory development — monitor exchange availability"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 24,
+      "link": "https://decrypt.co/376415/hugging-face-13-billion-sale-month-after-openai-hack"
+    },
+    {
+      "date": "2026-08-25",
+      "source": "CoinDesk",
+      "headline": "Bitcoin tops $80,000, solana jumps 8% but rally now runs into overbought warning",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 25,
+      "link": "https://www.coindesk.com/markets/2026/08/25/bitcoin-tops-usd80-000-solana-jumps-8-but-rally-now-runs-into-overbought-warning"
+    },
+    {
+      "date": "2026-08-25",
+      "source": "The Block",
+      "headline": "Bitcoin holds above $80,000 backed by ETF flows; bull market case ‘early but optimistic,’ analyst says",
+      "implications": [
+        "Bullish macro signal — increased arb activity expected"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 26,
+      "link": "https://www.theblock.co/news/markets/2026-08-25-bitcoin-holds-above-80000-412674"
+    },
+    {
+      "date": "2026-08-25",
+      "source": "CoinDesk",
+      "headline": "Bitcoin hits $80,000 for the first time since May as crypto recovery accelerates",
+      "implications": [
+        "General market development — monitor for spread impact"
+      ],
+      "botActions": [],
+      "sentiment": "high_impact",
+      "score": 27,
+      "link": "https://www.coindesk.com/markets/2026/08/24/bitcoin-hits-usd80-000-for-the-first-time-since-may-as-crypto-recovery-accelerates"
     }
   ],
   "structuralInsights": {
@@ -29,5 +133,6 @@
     "marketPhase": "late_bear_early_recovery",
     "preferredLeg": "DEX",
     "keySignal": "funding_rates"
-  }
+  },
+  "lastNewsRun": "2026-08-26T05:41:58.312Z"
 }

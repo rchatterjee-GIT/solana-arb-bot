@@ -1,0 +1,3147 @@
+{
+  "scans": 311,
+  "detected": [
+    {
+      "symbol": "XTESTA",
+      "exchange": "OKX",
+      "ts": "2026-08-25T17:06:34.857Z",
+      "viable": false,
+      "withdrawal": false,
+      "dex": false,
+      "feeViable": true,
+      "feeUsd": "0.00",
+      "reason": "no-withdrawal"
+    }
+  ],
+  "added": [],
+  "skipped": [
+    "XCRM",
+    "XHPE",
+    "BTC",
+    "ETH",
+    "OKB",
+    "SOL",
+    "DOGE",
+    "XRP",
+    "BCH",
+    "AEON",
+    "BICO",
+    "ZEC",
+    "1INCH",
+    "2Z",
+    "A",
+    "AAVE",
+    "ACE",
+    "ACH",
+    "ACT",
+    "ADA",
+    "AEVO",
+    "AGLD",
+    "AI",
+    "AIXBT",
+    "ALGO",
+    "ALLO",
+    "ANIME",
+    "APE",
+    "API3",
+    "APT",
+    "AR",
+    "ARB",
+    "ARG",
+    "ARKM",
+    "ASP",
+    "ASTR",
+    "ASTER",
+    "ATH",
+    "ATOM",
+    "AUCTION",
+    "AUDM",
+    "AUDF",
+    "AVAX",
+    "AVNT",
+    "AXS",
+    "BABYDOGE",
+    "BABY",
+    "BAND",
+    "BANANA",
+    "BARD",
+    "BASED",
+    "BAT",
+    "BERA",
+    "BETH",
+    "BIGTIME",
+    "BIO",
+    "BLUR",
+    "BNB",
+    "BNT",
+    "BREV",
+    "BRL1",
+    "CARDS",
+    "CATI",
+    "CAT",
+    "CC",
+    "CELO",
+    "CELR",
+    "CETUS",
+    "CFG",
+    "CFX",
+    "CHIP",
+    "CHZ",
+    "CITY",
+    "COMP",
+    "CORE",
+    "CRO",
+    "CRV",
+    "CSPR",
+    "CTC",
+    "CVC",
+    "CVX",
+    "DASH",
+    "DEGEN",
+    "DGB",
+    "DOGS",
+    "DOOD",
+    "DORA",
+    "DOS",
+    "DOT",
+    "DYDX",
+    "EDGE",
+    "EGLD",
+    "EIGEN",
+    "ELF",
+    "ENA",
+    "ENJ",
+    "ENS",
+    "ETC",
+    "ETHW",
+    "ETHFI",
+    "FET",
+    "FIL",
+    "FLOW",
+    "FLOKI",
+    "FLR",
+    "FLUID",
+    "FOGO",
+    "G",
+    "GALA",
+    "GALFT",
+    "GAS",
+    "GLM",
+    "GMT",
+    "GMX",
+    "GOAT",
+    "GRASS",
+    "GRT",
+    "GRVT",
+    "HBAR",
+    "HMSTR",
+    "HUMA",
+    "HYPE",
+    "ICP",
+    "ICX",
+    "ID",
+    "ILV",
+    "IMX",
+    "INJ",
+    "IOST",
+    "IOTA",
+    "DATA",
+    "IRYS",
+    "JITOSOL",
+    "JOE",
+    "JTO",
+    "KAIA",
+    "KAITO",
+    "KAT",
+    "KITE",
+    "KMNO",
+    "KNC",
+    "KSM",
+    "LAT",
+    "LAYER",
+    "LDO",
+    "LEO",
+    "LINK",
+    "LINEA",
+    "LIT",
+    "LPT",
+    "LQTY",
+    "LRC",
+    "LSK",
+    "LTC",
+    "LUNA",
+    "MAGIC",
+    "MANA",
+    "MASK",
+    "ME",
+    "MEGA",
+    "MEME",
+    "MENGO",
+    "MERL",
+    "METIS",
+    "MET",
+    "MINA",
+    "MMT",
+    "MON",
+    "MOODENG",
+    "MORPHO",
+    "MOVE",
+    "NAVX",
+    "NEAR",
+    "NEIRO",
+    "NEO",
+    "NES",
+    "NFT",
+    "NIGHT",
+    "NMR",
+    "NOT",
+    "OFC",
+    "OKSOL",
+    "OL",
+    "OMI",
+    "ONDO",
+    "ONE",
+    "ONT",
+    "OP",
+    "ORBS",
+    "ORDI",
+    "PARTI",
+    "PAXG",
+    "PENDLE",
+    "PENGU",
+    "PEOPLE",
+    "PEPE",
+    "PHA",
+    "PI",
+    "PIXEL",
+    "PNUT",
+    "POL",
+    "POR",
+    "PROMPT",
+    "PROVE",
+    "PROS",
+    "PUMP",
+    "PYTH",
+    "PYUSD",
+    "QTUM",
+    "RE",
+    "RESOLV",
+    "RLUSD",
+    "ROBO",
+    "RON",
+    "RPL",
+    "RSR",
+    "RVN",
+    "S",
+    "SAFE",
+    "SAHARA",
+    "SAND",
+    "SATS",
+    "SCR",
+    "SD",
+    "SEI",
+    "SENT",
+    "SHIB",
+    "SKL",
+    "SKY",
+    "SLP",
+    "SLX",
+    "SNT",
+    "SNX",
+    "SONIC",
+    "SOPH",
+    "SPACE",
+    "SPK",
+    "SPURS",
+    "SSV",
+    "STETH",
+    "STORJ",
+    "STRK",
+    "STX",
+    "SUI",
+    "SUSHI",
+    "SWFTC",
+    "T",
+    "TAO",
+    "THETA",
+    "TIA",
+    "TNSR",
+    "GRAM",
+    "TOSHI",
+    "TRA",
+    "TRB",
+    "TRX",
+    "TURBO",
+    "UMA",
+    "UNI",
+    "USAT",
+    "USDC",
+    "USDG",
+    "USD1",
+    "USDS",
+    "VELO",
+    "VELODROME",
+    "VINE",
+    "VIRTUAL",
+    "W",
+    "WAXP",
+    "WCT",
+    "WET",
+    "WIF",
+    "WIN",
+    "WLD",
+    "WLFI",
+    "WOO",
+    "XAAPL",
+    "XAAOI",
+    "XADBE",
+    "XALAB",
+    "XAMD",
+    "XAMZN",
+    "XAMAT",
+    "XAPP",
+    "XARM",
+    "XASTS",
+    "XASML",
+    "XAUT",
+    "XAVGO",
+    "XBE",
+    "XBMNR",
+    "XBOT",
+    "XBSP",
+    "XCBRS",
+    "XCH",
+    "XCOIN",
+    "XCOHR",
+    "XCRCL",
+    "XCRWD",
+    "XCRWV",
+    "XCRM",
+    "XCSCO",
+    "XDELL",
+    "XDKNG",
+    "XEWY",
+    "XGEV",
+    "XGME",
+    "XGOOGL",
+    "XHIMS",
+    "XHOOD",
+    "XHPE",
+    "XIBM",
+    "XINTC",
+    "XIREN",
+    "XIWM",
+    "XLITE",
+    "XLLY",
+    "XLM",
+    "XMETA",
+    "XMRVL",
+    "XMSFT",
+    "XMSTR",
+    "XMU",
+    "XNBIS",
+    "XNFLX",
+    "XNOW",
+    "XNVDA",
+    "XONDS",
+    "XON",
+    "XORCL",
+    "XPL",
+    "XPLTR",
+    "XQQQ",
+    "XRKLB",
+    "XSHAZ",
+    "XSKHY",
+    "XSMCI",
+    "XSNDK",
+    "XSNOW",
+    "XSOXL",
+    "XSPCX",
+    "XSPY",
+    "XTER",
+    "XTQQQ",
+    "XTSLA",
+    "XTSM",
+    "XTWLO",
+    "XTZ",
+    "XUSAR",
+    "XVRT",
+    "XXLE",
+    "YB",
+    "YFI",
+    "YGG",
+    "ZAMA",
+    "ZBCN",
+    "ZENT",
+    "ZEN",
+    "ZETA",
+    "ZIL",
+    "ZK",
+    "ZKJ",
+    "ZORA",
+    "ZRO",
+    "ZRX",
+    "XXIAOMI",
+    "XPOPMART",
+    "XSMH",
+    "XKO",
+    "XLRCX",
+    "XTTWO",
+    "XRDDT",
+    "XCIEN",
+    "XZM",
+    "XBX",
+    "XUNH",
+    "XAPLD",
+    "XRIVN",
+    "XISRG",
+    "XOKTA",
+    "XWDC",
+    "XGLW",
+    "XQCOM",
+    "XJNJ",
+    "XKLAC",
+    "XROK",
+    "XSTRC",
+    "BTC",
+    "ETH",
+    "OKB",
+    "SOL",
+    "DOGE",
+    "XRP",
+    "BCH",
+    "TRUMP",
+    "ZEC",
+    "1INCH",
+    "2Z",
+    "A",
+    "AAVE",
+    "ACE",
+    "ACH",
+    "ACT",
+    "ADA",
+    "AEON",
+    "AEVO",
+    "AGLD",
+    "AI",
+    "AIXBT",
+    "ALGO",
+    "ALLO",
+    "ANIME",
+    "APE",
+    "API3",
+    "APT",
+    "AR",
+    "ARB",
+    "ARG",
+    "ARKM",
+    "ASP",
+    "ASTR",
+    "ASTER",
+    "ATH",
+    "ATOM",
+    "AUCTION",
+    "AUDM",
+    "AUDF",
+    "AVAX",
+    "AVNT",
+    "AXS",
+    "BABYDOGE",
+    "BABY",
+    "BAND",
+    "BANANA",
+    "BARD",
+    "BASED",
+    "BAT",
+    "BERA",
+    "BETH",
+    "BICO",
+    "BIGTIME",
+    "BIO",
+    "BLUR",
+    "BNB",
+    "BNT",
+    "BONK",
+    "BREV",
+    "BRL1",
+    "CARDS",
+    "CATI",
+    "CAT",
+    "CC",
+    "CELO",
+    "CELR",
+    "CETUS",
+    "CFG",
+    "CFX",
+    "CHIP",
+    "CHZ",
+    "CITY",
+    "COMP",
+    "CORE",
+    "CRO",
+    "CRV",
+    "CSPR",
+    "CTC",
+    "CVC",
+    "CVX",
+    "DASH",
+    "DEGEN",
+    "DGB",
+    "DOGS",
+    "DOOD",
+    "DORA",
+    "DOS",
+    "DOT",
+    "DYDX",
+    "EDGE",
+    "EGLD",
+    "EIGEN",
+    "ELF",
+    "ENA",
+    "ENJ",
+    "ENS",
+    "ETC",
+    "ETHW",
+    "ETHFI",
+    "FET",
+    "FIL",
+    "FLOW",
+    "FLOKI",
+    "FLR",
+    "FLUID",
+    "FOGO",
+    "G",
+    "GALA",
+    "GALFT",
+    "GAS",
+    "GLM",
+    "GMT",
+    "GMX",
+    "GRASS",
+    "GRT",
+    "GRVT",
+    "HBAR",
+    "HMSTR",
+    "HUMA",
+    "HYPE",
+    "ICP",
+    "ICX",
+    "ID",
+    "ILV",
+    "IMX",
+    "INJ",
+    "IOST",
+    "IOTA",
+    "DATA",
+    "IRYS",
+    "JITOSOL",
+    "JOE",
+    "JUP",
+    "KAIA",
+    "KAITO",
+    "KAT",
+    "KITE",
+    "KMNO",
+    "KNC",
+    "KSM",
+    "LAT",
+    "LAYER",
+    "LDO",
+    "LEO",
+    "LINK",
+    "LINEA",
+    "LIT",
+    "LPT",
+    "LQTY",
+    "LRC",
+    "LSK",
+    "LTC",
+    "LUNA",
+    "MAGIC",
+    "MANA",
+    "MASK",
+    "ME",
+    "MEGA",
+    "MEME",
+    "MENGO",
+    "MERL",
+    "METIS",
+    "MET",
+    "MEW",
+    "MINA",
+    "MMT",
+    "MON",
+    "MOODENG",
+    "MORPHO",
+    "MOVE",
+    "NAVX",
+    "NEAR",
+    "NEIRO",
+    "NEO",
+    "NES",
+    "NFT",
+    "NIGHT",
+    "NMR",
+    "NOT",
+    "OFC",
+    "OKSOL",
+    "OL",
+    "OMI",
+    "ONDO",
+    "ONE",
+    "ONT",
+    "OP",
+    "ORBS",
+    "ORDI",
+    "PARTI",
+    "PAXG",
+    "PENDLE",
+    "PENGU",
+    "PEOPLE",
+    "PEPE",
+    "PHA",
+    "PI",
+    "PIXEL",
+    "PNUT",
+    "POL",
+    "POR",
+    "PROMPT",
+    "PROVE",
+    "PROS",
+    "PUMP",
+    "PYTH",
+    "PYUSD",
+    "QTUM",
+    "RE",
+    "RESOLV",
+    "RLUSD",
+    "ROBO",
+    "RON",
+    "RPL",
+    "RSR",
+    "RVN",
+    "S",
+    "SAFE",
+    "SAHARA",
+    "SAND",
+    "SATS",
+    "SCR",
+    "SD",
+    "SEI",
+    "SENT",
+    "SHIB",
+    "SKL",
+    "SKY",
+    "SLP",
+    "SLX",
+    "SNT",
+    "SNX",
+    "SONIC",
+    "SOPH",
+    "SPACE",
+    "SPK",
+    "SPURS",
+    "SSV",
+    "STETH",
+    "STORJ",
+    "STRK",
+    "STX",
+    "SUI",
+    "SUSHI",
+    "SWFTC",
+    "T",
+    "TAO",
+    "THETA",
+    "TIA",
+    "TNSR",
+    "GRAM",
+    "TOSHI",
+    "TRA",
+    "TRB",
+    "TRX",
+    "TURBO",
+    "UMA",
+    "UNI",
+    "USAT",
+    "USDC",
+    "USDG",
+    "USD1",
+    "USDS",
+    "VELO",
+    "VELODROME",
+    "VINE",
+    "VIRTUAL",
+    "W",
+    "WAXP",
+    "WCT",
+    "WET",
+    "WIF",
+    "WIN",
+    "WLD",
+    "WLFI",
+    "WOO",
+    "XAAPL",
+    "XAAOI",
+    "XADBE",
+    "XALAB",
+    "XAMD",
+    "XAMZN",
+    "XAMAT",
+    "XAPP",
+    "XAPLD",
+    "XARM",
+    "XASTS",
+    "XASML",
+    "XAUT",
+    "XAVGO",
+    "XBE",
+    "XBMNR",
+    "XBOT",
+    "XBSP",
+    "XBX",
+    "XCBRS",
+    "XCH",
+    "XCIEN",
+    "XCOIN",
+    "XCOHR",
+    "XCRCL",
+    "XCRWD",
+    "XCRWV",
+    "XCRM",
+    "XCSCO",
+    "XDELL",
+    "XDKNG",
+    "XEWY",
+    "XGEV",
+    "XGLW",
+    "XGME",
+    "XGOOGL",
+    "XHIMS",
+    "XHOOD",
+    "XHPE",
+    "XIBM",
+    "XINTC",
+    "XIREN",
+    "XISRG",
+    "XIWM",
+    "XJNJ",
+    "XKLAC",
+    "XKO",
+    "XLITE",
+    "XLLY",
+    "XLM",
+    "XLRCX",
+    "XMETA",
+    "XMRVL",
+    "XMSFT",
+    "XMSTR",
+    "XMU",
+    "XNBIS",
+    "XNFLX",
+    "XNOW",
+    "XNVDA",
+    "XOKTA",
+    "XONDS",
+    "XON",
+    "XORCL",
+    "XPL",
+    "XPLTR",
+    "XPOPMART",
+    "XQCOM",
+    "XQQQ",
+    "XRDDT",
+    "XRIVN",
+    "XRKLB",
+    "XROK",
+    "XSHAZ",
+    "XSKHY",
+    "XSMCI",
+    "XSMH",
+    "XSNDK",
+    "XSNOW",
+    "XSOXL",
+    "XSPCX",
+    "XSPY",
+    "XSTRC",
+    "XTER",
+    "XTQQQ",
+    "XTSLA",
+    "XTSM",
+    "XTTWO",
+    "XTWLO",
+    "XTZ",
+    "XUNH",
+    "XUSAR",
+    "XVRT",
+    "XWDC",
+    "XXIAOMI",
+    "XXLE",
+    "XZM",
+    "YB",
+    "YFI",
+    "YGG",
+    "ZAMA",
+    "ZBCN",
+    "ZENT",
+    "ZEN",
+    "ZETA",
+    "ZIL",
+    "ZK",
+    "ZKJ",
+    "ZORA",
+    "ZRO",
+    "ZRX",
+    "XTESTA"
+  ],
+  "lastScan": "2026-08-26T08:50:08.296Z",
+  "seenRaydium": [],
+  "failedTokens": {
+    "BTC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:24.611Z",
+      "retries": 0
+    },
+    "ETH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:25.892Z",
+      "retries": 0
+    },
+    "OKB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:27.054Z",
+      "retries": 0
+    },
+    "SOL": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:00:28.554Z",
+      "retries": 0
+    },
+    "DOGE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:29.833Z",
+      "retries": 0
+    },
+    "XRP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:31.124Z",
+      "retries": 0
+    },
+    "BCH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:32.300Z",
+      "retries": 0
+    },
+    "AEON": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:46.137Z",
+      "retries": 0
+    },
+    "BICO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:30.325Z",
+      "retries": 0
+    },
+    "ZEC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:35.011Z",
+      "retries": 0
+    },
+    "1INCH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:36.287Z",
+      "retries": 0
+    },
+    "2Z": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:37.429Z",
+      "retries": 0
+    },
+    "A": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:38.589Z",
+      "retries": 0
+    },
+    "AAVE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:39.870Z",
+      "retries": 0
+    },
+    "ACE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:41.148Z",
+      "retries": 0
+    },
+    "ACH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:42.432Z",
+      "retries": 0
+    },
+    "ACT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:43.618Z",
+      "retries": 0
+    },
+    "ADA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:44.985Z",
+      "retries": 0
+    },
+    "AEVO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:47.425Z",
+      "retries": 0
+    },
+    "AGLD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:48.690Z",
+      "retries": 0
+    },
+    "AI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:49.837Z",
+      "retries": 0
+    },
+    "AIXBT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:51.162Z",
+      "retries": 0
+    },
+    "ALGO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:52.473Z",
+      "retries": 0
+    },
+    "ALLO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:53.607Z",
+      "retries": 0
+    },
+    "ANIME": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:54.908Z",
+      "retries": 0
+    },
+    "APE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:56.266Z",
+      "retries": 0
+    },
+    "API3": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:57.556Z",
+      "retries": 0
+    },
+    "APT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:00:58.846Z",
+      "retries": 0
+    },
+    "AR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:00.110Z",
+      "retries": 0
+    },
+    "ARB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:01.462Z",
+      "retries": 0
+    },
+    "ARG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:02.717Z",
+      "retries": 0
+    },
+    "ARKM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:04.054Z",
+      "retries": 0
+    },
+    "ASP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:05.289Z",
+      "retries": 0
+    },
+    "ASTR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:06.603Z",
+      "retries": 0
+    },
+    "ASTER": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:07.747Z",
+      "retries": 0
+    },
+    "ATH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:09.015Z",
+      "retries": 0
+    },
+    "ATOM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:10.336Z",
+      "retries": 0
+    },
+    "AUCTION": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:11.651Z",
+      "retries": 0
+    },
+    "AUDM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:12.835Z",
+      "retries": 0
+    },
+    "AUDF": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:13.988Z",
+      "retries": 0
+    },
+    "AVAX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:15.287Z",
+      "retries": 0
+    },
+    "AVNT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:16.488Z",
+      "retries": 0
+    },
+    "AXS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:17.838Z",
+      "retries": 0
+    },
+    "BABYDOGE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:19.092Z",
+      "retries": 0
+    },
+    "BABY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:20.384Z",
+      "retries": 0
+    },
+    "BAND": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:21.714Z",
+      "retries": 0
+    },
+    "BANANA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:22.961Z",
+      "retries": 0
+    },
+    "BARD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:24.094Z",
+      "retries": 0
+    },
+    "BASED": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:25.283Z",
+      "retries": 0
+    },
+    "BAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:26.540Z",
+      "retries": 0
+    },
+    "BERA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:27.840Z",
+      "retries": 0
+    },
+    "BETH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:29.011Z",
+      "retries": 0
+    },
+    "BIGTIME": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:31.616Z",
+      "retries": 0
+    },
+    "BIO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:32.903Z",
+      "retries": 0
+    },
+    "BLUR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:34.191Z",
+      "retries": 0
+    },
+    "BNB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:35.476Z",
+      "retries": 0
+    },
+    "BNT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:36.718Z",
+      "retries": 0
+    },
+    "BREV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:39.445Z",
+      "retries": 0
+    },
+    "BRL1": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:40.575Z",
+      "retries": 0
+    },
+    "CARDS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:41.741Z",
+      "retries": 0
+    },
+    "CATI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:43.114Z",
+      "retries": 0
+    },
+    "CAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:44.442Z",
+      "retries": 0
+    },
+    "CC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:45.600Z",
+      "retries": 0
+    },
+    "CELO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:46.881Z",
+      "retries": 0
+    },
+    "CELR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:48.143Z",
+      "retries": 0
+    },
+    "CETUS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:49.430Z",
+      "retries": 0
+    },
+    "CFG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:50.723Z",
+      "retries": 0
+    },
+    "CFX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:52.041Z",
+      "retries": 0
+    },
+    "CHIP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:53.296Z",
+      "retries": 0
+    },
+    "CHZ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:54.570Z",
+      "retries": 0
+    },
+    "CITY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:55.838Z",
+      "retries": 0
+    },
+    "COMP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:57.077Z",
+      "retries": 0
+    },
+    "CORE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:58.394Z",
+      "retries": 0
+    },
+    "CRO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:01:59.712Z",
+      "retries": 0
+    },
+    "CRV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:00.977Z",
+      "retries": 0
+    },
+    "CSPR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:02.266Z",
+      "retries": 0
+    },
+    "CTC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:03.577Z",
+      "retries": 0
+    },
+    "CVC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:04.897Z",
+      "retries": 0
+    },
+    "CVX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:06.195Z",
+      "retries": 0
+    },
+    "DASH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:07.344Z",
+      "retries": 0
+    },
+    "DEGEN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:08.653Z",
+      "retries": 0
+    },
+    "DGB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:09.958Z",
+      "retries": 0
+    },
+    "DOGS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:11.229Z",
+      "retries": 0
+    },
+    "DOOD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:12.450Z",
+      "retries": 0
+    },
+    "DORA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:13.605Z",
+      "retries": 0
+    },
+    "DOS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:14.790Z",
+      "retries": 0
+    },
+    "DOT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:16.105Z",
+      "retries": 0
+    },
+    "DYDX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:17.372Z",
+      "retries": 0
+    },
+    "EDGE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:18.541Z",
+      "retries": 0
+    },
+    "EGLD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:19.852Z",
+      "retries": 0
+    },
+    "EIGEN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:21.139Z",
+      "retries": 0
+    },
+    "ELF": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:22.562Z",
+      "retries": 0
+    },
+    "ENA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:23.680Z",
+      "retries": 0
+    },
+    "ENJ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:24.975Z",
+      "retries": 0
+    },
+    "ENS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:26.231Z",
+      "retries": 0
+    },
+    "ETC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:27.579Z",
+      "retries": 0
+    },
+    "ETHW": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:28.858Z",
+      "retries": 0
+    },
+    "ETHFI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:30.205Z",
+      "retries": 0
+    },
+    "FET": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:31.500Z",
+      "retries": 0
+    },
+    "FIL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:32.775Z",
+      "retries": 0
+    },
+    "FLOW": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:34.008Z",
+      "retries": 0
+    },
+    "FLOKI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:35.304Z",
+      "retries": 0
+    },
+    "FLR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:36.618Z",
+      "retries": 0
+    },
+    "FLUID": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:37.957Z",
+      "retries": 0
+    },
+    "FOGO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:39.116Z",
+      "retries": 0
+    },
+    "G": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:40.449Z",
+      "retries": 0
+    },
+    "GALA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:41.748Z",
+      "retries": 0
+    },
+    "GALFT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:42.909Z",
+      "retries": 0
+    },
+    "GAS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:44.189Z",
+      "retries": 0
+    },
+    "GLM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:45.574Z",
+      "retries": 0
+    },
+    "GMT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:46.854Z",
+      "retries": 0
+    },
+    "GMX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:48.010Z",
+      "retries": 0
+    },
+    "GOAT": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-18T18:45:06.300Z",
+      "retries": 0
+    },
+    "GRASS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:49.141Z",
+      "retries": 0
+    },
+    "GRT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:50.404Z",
+      "retries": 0
+    },
+    "GRVT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:51.534Z",
+      "retries": 0
+    },
+    "HBAR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:52.801Z",
+      "retries": 0
+    },
+    "HMSTR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:54.069Z",
+      "retries": 0
+    },
+    "HUMA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:55.202Z",
+      "retries": 0
+    },
+    "HYPE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:56.324Z",
+      "retries": 0
+    },
+    "ICP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:57.600Z",
+      "retries": 0
+    },
+    "ICX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:02:58.890Z",
+      "retries": 0
+    },
+    "ID": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:00.176Z",
+      "retries": 0
+    },
+    "ILV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:01.473Z",
+      "retries": 0
+    },
+    "IMX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:02.746Z",
+      "retries": 0
+    },
+    "INJ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:04.017Z",
+      "retries": 0
+    },
+    "IOST": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:05.311Z",
+      "retries": 0
+    },
+    "IOTA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:06.665Z",
+      "retries": 0
+    },
+    "DATA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:07.955Z",
+      "retries": 0
+    },
+    "IRYS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:09.200Z",
+      "retries": 0
+    },
+    "JITOSOL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:10.358Z",
+      "retries": 0
+    },
+    "JOE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:11.675Z",
+      "retries": 0
+    },
+    "JTO": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-18T18:45:32.166Z",
+      "retries": 0
+    },
+    "KAIA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:14.469Z",
+      "retries": 0
+    },
+    "KAITO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:15.797Z",
+      "retries": 0
+    },
+    "KAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:16.923Z",
+      "retries": 0
+    },
+    "KITE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:18.059Z",
+      "retries": 0
+    },
+    "KMNO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:19.224Z",
+      "retries": 0
+    },
+    "KNC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:20.537Z",
+      "retries": 0
+    },
+    "KSM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:21.819Z",
+      "retries": 0
+    },
+    "LAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:23.189Z",
+      "retries": 0
+    },
+    "LAYER": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:03:24.780Z",
+      "retries": 0
+    },
+    "LDO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:26.049Z",
+      "retries": 0
+    },
+    "LEO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:27.401Z",
+      "retries": 0
+    },
+    "LINK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:28.767Z",
+      "retries": 0
+    },
+    "LINEA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:29.905Z",
+      "retries": 0
+    },
+    "LIT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:31.052Z",
+      "retries": 0
+    },
+    "LPT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:32.339Z",
+      "retries": 0
+    },
+    "LQTY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:33.634Z",
+      "retries": 0
+    },
+    "LRC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:34.913Z",
+      "retries": 0
+    },
+    "LSK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:36.167Z",
+      "retries": 0
+    },
+    "LTC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:37.451Z",
+      "retries": 0
+    },
+    "LUNA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:38.715Z",
+      "retries": 0
+    },
+    "MAGIC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:39.978Z",
+      "retries": 0
+    },
+    "MANA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:41.278Z",
+      "retries": 0
+    },
+    "MASK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:42.584Z",
+      "retries": 0
+    },
+    "ME": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:03:44.096Z",
+      "retries": 0
+    },
+    "MEGA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:45.264Z",
+      "retries": 0
+    },
+    "MEME": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:46.554Z",
+      "retries": 0
+    },
+    "MENGO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:47.816Z",
+      "retries": 0
+    },
+    "MERL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:49.124Z",
+      "retries": 0
+    },
+    "METIS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:50.417Z",
+      "retries": 0
+    },
+    "MET": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:51.587Z",
+      "retries": 0
+    },
+    "MINA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:54.474Z",
+      "retries": 0
+    },
+    "MMT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:55.639Z",
+      "retries": 0
+    },
+    "MON": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:56.820Z",
+      "retries": 0
+    },
+    "MOODENG": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:03:58.325Z",
+      "retries": 0
+    },
+    "MORPHO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:03:59.610Z",
+      "retries": 0
+    },
+    "MOVE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:00.865Z",
+      "retries": 0
+    },
+    "NAVX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:02.201Z",
+      "retries": 0
+    },
+    "NEAR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:03.628Z",
+      "retries": 0
+    },
+    "NEIRO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:04.893Z",
+      "retries": 0
+    },
+    "NEO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:06.151Z",
+      "retries": 0
+    },
+    "NES": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:07.348Z",
+      "retries": 0
+    },
+    "NFT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:08.501Z",
+      "retries": 0
+    },
+    "NIGHT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:09.640Z",
+      "retries": 0
+    },
+    "NMR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:10.990Z",
+      "retries": 0
+    },
+    "NOT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:12.152Z",
+      "retries": 0
+    },
+    "OFC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:13.302Z",
+      "retries": 0
+    },
+    "OKSOL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:14.468Z",
+      "retries": 0
+    },
+    "OL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:15.733Z",
+      "retries": 0
+    },
+    "OMI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:17.019Z",
+      "retries": 0
+    },
+    "ONDO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:18.304Z",
+      "retries": 0
+    },
+    "ONE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:19.610Z",
+      "retries": 0
+    },
+    "ONT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:20.867Z",
+      "retries": 0
+    },
+    "OP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:22.152Z",
+      "retries": 0
+    },
+    "ORBS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:23.416Z",
+      "retries": 0
+    },
+    "ORDI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:24.676Z",
+      "retries": 0
+    },
+    "PARTI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:25.981Z",
+      "retries": 0
+    },
+    "PAXG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:27.148Z",
+      "retries": 0
+    },
+    "PENDLE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:28.416Z",
+      "retries": 0
+    },
+    "PENGU": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:04:29.939Z",
+      "retries": 0
+    },
+    "PEOPLE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:31.193Z",
+      "retries": 0
+    },
+    "PEPE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:32.494Z",
+      "retries": 0
+    },
+    "PHA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:33.780Z",
+      "retries": 0
+    },
+    "PI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:35.107Z",
+      "retries": 0
+    },
+    "PIXEL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:36.476Z",
+      "retries": 0
+    },
+    "PNUT": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:04:38.019Z",
+      "retries": 0
+    },
+    "POL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:39.297Z",
+      "retries": 0
+    },
+    "POR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:40.669Z",
+      "retries": 0
+    },
+    "PROMPT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:41.961Z",
+      "retries": 0
+    },
+    "PROVE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:43.109Z",
+      "retries": 0
+    },
+    "PROS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:44.292Z",
+      "retries": 0
+    },
+    "PUMP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:45.455Z",
+      "retries": 0
+    },
+    "PYTH": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:04:47.011Z",
+      "retries": 0
+    },
+    "PYUSD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:48.174Z",
+      "retries": 0
+    },
+    "QTUM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:49.473Z",
+      "retries": 0
+    },
+    "RE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:50.633Z",
+      "retries": 0
+    },
+    "RESOLV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:51.819Z",
+      "retries": 0
+    },
+    "RLUSD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:52.956Z",
+      "retries": 0
+    },
+    "ROBO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:54.178Z",
+      "retries": 0
+    },
+    "RON": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:55.468Z",
+      "retries": 0
+    },
+    "RPL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:56.740Z",
+      "retries": 0
+    },
+    "RSR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:58.003Z",
+      "retries": 0
+    },
+    "RVN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:04:59.266Z",
+      "retries": 0
+    },
+    "S": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:00.564Z",
+      "retries": 0
+    },
+    "SAFE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:01.849Z",
+      "retries": 0
+    },
+    "SAHARA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:02.988Z",
+      "retries": 0
+    },
+    "SAND": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:04.283Z",
+      "retries": 0
+    },
+    "SATS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:05.552Z",
+      "retries": 0
+    },
+    "SCR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:06.846Z",
+      "retries": 0
+    },
+    "SD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:08.180Z",
+      "retries": 0
+    },
+    "SEI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:09.328Z",
+      "retries": 0
+    },
+    "SENT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:10.477Z",
+      "retries": 0
+    },
+    "SHIB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:11.818Z",
+      "retries": 0
+    },
+    "SKL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:13.090Z",
+      "retries": 0
+    },
+    "SKY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:14.219Z",
+      "retries": 0
+    },
+    "SLP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:15.518Z",
+      "retries": 0
+    },
+    "SLX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:16.694Z",
+      "retries": 0
+    },
+    "SNT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:18.010Z",
+      "retries": 0
+    },
+    "SNX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:19.362Z",
+      "retries": 0
+    },
+    "SONIC": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:05:21.012Z",
+      "retries": 0
+    },
+    "SOPH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:22.306Z",
+      "retries": 0
+    },
+    "SPACE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:23.518Z",
+      "retries": 0
+    },
+    "SPK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:24.736Z",
+      "retries": 0
+    },
+    "SPURS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:26.163Z",
+      "retries": 0
+    },
+    "SSV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:27.506Z",
+      "retries": 0
+    },
+    "STETH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:28.837Z",
+      "retries": 0
+    },
+    "STORJ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:30.110Z",
+      "retries": 0
+    },
+    "STRK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:31.389Z",
+      "retries": 0
+    },
+    "STX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:32.615Z",
+      "retries": 0
+    },
+    "SUI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:33.941Z",
+      "retries": 0
+    },
+    "SUSHI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:35.205Z",
+      "retries": 0
+    },
+    "SWFTC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:36.489Z",
+      "retries": 0
+    },
+    "T": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:37.801Z",
+      "retries": 0
+    },
+    "TAO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:39.147Z",
+      "retries": 0
+    },
+    "THETA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:40.439Z",
+      "retries": 0
+    },
+    "TIA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:41.703Z",
+      "retries": 0
+    },
+    "TNSR": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:05:43.188Z",
+      "retries": 0
+    },
+    "GRAM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:44.467Z",
+      "retries": 0
+    },
+    "TOSHI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:45.631Z",
+      "retries": 0
+    },
+    "TRA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:46.888Z",
+      "retries": 0
+    },
+    "TRB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:48.162Z",
+      "retries": 0
+    },
+    "TRX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:49.470Z",
+      "retries": 0
+    },
+    "TURBO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:50.783Z",
+      "retries": 0
+    },
+    "UMA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:52.039Z",
+      "retries": 0
+    },
+    "UNI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:53.278Z",
+      "retries": 0
+    },
+    "USAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:54.431Z",
+      "retries": 0
+    },
+    "USDC": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:05:55.991Z",
+      "retries": 0
+    },
+    "USDG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:57.153Z",
+      "retries": 0
+    },
+    "USD1": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:58.300Z",
+      "retries": 0
+    },
+    "USDS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:05:59.440Z",
+      "retries": 0
+    },
+    "VELO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:00.851Z",
+      "retries": 0
+    },
+    "VELODROME": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:02.154Z",
+      "retries": 0
+    },
+    "VINE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:03.338Z",
+      "retries": 0
+    },
+    "VIRTUAL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:04.532Z",
+      "retries": 0
+    },
+    "W": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:06:06.065Z",
+      "retries": 0
+    },
+    "WAXP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:07.390Z",
+      "retries": 0
+    },
+    "WCT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:08.697Z",
+      "retries": 0
+    },
+    "WET": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:09.857Z",
+      "retries": 0
+    },
+    "WIF": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:06:11.347Z",
+      "retries": 0
+    },
+    "WIN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:12.633Z",
+      "retries": 0
+    },
+    "WLD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:13.924Z",
+      "retries": 0
+    },
+    "WLFI": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:06:15.337Z",
+      "retries": 0
+    },
+    "WOO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:16.647Z",
+      "retries": 0
+    },
+    "XAAPL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:17.831Z",
+      "retries": 0
+    },
+    "XAAOI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:19.072Z",
+      "retries": 0
+    },
+    "XADBE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:20.224Z",
+      "retries": 0
+    },
+    "XALAB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:21.423Z",
+      "retries": 0
+    },
+    "XAMD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:22.668Z",
+      "retries": 0
+    },
+    "XAMZN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:23.832Z",
+      "retries": 0
+    },
+    "XAMAT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:24.989Z",
+      "retries": 0
+    },
+    "XAPP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:26.190Z",
+      "retries": 0
+    },
+    "XARM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:28.500Z",
+      "retries": 0
+    },
+    "XASTS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:29.657Z",
+      "retries": 0
+    },
+    "XASML": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:30.832Z",
+      "retries": 0
+    },
+    "XAUT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:31.983Z",
+      "retries": 0
+    },
+    "XAVGO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:33.151Z",
+      "retries": 0
+    },
+    "XBE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:34.283Z",
+      "retries": 0
+    },
+    "XBMNR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:35.433Z",
+      "retries": 0
+    },
+    "XBOT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:36.608Z",
+      "retries": 0
+    },
+    "XBSP": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:37.735Z",
+      "retries": 0
+    },
+    "XCBRS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:40.018Z",
+      "retries": 0
+    },
+    "XCH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:41.331Z",
+      "retries": 0
+    },
+    "XCOIN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:43.671Z",
+      "retries": 0
+    },
+    "XCOHR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:44.883Z",
+      "retries": 0
+    },
+    "XCRCL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:46.024Z",
+      "retries": 0
+    },
+    "XCRWD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:47.197Z",
+      "retries": 0
+    },
+    "XCRWV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:48.371Z",
+      "retries": 0
+    },
+    "XCRM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:49.548Z",
+      "retries": 0
+    },
+    "XCSCO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:50.719Z",
+      "retries": 0
+    },
+    "XDELL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:51.871Z",
+      "retries": 0
+    },
+    "XDKNG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:53.026Z",
+      "retries": 0
+    },
+    "XEWY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:54.239Z",
+      "retries": 0
+    },
+    "XGEV": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:55.434Z",
+      "retries": 0
+    },
+    "XGME": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:57.803Z",
+      "retries": 0
+    },
+    "XGOOGL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:58.954Z",
+      "retries": 0
+    },
+    "XHIMS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:00.134Z",
+      "retries": 0
+    },
+    "XHOOD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:01.323Z",
+      "retries": 0
+    },
+    "XHPE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:02.557Z",
+      "retries": 0
+    },
+    "XIBM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:03.793Z",
+      "retries": 0
+    },
+    "XINTC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:04.943Z",
+      "retries": 0
+    },
+    "XIREN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:06.162Z",
+      "retries": 0
+    },
+    "XIWM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:08.558Z",
+      "retries": 0
+    },
+    "XLITE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:13.367Z",
+      "retries": 0
+    },
+    "XLLY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:14.543Z",
+      "retries": 0
+    },
+    "XLM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:15.856Z",
+      "retries": 0
+    },
+    "XMETA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:18.148Z",
+      "retries": 0
+    },
+    "XMRVL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:19.300Z",
+      "retries": 0
+    },
+    "XMSFT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:20.509Z",
+      "retries": 0
+    },
+    "XMSTR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:21.683Z",
+      "retries": 0
+    },
+    "XMU": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:22.881Z",
+      "retries": 0
+    },
+    "XNBIS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:24.038Z",
+      "retries": 0
+    },
+    "XNFLX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:25.224Z",
+      "retries": 0
+    },
+    "XNOW": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:26.396Z",
+      "retries": 0
+    },
+    "XNVDA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:27.550Z",
+      "retries": 0
+    },
+    "XONDS": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:29.800Z",
+      "retries": 0
+    },
+    "XON": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:30.928Z",
+      "retries": 0
+    },
+    "XORCL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:32.095Z",
+      "retries": 0
+    },
+    "XPL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:33.211Z",
+      "retries": 0
+    },
+    "XPLTR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:34.364Z",
+      "retries": 0
+    },
+    "XQQQ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:37.967Z",
+      "retries": 0
+    },
+    "XRKLB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:41.522Z",
+      "retries": 0
+    },
+    "XSHAZ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:43.909Z",
+      "retries": 0
+    },
+    "XSKHY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:45.058Z",
+      "retries": 0
+    },
+    "XSMCI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:46.235Z",
+      "retries": 0
+    },
+    "XSNDK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:48.552Z",
+      "retries": 0
+    },
+    "XSNOW": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:49.713Z",
+      "retries": 0
+    },
+    "XSOXL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:50.876Z",
+      "retries": 0
+    },
+    "XSPCX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:52.057Z",
+      "retries": 0
+    },
+    "XSPY": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:53.203Z",
+      "retries": 0
+    },
+    "XTER": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:55.467Z",
+      "retries": 0
+    },
+    "XTQQQ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:56.637Z",
+      "retries": 0
+    },
+    "XTSLA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:57.823Z",
+      "retries": 0
+    },
+    "XTSM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:58.978Z",
+      "retries": 0
+    },
+    "XTWLO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:01.284Z",
+      "retries": 0
+    },
+    "XTZ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:02.621Z",
+      "retries": 0
+    },
+    "XUSAR": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:04.957Z",
+      "retries": 0
+    },
+    "XVRT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:06.117Z",
+      "retries": 0
+    },
+    "XXLE": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:09.720Z",
+      "retries": 0
+    },
+    "YB": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:12.006Z",
+      "retries": 0
+    },
+    "YFI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:13.463Z",
+      "retries": 0
+    },
+    "YGG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:14.721Z",
+      "retries": 0
+    },
+    "ZAMA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:15.876Z",
+      "retries": 0
+    },
+    "ZBCN": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:08:17.349Z",
+      "retries": 0
+    },
+    "ZENT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:18.627Z",
+      "retries": 0
+    },
+    "ZEN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:19.771Z",
+      "retries": 0
+    },
+    "ZETA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:21.044Z",
+      "retries": 0
+    },
+    "ZIL": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:22.328Z",
+      "retries": 0
+    },
+    "ZK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:23.660Z",
+      "retries": 0
+    },
+    "ZKJ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:24.933Z",
+      "retries": 0
+    },
+    "ZORA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:26.085Z",
+      "retries": 0
+    },
+    "ZRO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:27.379Z",
+      "retries": 0
+    },
+    "ZRX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:28.664Z",
+      "retries": 0
+    },
+    "XXIAOMI": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:08.576Z",
+      "retries": 0
+    },
+    "XPOPMART": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:35.655Z",
+      "retries": 0
+    },
+    "XSMH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:47.394Z",
+      "retries": 0
+    },
+    "XKO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:12.151Z",
+      "retries": 0
+    },
+    "XLRCX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:16.996Z",
+      "retries": 0
+    },
+    "XTTWO": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:00.101Z",
+      "retries": 0
+    },
+    "XRDDT": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:39.114Z",
+      "retries": 0
+    },
+    "XCIEN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:42.528Z",
+      "retries": 0
+    },
+    "XZM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:10.858Z",
+      "retries": 0
+    },
+    "XBX": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:38.873Z",
+      "retries": 0
+    },
+    "XUNH": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:03.815Z",
+      "retries": 0
+    },
+    "XAPLD": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:27.369Z",
+      "retries": 0
+    },
+    "XRIVN": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:40.299Z",
+      "retries": 0
+    },
+    "XISRG": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:07.368Z",
+      "retries": 0
+    },
+    "XOKTA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:28.673Z",
+      "retries": 0
+    },
+    "XWDC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:08:07.358Z",
+      "retries": 0
+    },
+    "XGLW": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:06:56.629Z",
+      "retries": 0
+    },
+    "XQCOM": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:36.783Z",
+      "retries": 0
+    },
+    "XJNJ": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:09.800Z",
+      "retries": 0
+    },
+    "XKLAC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:11.005Z",
+      "retries": 0
+    },
+    "XROK": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:42.737Z",
+      "retries": 0
+    },
+    "XSTRC": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-23T08:07:54.320Z",
+      "retries": 0
+    },
+    "TRUMP": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:00:33.799Z",
+      "retries": 0
+    },
+    "BONK": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:01:38.239Z",
+      "retries": 0
+    },
+    "JUP": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:03:13.198Z",
+      "retries": 0
+    },
+    "MEW": {
+      "exchange": "OKX",
+      "reason": "no-dex-liquidity",
+      "ts": "2026-08-23T08:03:53.146Z",
+      "retries": 0
+    },
+    "XTESTA": {
+      "exchange": "OKX",
+      "reason": "no-withdrawal",
+      "ts": "2026-08-25T17:06:34.857Z",
+      "retries": 0
+    }
+  },
+  "lastReset": "2026-08-23T09:00:19.981Z"
+}

@@ -10,12 +10,13 @@ const crypto = require('crypto');
 
 const KNOWN_FILE  = path.join(__dirname, 'known-pairs.json');
 const NEW_FILE    = path.join(__dirname, 'new-pairs.json');
+const STATS_FILE  = path.join(__dirname, 'listing-stats.json');
 const LOG_FILE    = path.join(__dirname, 'listing.log');
 const CONFIG_FILE = path.join(__dirname, 'arb-config.json');
 
-const LISTING_THRESHOLD = 5.0;   // % spread required to add new token
-const LISTING_TRADE_SIZE = 60;   // smaller size for new/unknown tokens ($60 vs $120)
-const LISTING_MAX_AGE_HRS = 4;   // remove new listing pairs after 4hrs if no opportunity
+const LISTING_THRESHOLD = 2.0;   // % spread required to add new token
+const LISTING_TRADE_SIZE = 60;   // smaller size for new/unknown tokens ($60)
+const LISTING_MAX_AGE_HRS = 24;  // keep new listing pairs for 24hrs
 const MIN_DEX_LIQUIDITY = 50000; // minimum $50k DEX liquidity to consider
 
 function log(msg) {
@@ -216,9 +217,13 @@ async function scanNewListings() {
       log('New Coinbase listing: ' + pair.symbol);
       await processNewListing(pair.symbol, 'Coinbase', config, newPairs, okxSymbols, bybitSymbols, coinbaseSymbols);
     }
-  } else if (!known.coinbase || newCoinbase.length >= 10) {
+  } else if (!known.coinbase || known.coinbase.length === 0) {
     known.coinbase = coinbasePairs.map(p => p.symbol);
     log('Coinbase baseline set (' + coinbasePairs.length + ' pairs)');
+  } else if (newCoinbase.length >= 10) {
+    // Large batch - just update baseline silently (API returned different data)
+    known.coinbase = coinbasePairs.map(p => p.symbol);
+    log('Coinbase baseline refreshed (' + coinbasePairs.length + ' pairs)');
   }
 
   // Process new Kraken listings through full viability framework
@@ -243,13 +248,20 @@ async function scanNewListings() {
   }
 
   // Update known pairs for all exchanges
-  known.okx    = okxPairs.map(p => p.symbol);
-  known.bybit  = bybitPairs.map(p => p.symbol);
-  known.kraken = krakenPairs.map(p => p.symbol);
+  known.okx      = okxPairs.map(p => p.symbol);
+  known.bybit    = bybitPairs.map(p => p.symbol);
+  known.kraken   = krakenPairs.map(p => p.symbol);
+  known.coinbase = coinbasePairs.map(p => p.symbol);
 
   known.lastScan = new Date().toISOString();
   writeJSON(KNOWN_FILE, known);
   writeJSON(NEW_FILE, newPairs.filter(p => p.addedAt >= cutoff));
+
+  // Update listing stats for daily report
+  const stats = readJSON(STATS_FILE) || { scans: 0, detected: [], added: [], skipped: [], lastReset: new Date().toISOString() };
+  stats.scans = (stats.scans || 0) + 1;
+  stats.lastScan = new Date().toISOString();
+  writeJSON(STATS_FILE, stats);
 
   return { newOKX: newOKX.length, newBybit: newBybit.length, newKraken: newKraken.length, newCoinbase: newCoinbase.length };
 }
@@ -304,7 +316,26 @@ async function processNewListing(symbol, exchange, okxSymbols, bybitSymbols, con
     await sendTG(alertMsg);
     log(symbol + ' alert sent. Viable: ' + viable);
 
-        // 6. Add to bot if viable
+    // Track in stats
+    try {
+      const stats = readJSON(STATS_FILE) || { scans: 0, detected: [], added: [], skipped: [] };
+      const reason = viable ? 'viable' : !wd.canWithdraw ? 'no-withdrawal' : !dex.liquid ? 'no-dex-liquidity' : 'fee-too-high';
+      const entry = { symbol, exchange, ts: new Date().toISOString(), viable,
+        withdrawal: wd.canWithdraw, dex: dex.liquid, feeViable,
+        feeUsd: feeUsd.toFixed(2), reason };
+      stats.detected = (stats.detected || []).slice(-100); // keep last 100
+      stats.detected.push(entry);
+      if (viable) stats.added = (stats.added || []).concat(symbol);
+      else {
+        stats.skipped = (stats.skipped || []).concat(symbol);
+        // Store failed tokens for re-check (especially no-withdrawal ones)
+        if (!stats.failedTokens) stats.failedTokens = {};
+        stats.failedTokens[symbol] = { exchange, reason, ts: new Date().toISOString(), retries: (stats.failedTokens[symbol]?.retries || 0) };
+      }
+      writeJSON(STATS_FILE, stats);
+    } catch {}
+
+    // 6. Add to bot if viable
     if (viable && mint) {
       // Add to new-pairs.json in bot-compatible format
       const expiresAt = new Date(Date.now() + LISTING_MAX_AGE_HRS * 60 * 60 * 1000).toISOString();
@@ -487,7 +518,184 @@ async function run() {
   return result;
 }
 
-module.exports = { run, scanNewListings, checkNews, getCoinbasePairs };
+// ── Re-check previously failed tokens ────────────────────────────────────────
+async function recheckFailedTokens(sendTG) {
+  const stats = readJSON(STATS_FILE) || {};
+  const failed = stats.failedTokens || {};
+  const config = readJSON(CONFIG_FILE) || {};
+  const okxSymbols = new Set((readJSON(KNOWN_FILE) || {}).okx || []);
+  const bybitSymbols = new Set((readJSON(KNOWN_FILE) || {}).bybit || []);
+  const newPairs = readJSON(NEW_FILE) || [];
+  let reactivated = 0;
+
+  for (const [symbol, data] of Object.entries(failed)) {
+    if (data.reason !== 'no-withdrawal') continue; // Only re-check withdrawal failures
+    const daysSince = (Date.now() - new Date(data.ts).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince < 7) continue; // Re-check weekly
+
+    log('Re-checking ' + symbol + ' (failed ' + Math.round(daysSince) + ' days ago: ' + data.reason + ')');
+    try {
+      await processNewListing(symbol, data.exchange, okxSymbols, bybitSymbols, config, newPairs);
+      // If it reaches here without being killed, update retry count
+      stats.failedTokens[symbol].retries = (stats.failedTokens[symbol].retries || 0) + 1;
+      stats.failedTokens[symbol].lastRetry = new Date().toISOString();
+      reactivated++;
+    } catch(e) {
+      log('Re-check error for ' + symbol + ': ' + e.message);
+    }
+  }
+
+  writeJSON(STATS_FILE, stats);
+  if (reactivated > 0 && sendTG) {
+    await sendTG('🔍 [AGENT] Weekly re-check: ' + reactivated + ' previously-failed token(s) re-evaluated');
+  }
+  return reactivated;
+}
+
+// ── Full OKX universe viability scan ─────────────────────────────────────────
+async function scanFullOKXUniverse(sendTG) {
+  log('Starting full OKX universe scan...');
+  const config = readJSON(CONFIG_FILE) || {};
+  const known = readJSON(KNOWN_FILE) || { okx: [] };
+  const newPairs = readJSON(NEW_FILE) || [];
+
+  // Get current active pairs from config
+  const activePairs = new Set([
+    ...(config.PAIRS || []).map(p => p.okxCcy || p.symbol),
+    ...(newPairs.map(p => p.okxCcy || p.symbol))
+  ]);
+
+  // Get all OKX spot pairs
+  const okxAll = await getOKXPairs();
+  const bybitSymbols = new Set((await getBybitPairs()).map(p => p.symbol));
+  const okxSymbols = new Set(okxAll.map(p => p.symbol));
+
+  // Filter to tokens not already active and not in skip lists
+  const skipList = new Set([
+    ...(config.POLICY_SKIP_OKX || []),
+    ...activePairs
+  ]);
+
+  const candidates = okxAll.filter(p => !skipList.has(p.symbol));
+  log('OKX universe: ' + okxAll.length + ' total, ' + candidates.length + ' candidates to check');
+
+  let added = 0, noWithdrawal = 0, noDex = 0, feeTooHigh = 0;
+
+  for (const pair of candidates) {
+    try {
+      const before = newPairs.length;
+      await processNewListing(pair.symbol, 'OKX', okxSymbols, bybitSymbols, config, newPairs);
+      if (newPairs.length > before) added++;
+      await new Promise(r => setTimeout(r, 500)); // rate limit
+    } catch(e) { log('Universe scan error for ' + pair.symbol + ': ' + e.message); }
+  }
+
+  const msg = '🔍 [AGENT] OKX Universe Scan Complete\n' +
+    'Checked ' + candidates.length + ' pairs\n' +
+    'Added to bot: ' + added + '\n' +
+    'Already tracking: ' + activePairs.size;
+
+  log(msg);
+  if (sendTG) await sendTG(msg);
+  return { added, total: candidates.length };
+}
+
+// ── Pump.fun / Raydium new token monitor ─────────────────────────────────────
+async function scanSolanaNativeListings(sendTG) {
+  // Monitor Raydium new pools — tokens that just launched on Solana DEX
+  // These may get listed on OKX/Bybit within hours, creating arb opportunity
+  try {
+    const r = await fetch('https://api.raydium.io/v2/main/pairs?sort=volume24h&order=desc&offset=0&limit=50', {
+      signal: AbortSignal.timeout(10000)
+    });
+    const j = await r.json();
+    const pairs = j.data || [];
+
+    const stats = readJSON(STATS_FILE) || {};
+    if (!stats.seenRaydium) stats.seenRaydium = [];
+    const seenSet = new Set(stats.seenRaydium);
+
+    const known = readJSON(KNOWN_FILE) || { okx: [], bybit: [] };
+    const okxSet = new Set(known.okx || []);
+    const bybitSet = new Set(known.bybit || []);
+
+    let newOnBoth = [];
+    for (const pair of pairs) {
+      const sym = pair.name?.split('-')[0];
+      if (!sym || seenSet.has(sym)) continue;
+      seenSet.add(sym);
+      // Check if this Raydium token is ALSO listed on OKX or Bybit
+      if (okxSet.has(sym) || bybitSet.has(sym)) {
+        newOnBoth.push({ sym, vol24h: pair.volume24h, exchange: okxSet.has(sym) ? 'OKX' : 'Bybit' });
+      }
+    }
+
+    stats.seenRaydium = [...seenSet].slice(-1000);
+    writeJSON(STATS_FILE, stats);
+
+    if (newOnBoth.length > 0 && sendTG) {
+      const lines = newOnBoth.map(t => t.sym + ' (' + t.exchange + ') vol24h:$' + Math.round(t.vol24h)).join('\n');
+      await sendTG('🆕 [LISTING] Raydium+CEX crossover detected:\n' + lines + '\n\nThese may have arb opportunity — checking viability...');
+      // Process each as potential new pair
+      const config = readJSON(CONFIG_FILE) || {};
+      const newPairs = readJSON(NEW_FILE) || [];
+      const okxSymbols = new Set(known.okx);
+      const bybitSymbols = new Set(known.bybit);
+      for (const t of newOnBoth) {
+        await processNewListing(t.sym, t.exchange, okxSymbols, bybitSymbols, config, newPairs);
+      }
+    }
+
+    return newOnBoth.length;
+  } catch(e) {
+    log('Raydium scan error: ' + e.message);
+    return 0;
+  }
+}
+
+// ── Listing report ────────────────────────────────────────────────────────────
+function generateListingReport() {
+  const stats = readJSON(STATS_FILE) || { scans: 0, detected: [], added: [], skipped: [] };
+  const known = readJSON(KNOWN_FILE) || { okx: [], bybit: [], kraken: [], coinbase: [] };
+  const newPairs = readJSON(NEW_FILE) || [];
+  const now = Date.now();
+  const since = new Date(stats.lastReset || now - 24*60*60*1000);
+  const sinceStr = since.toISOString().slice(0,16).replace('T',' ') + ' UTC';
+
+  const detected = stats.detected || [];
+  const added = detected.filter(d => d.viable);
+  const skipped = detected.filter(d => !d.viable);
+  const noWithdrawal = skipped.filter(d => d.reason === 'no-withdrawal').length;
+  const noDex = skipped.filter(d => d.reason === 'no-dex-liquidity').length;
+  const feeTooHigh = skipped.filter(d => d.reason === 'fee-too-high').length;
+
+  let msg = '📊 [REPORT] Listing Monitor\n';
+  msg += 'Since: ' + sinceStr + '\n';
+  msg += 'Scans: ' + (stats.scans || 0) + ' (every 5min)\n';
+  msg += 'Pairs tracked: OKX ' + (known.okx?.length||0) + ' | Bybit ' + (known.bybit?.length||0) + ' | Kraken ' + (known.kraken?.length||0) + ' | CB ' + (known.coinbase?.length||0) + '\n\n';
+  msg += 'New listings detected: ' + detected.length + '\n';
+  if (added.length > 0) {
+    msg += '✅ Added to bot (' + added.length + '): ' + added.map(d=>d.symbol).join(', ') + '\n';
+  } else {
+    msg += '✅ Added to bot: none\n';
+  }
+  msg += '❌ Skipped (' + skipped.length + '):\n';
+  msg += '  No withdrawal: ' + noWithdrawal + '\n';
+  msg += '  No DEX liquidity: ' + noDex + '\n';
+  msg += '  Fee too high: ' + feeTooHigh + '\n';
+  if (newPairs.length > 0) {
+    msg += '\nCurrently active dynamic pairs: ' + newPairs.map(p=>p.name).join(', ');
+  }
+  if (detected.length > 0) {
+    msg += '\n\nLast 5 detections:\n';
+    msg += detected.slice(-5).map(d =>
+      (d.viable?'✅':'❌') + ' ' + d.symbol + ' (' + d.exchange + ') — ' + d.reason
+    ).join('\n');
+  }
+  return msg;
+}
+
+module.exports = { run, scanNewListings, checkNews, getCoinbasePairs, generateListingReport, recheckFailedTokens, scanFullOKXUniverse, scanSolanaNativeListings };
 
 if (require.main === module) {
   run().then(r => console.log('Scan complete:', r)).catch(e => console.error(e.message));

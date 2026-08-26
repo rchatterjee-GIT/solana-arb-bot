@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-08-25T19:44:16.627Z",
+  "scanning": [
+    "JTO",
+    "SOL",
+    "WIF",
+    "PENGU",
+    "BONK",
+    "W",
+    "PNUT"
+  ],
+  "opportunities": [],
+  "lastSpreads": {
+    "SOL": {
+      "spread": "0.9072%",
+      "buy": "Jupiter",
+      "sell": "Meteora",
+      "profit": "-0.9575"
+    },
+    "BONK": {
+      "spread": "4.8017%",
+      "buy": "Jupiter",
+      "sell": "Meteora",
+      "profit": "-8.5347"
+    }
+  },
+  "totalTrades": 0,
+  "totalPnl": 0,
+  "paused": false
+}

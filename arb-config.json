@@ -1,24 +1,32 @@
 {
   "POLICY_SKIP_OKX": [
-    "TRUMP",
+    "BOME",
     "POPCAT",
-    "BONK",
-    "JUP",
-    "BOME"
+    "ZEUS",
+    "GOAT",
+    "RAY",
+    "RENDER",
+    "TRUMP",
+    "JTO"
   ],
   "POLICY_SKIP_BYBIT": [
-    "JUP",
-    "TRUMP",
-    "POPCAT",
-    "BONK",
     "BOME",
-    "GOAT"
+    "BONK",
+    "GOAT",
+    "JUP",
+    "MEW",
+    "POPCAT",
+    "TRUMP",
+    "RAY",
+    "RENDER",
+    "ZEUS",
+    "JTO"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
   ],
   "TRADE_SIZE_USD": 120,
-  "MIN_SPREAD_CEX": 1,
+  "MIN_SPREAD_CEX": 2.5,
   "WINS_TARGET": 10,
   "SMART_SELL": true,
   "HOLD_MIN_SPREAD_PCT": 0.4,
@@ -46,27 +54,50 @@
   "VOLATILE_BAND_MULTIPLIER": 0.8,
   "note": "Edit via node command only. Changes take effect within 30s.",
   "MAX_CONCURRENT_TRADES": 2,
-  "MIN_SPREAD_BUFFER_PCT": 20,
+  "MIN_SPREAD_BUFFER_PCT": 5,
   "KRAKEN_ENABLED": true,
   "REBALANCE_TARGET_SOLANA": 200,
   "REBALANCE_TARGET_OKX": 350,
   "REBALANCE_TARGET_BYBIT": 300,
   "REBALANCE_TARGET_KRAKEN": 300,
   "KRAKEN_SYNTHETIC": false,
-  "PAIR_MIN_SPREAD": {
-    "W": 3.2,
-    "GOAT": 2
-  },
+  "MIN_SPREAD_KRAKEN": 1.2,
   "DEX_THRESHOLD_OVERRIDES": {
-    "RAY": 2.5,
-    "PENGU": 5,
-    "W": 3.5,
-    "WIF": 2.5,
-    "PNUT": 3.5,
-    "JTO": 1.8
+    "JTO": 1.8,
+    "SOL": 1.8,
+    "WIF": 2.3,
+    "PENGU": 3,
+    "PNUT": 3,
+    "W": 3.2,
+    "RAY": 2.3
   },
   "COINBASE_ENABLED": true,
-  "MIN_SPREAD_COINBASE": 1.2,
-  "TRADE_SIZE_COINBASE": 120,
-  "REBALANCE_TARGET_COINBASE": 200
+  "PAIR_MIN_SPREAD": {
+    "W": 11.2,
+    "GOAT": 2.4,
+    "PENGU": 9.5,
+    "JTO": 24.5,
+    "RENDER": 9.5,
+    "RAY": 3.5,
+    "PNUT": 9.5
+  },
+  "TEMP_SKIPS": {
+    "JTO:threshold": 1787740023437
+  },
+  "lastTestDate": "2026-08-23T06:02:39.204Z",
+  "lastTestSummary": {
+    "passed": 96,
+    "failed": 5,
+    "warned": 1
+  },
+  "DISABLE_BUY_OKX": true,
+  "DISABLE_BUY_BYBIT": true,
+  "DISABLE_BUY_KRAKEN": true,
+  "DISABLE_BUY_COINBASE": true,
+  "DISABLE_BUY_DEX": false,
+  "DEX_ARB_ENABLED": false,
+  "FUNDING_ARB_ENABLED": false,
+  "TRIANGULAR_ARB_ENABLED": true,
+  "ACTIVE_REGIME": "NEUTRAL",
+  "REGIME_SINCE": "2026-08-26T07:29:26.085Z"
 }

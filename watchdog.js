@@ -97,7 +97,7 @@ async function handleCommand(text) {
         'Total: $' + total.toFixed(0) + ' (' + (total>=state.startCapital?'+':'') + roi + '% ROI)\n\n' +
         'Wins: ' + winsBar + ' ' + (state.consecutiveWins||0) + '/10\n' +
         'Trades: ' + state.totalTrades + ' | P&L: ' + (state.totalProfit>=0?'+':'') + '$' + (state.totalProfit||0).toFixed(2) + '\n' +
-        '⏰ ' + new Date().toUTCString()
+        dexArbStatus + '\n⏰ ' + new Date().toUTCString()
       );
     } catch(err) { await tgSend('❌ Status error: ' + err.message); }
 

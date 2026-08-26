@@ -146,7 +146,7 @@ module.exports = [
     async action(ctx, issues) {
       // Trigger rebalance via Telegram
       await ctx.sendTG(`⚠️ [WARN] OKX critically low $${issues[0].okx.toFixed(0)} — triggering rebalance`);
-      await ctx.sendTG('/rb confirm');
+      // auto-rebalance triggered by rule — bot handles via /rb confirm internally
       return [`OKX $${issues[0].okx.toFixed(0)} below minimum — rebalance triggered`];
     }
   },
@@ -178,7 +178,7 @@ module.exports = [
     async action(ctx, issues) {
       const msgs = issues.map(i => `${i.ex}: $${i.bal.toFixed(0)} vs target $${i.target} (${i.pct}% off)`);
       await ctx.sendTG(`⚠️ [WARN] Exchange imbalance detected\n${msgs.join('\n')}\nSending /rb`);
-      await ctx.sendTG('/rb confirm');
+      // auto-rebalance triggered by rule — bot handles via /rb confirm internally
       return [`Rebalance triggered: ${msgs.join(', ')}`];
     }
   },
@@ -211,7 +211,7 @@ module.exports = [
       return null;
     },
     async action(ctx, issues) {
-      await ctx.sendTG(`🚨 Agent: Bot status stale ${issues[0].age}s — bot may be crashed. Check watchdog.`);
+      await ctx.sendTG('\U0001f6a8 [ALERT] Bot stale ' + issues[0].age + 's — may be crashed. Check watchdog.');
       return [`Bot stale ${issues[0].age}s — alert sent`];
     }
   },
@@ -231,7 +231,7 @@ module.exports = [
     async action(ctx, issues) {
       // Auto-resync state
       const { stateTrades, actualTrades } = issues[0];
-      await ctx.sendTG(`⚠️ Agent: State drift detected (state:${stateTrades} vs actual:${actualTrades}) — auto-resyncing`);
+      await ctx.sendTG('⚠️ [WARN] State drift: ' + issues[0].stateTrades + ' vs actual:' + issues[0].actualTrades + ' — auto-resyncing');
       await ctx.resyncState();
       return [`State resynced: ${stateTrades} → ${actualTrades}`];
     }
@@ -257,7 +257,7 @@ module.exports = [
     },
     async action(ctx, issues) {
       // Alert — precision fixes are in hygiene.js, just notify
-      await ctx.sendTG(`⚠️ Agent: Precision error detected in crash log — hygiene.js should handle on next cycle`);
+      await ctx.sendTG('⚠️ [WARN] Precision error in crash log — check manually');
       return ['Precision error detected — hygiene cycle will fix'];
     }
   },
@@ -1312,6 +1312,413 @@ module.exports = [
       await ctx.sendTG(msg);
       console.log('[agent] Viability test complete: ' + results.length + ' pairs checked');
       return ['Viability test: ' + results.filter(function(r){return r.action==='enable';}).length + ' viable, ' + results.filter(function(r){return r.action==='kill';}).length + ' killed'];
+    }
+  },
+
+
+  // ── Daily listing monitor report ─────────────────────────────────────────
+  {
+    id: 'daily-listing-report',
+    name: 'Daily listing monitor summary',
+    severity: 'info',
+    detect(ctx) {
+      const now = new Date();
+      const lastReport = ctx.agentState.lastListingReport || 0;
+      if (now.getUTCHours() !== 9 || now.getUTCMinutes() > 5) return null;
+      if (Date.now() - lastReport < 23 * 60 * 60 * 1000) return null;
+      return [{ time: now.toISOString() }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastListingReport = Date.now();
+      try {
+        const lm = require('./listing-monitor');
+        const report = lm.generateListingReport();
+        await ctx.sendTG(report);
+        const fs2 = require('fs');
+        const statsPath = require('path').join(__dirname, 'listing-stats.json');
+        if (fs2.existsSync(statsPath)) {
+          const stats = JSON.parse(fs2.readFileSync(statsPath, 'utf8'));
+          stats.detected = []; stats.scans = 0; stats.lastReset = new Date().toISOString();
+          fs2.writeFileSync(statsPath, JSON.stringify(stats, null, 2));
+        }
+      } catch(e) { await ctx.sendTG('\u26a0\ufe0f [WARN] Listing report error: ' + e.message); }
+      return ['Daily listing report sent'];
+    }
+  },
+
+  // ── Pair threshold recommendation with Telegram confirmation ──────────────
+  {
+
+
+    id: 'pair-threshold-recommendation',
+    name: 'Suggest threshold adjustment based on win rate',
+    severity: 'warn',  // use warn to get 30min cooldown — internal logic handles 4hr
+    detect(ctx) {
+      const trades = ctx.trades || [];
+      if (trades.length < 5) return null;
+      const lastChecked = ctx.agentState.lastThresholdCheck || 0;
+      if (Date.now() - lastChecked < 4 * 60 * 60 * 1000 && lastChecked > 0) return null; // once per 4hrs, always runs on first check
+
+      const recommendations = [];
+      const pairs = [...new Set(trades.map(t => t.pair))];
+
+      for (const pair of pairs) {
+        const pairTrades = trades.filter(t => t.pair === pair && t.direction !== 'RECOVERY' && t.profit != null);
+        if (pairTrades.length < 3) continue;
+
+        const wins = pairTrades.filter(t => t.profit > 0);
+        const winRate = wins.length / pairTrades.length;
+        const winSpreads = wins.map(t => t.spreadPct).filter(Boolean);
+        const minWinSpread = winSpreads.length ? Math.min(...winSpreads) : null;
+        const symbol = pair.replace('/USDT', '');
+        const currentThreshold = (ctx.config.DEX_THRESHOLD_OVERRIDES || {})[symbol] || ctx.config.MIN_SPREAD_CEX || 1.5;
+
+        // Recommend raising threshold if win rate is high and min win spread is above current threshold
+        if (winRate >= 0.75 && minWinSpread && minWinSpread > currentThreshold * 1.1 && pairTrades.length >= 3) {
+          const suggestedThreshold = Math.round(minWinSpread * 10) / 10; // round to 1dp
+          recommendations.push({
+            symbol, winRate: Math.round(winRate * 100),
+            trades: pairTrades.length, wins: wins.length,
+            currentThreshold, suggestedThreshold, minWinSpread
+          });
+        }
+      }
+
+      return recommendations.length ? recommendations : null;
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastThresholdCheck = Date.now();
+
+      // Store pending recommendations for Telegram confirmation
+      ctx.agentState.pendingThresholdChanges = issues.map(r => ({
+        symbol: r.symbol,
+        from: r.currentThreshold,
+        to: r.suggestedThreshold,
+        reason: r.winRate + '% win rate, min win spread ' + r.minWinSpread.toFixed(2) + '% over ' + r.trades + ' trades'
+      }));
+
+      const lines = issues.map(r =>
+        r.symbol + ': ' + r.winRate + '% wins (' + r.wins + '/' + r.trades + ') | ' +
+        'min win spread ' + r.minWinSpread.toFixed(2) + '% | ' +
+        'suggest raising from ' + r.currentThreshold + '% → ' + r.suggestedThreshold + '%'
+      ).join('\n');
+
+      await ctx.sendTG(
+        '🔍 [AGENT] Threshold Recommendations\n' +
+        lines + '\n\n' +
+        'Reply /agent approve-thresholds to apply\n' +
+        'Reply /agent skip-thresholds to dismiss'
+      );
+
+      return ['Threshold recommendations sent: ' + issues.map(r => r.symbol).join(', ')];
+    }
+  },
+
+
+  // ── Catastrophic loss detection — kill pair immediately ───────────────────
+  {
+    id: 'catastrophic-loss-detection',
+    name: 'Detect and kill pairs with catastrophic single losses',
+    severity: 'critical',
+    detect(ctx) {
+      const trades = ctx.trades || [];
+      const issues = [];
+      const pairs = [...new Set(trades.map(t => t.pair))];
+      for (const pair of pairs) {
+        const sym = pair.replace('/USDT','');
+        const pairLosses = trades.filter(t => t.pair === pair && t.profit < -10);
+        if (pairLosses.length > 0) {
+          const worst = Math.min(...pairLosses.map(t => t.profit));
+          const alreadySkipped = (ctx.config.POLICY_SKIP_OKX||[]).includes(sym) &&
+                                 (ctx.config.POLICY_SKIP_BYBIT||[]).includes(sym);
+          if (!alreadySkipped) issues.push({ sym, worst, count: pairLosses.length });
+        }
+      }
+      return issues.length ? issues : null;
+    },
+    async action(ctx, issues) {
+      const cfg = JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'arb-config.json'),'utf8'));
+      if (!cfg.POLICY_SKIP_OKX) cfg.POLICY_SKIP_OKX = [];
+      if (!cfg.POLICY_SKIP_BYBIT) cfg.POLICY_SKIP_BYBIT = [];
+      const killed = [];
+      for (const { sym, worst, count } of issues) {
+        if (!cfg.POLICY_SKIP_OKX.includes(sym)) cfg.POLICY_SKIP_OKX.push(sym);
+        if (!cfg.POLICY_SKIP_BYBIT.includes(sym)) cfg.POLICY_SKIP_BYBIT.push(sym);
+        killed.push(sym + ' (worst: $' + worst.toFixed(2) + ', ' + count + ' losses)');
+      }
+      require('fs').writeFileSync(require('path').join(__dirname,'arb-config.json'), JSON.stringify(cfg,null,2));
+      await ctx.sendTG(
+        '🚨 [ALERT] Catastrophic loss — pairs killed:\n' +
+        killed.join('\n') + '\n' +
+        'Added to skip lists. Config reloads in 30s.'
+      );
+      return ['Killed: ' + killed.join(', ')];
+    }
+  },
+
+  // ── Zero-spread fire detection — pairs where spread closes before execution ─
+  {
+    id: 'zero-spread-fire-detection',
+    name: 'Detect pairs where spread consistently closes before execution',
+    severity: 'warn',
+    detect(ctx) {
+      const trades = ctx.trades || [];
+      const issues = [];
+      const pairs = [...new Set(trades.map(t => t.pair))];
+      for (const pair of pairs) {
+        const sym = pair.replace('/USDT','');
+        const pt = trades.filter(t => t.pair === pair && t.direction !== 'RECOVERY');
+        if (pt.length < 3) continue;
+        const zeroSpreads = pt.filter(t => !t.spreadPct || t.spreadPct < 0.1);
+        const zeroRate = zeroSpreads.length / pt.length;
+        if (zeroRate >= 0.5) {
+          const alreadySkipped = (ctx.config.POLICY_SKIP_OKX||[]).includes(sym) &&
+                                 (ctx.config.POLICY_SKIP_BYBIT||[]).includes(sym);
+          if (!alreadySkipped) issues.push({ sym, zeroRate: Math.round(zeroRate*100), total: pt.length });
+        }
+      }
+      return issues.length ? issues : null;
+    },
+    async action(ctx, issues) {
+      const lines = issues.map(i => i.sym + ': ' + i.zeroRate + '% of fires at 0% spread (' + i.total + ' trades)');
+      await ctx.sendTG(
+        '⚠️ [WARN] Spread-close-before-execution detected:\n' +
+        lines.join('\n') + '\n\n' +
+        'These pairs fire but spread closes during withdrawal.\n' +
+        'Consider: /agent skip-pair <SYM> or raise thresholds.'
+      );
+      return ['Zero-spread alert: ' + issues.map(i=>i.sym).join(', ')];
+    }
+  },
+
+  // ── Buffer too high detection ─────────────────────────────────────────────
+  {
+    id: 'buffer-suppression-detection',
+    name: 'Detect when MIN_SPREAD_BUFFER_PCT is blocking profitable trades',
+    severity: 'warn',
+    detect(ctx) {
+      const buffer = ctx.config.MIN_SPREAD_BUFFER_PCT || 12;
+      if (buffer <= 12) return null; // fine
+      const trades = ctx.trades || [];
+      const wins = trades.filter(t => t.profit > 0 && t.spreadPct);
+      if (wins.length < 3) return null;
+      const avgWinSpread = wins.reduce((a,t) => a+t.spreadPct, 0) / wins.length;
+      const threshold = ctx.config.MIN_SPREAD_CEX || 1.5;
+      const effectiveThreshold = threshold * (1 + buffer/100);
+      // If effective threshold is close to or above avg win spread, we're suppressing wins
+      if (effectiveThreshold > avgWinSpread * 0.9) {
+        return [{ buffer, effectiveThreshold: effectiveThreshold.toFixed(2), avgWinSpread: avgWinSpread.toFixed(2) }];
+      }
+      return null;
+    },
+    async action(ctx, issues) {
+      const { buffer, effectiveThreshold, avgWinSpread } = issues[0];
+      await ctx.sendTG(
+        '⚠️ [WARN] Buffer too high — suppressing wins\n' +
+        'Buffer: ' + buffer + '% | Effective threshold: ' + effectiveThreshold + '%\n' +
+        'Avg winning spread: ' + avgWinSpread + '%\n' +
+        'Recommend: lower MIN_SPREAD_BUFFER_PCT to 10%\n' +
+        '/agent approve-buffer-reduction to apply'
+      );
+      ctx.agentState.pendingBufferReduction = { from: buffer, to: 10 };
+      const fs2 = require('fs');
+      const freshState = JSON.parse(fs2.readFileSync(require('path').join(__dirname,'agent-state.json'),'utf8'));
+      freshState.pendingBufferReduction = { from: buffer, to: 10 };
+      fs2.writeFileSync(require('path').join(__dirname,'agent-state.json'), JSON.stringify(freshState,null,2));
+      return ['Buffer suppression alert sent'];
+    }
+  },
+
+  // ── Weekly re-check of failed tokens ─────────────────────────────────────
+  {
+    id: 'weekly-token-recheck',
+    name: 'Re-check tokens that previously failed viability (no withdrawal)',
+    severity: 'info',
+    detect(ctx) {
+      const lastCheck = ctx.agentState.lastTokenRecheck || 0;
+      if (Date.now() - lastCheck < 7 * 24 * 60 * 60 * 1000) return null;
+      const stats = (() => { try { return JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'listing-stats.json'),'utf8')); } catch { return {}; } })();
+      const failed = stats.failedTokens || {};
+      const toRecheck = Object.entries(failed).filter(([,d]) => {
+        const daysSince = (Date.now() - new Date(d.ts).getTime()) / (1000*60*60*24);
+        return d.reason === 'no-withdrawal' && daysSince >= 7;
+      });
+      return toRecheck.length ? [{ count: toRecheck.length }] : null;
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastTokenRecheck = Date.now();
+      const lm = require('./listing-monitor');
+      const reactivated = await lm.recheckFailedTokens(ctx.sendTG);
+      return ['Weekly recheck: ' + reactivated + ' tokens reactivated'];
+    }
+  },
+
+  // ── Full OKX universe scan (weekly Sunday 08:00 UTC) ─────────────────────
+  {
+    id: 'weekly-okx-universe-scan',
+    name: 'Scan full OKX pair universe for new viable arb pairs',
+    severity: 'info',
+    detect(ctx) {
+      const now = new Date();
+      const lastScan = ctx.agentState.lastOKXUniverseScan || 0;
+      if (now.getUTCDay() !== 0 || now.getUTCHours() !== 8) return null;
+      if (Date.now() - lastScan < 6 * 24 * 60 * 60 * 1000) return null;
+      return [{ time: now.toISOString() }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastOKXUniverseScan = Date.now();
+      await ctx.sendTG('🔍 [AGENT] Starting full OKX universe scan (~5min)...');
+      const lm = require('./listing-monitor');
+      const result = await lm.scanFullOKXUniverse(ctx.sendTG);
+      return ['OKX universe scan: ' + result.added + ' new pairs from ' + result.total + ' checked'];
+    }
+  },
+
+  // ── Raydium/Solana native token monitor (every 30min) ────────────────────
+  {
+    id: 'raydium-native-monitor',
+    name: 'Monitor Raydium new pools for CEX crossover opportunities',
+    severity: 'info',
+    detect(ctx) {
+      const lastScan = ctx.agentState.lastRaydiumScan || 0;
+      if (Date.now() - lastScan < 30 * 60 * 1000) return null;
+      return [{ time: new Date().toISOString() }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastRaydiumScan = Date.now();
+      const lm = require('./listing-monitor');
+      const found = await lm.scanSolanaNativeListings(ctx.sendTG);
+      return found > 0 ? ['Raydium scan: ' + found + ' CEX crossovers found'] : ['Raydium scan: nothing new'];
+    }
+  },
+
+  // ── Spread flip alert — notify when market conditions become favourable ──────
+  {
+    id: 'spread-flip-alert',
+    name: 'Alert when spreads flip positive (arb conditions improving)',
+    severity: 'warn',
+    detect(ctx) {
+      const status = ctx.botStatus || {};
+      const pairs = status.pairs || [];
+      if (!pairs.length) return null;
+
+      const lastFlip = ctx.agentState.lastSpreadFlipAlert || 0;
+      if (Date.now() - lastFlip < 5 * 60 * 1000) return null; // max once per 5min
+
+      const approaching = [];
+      const flipped = [];
+
+      for (const p of pairs) {
+        if (!p.okxViable && !p.bybitViable) continue;
+        const spreadOKX   = p.spreadOKX || 0;
+        const spreadBybit = p.spreadBybit || 0;
+        const spreadDex   = p.spreadDex || 0;
+        const thresh      = p.dexThresh || 1.5;
+
+        // Flipped: spread now positive and above 50% of threshold
+        if (spreadOKX > thresh * 0.5 || spreadDex > thresh * 0.5) {
+          flipped.push({ name: p.name, spreadOKX, spreadDex, thresh });
+        }
+        // Approaching: spread was negative but now within 0.5% of threshold
+        else if ((spreadOKX > -0.3 && spreadOKX < thresh) || (spreadDex > -0.3 && spreadDex < thresh)) {
+          approaching.push({ name: p.name, spreadOKX, spreadDex, thresh });
+        }
+      }
+
+      if (flipped.length || approaching.length) {
+        return [{ flipped, approaching }];
+      }
+      return null;
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastSpreadFlipAlert = Date.now();
+      const { flipped, approaching } = issues[0];
+      let msg = '📡 [MARKET] Spread conditions improving\n';
+
+      if (flipped.length) {
+        msg += '\n🟢 Spreads above 50% threshold (may fire soon):\n';
+        msg += flipped.map(p =>
+          p.name.replace('/USDT','') + ': OKX ' + p.spreadOKX.toFixed(3) + '% DEX ' + p.spreadDex.toFixed(3) + '% (thr:' + p.thresh.toFixed(2) + '%)'
+        ).join('\n');
+      }
+
+      if (approaching.length) {
+        msg += '\n🟡 Spreads approaching threshold:\n';
+        msg += approaching.map(p =>
+          p.name.replace('/USDT','') + ': OKX ' + p.spreadOKX.toFixed(3) + '% DEX ' + p.spreadDex.toFixed(3) + '% (thr:' + p.thresh.toFixed(2) + '%)'
+        ).join('\n');
+      }
+
+      msg += '\n\n' + balHeader(ctx);
+      await ctx.sendTG(msg);
+      return ['Spread flip alert sent: ' + [...flipped, ...approaching].map(p=>p.name).join(', ')];
+    }
+  },
+
+  // ── Market regime detector + strategy hotswap ────────────────────────────
+  {
+    id: 'market-regime-detector',
+    name: 'Detect market regime (BULL/NEUTRAL/BEAR) and hotswap strategy',
+    severity: 'warn',
+    detect(ctx) {
+      const lastCheck = ctx.agentState.lastRegimeCheck || 0;
+      if (Date.now() - lastCheck < 5 * 60 * 1000) return null; // every 5min
+      return [{ time: new Date().toISOString() }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastRegimeCheck = Date.now();
+      try {
+        const sm = require('./strategy-manager');
+        const state = await sm.checkAndSwap(ctx.sendTG);
+        return ['Regime check: ' + state.regime + ' | BTC $' + state.btcPrice?.toLocaleString() + ' (' + state.btcChange24h?.toFixed(1) + '%)'];
+      } catch(e) {
+        return ['Regime check error: ' + e.message];
+      }
+    }
+  },
+
+  // ── Funding arb auto-open on BULL regime ─────────────────────────────────
+  {
+    id: 'funding-arb-auto',
+    name: 'Auto-open funding arb positions when BULL regime detected',
+    severity: 'warn',
+    detect(ctx) {
+      const cfg = ctx.config;
+      if (!cfg.FUNDING_ARB_ENABLED) return null;
+      const lastOpen = ctx.agentState.lastFundingArbOpen || 0;
+      if (Date.now() - lastOpen < 8 * 60 * 60 * 1000) return null; // max once per 8hr
+      // Check if we already have open positions
+      try {
+        const positions = JSON.parse(require('fs').readFileSync(require('path').join(__dirname,'funding-positions.json'),'utf8'));
+        const open = positions.filter(p => p.status === 'open');
+        if (open.length >= 2) return null; // max 2 positions
+      } catch {}
+      return [{ time: new Date().toISOString() }];
+    },
+    async action(ctx, issues) {
+      ctx.agentState.lastFundingArbOpen = Date.now();
+      try {
+        const fa = require('./funding-arb');
+        // Check current rates
+        const pairs = ['SOL', 'JTO', 'WIF'];
+        const opps = await fa.scanFundingOpportunities(pairs, null);
+        const viable = opps.filter(o => o.viable && o.fundingRate >= 0.0005);
+        if (!viable.length) {
+          await ctx.sendTG('📡 [FUNDING-ARB] BULL regime but no viable rates (all below 0.05%/8hr)');
+          return ['No viable funding rates'];
+        }
+        // Open best opportunity
+        const best = viable[0];
+        await ctx.sendTG(
+          '📡 [FUNDING-ARB] Opening: ' + best.symbol + ' ' + best.exchange + ' rate:' + (best.fundingRate*100).toFixed(4) + '%/8hr (' + best.annualized.toFixed(1) + '%/yr) size:$' + fa.POSITION_SIZE_USD
+        );
+        const pos = await fa.openFundingPosition(best.symbol, best.exchange);
+        await ctx.sendTG('✅ [FUNDING-ARB] Position opened: ' + pos.id);
+        return ['Funding arb opened: ' + best.symbol + ' ' + best.exchange];
+      } catch(e) {
+        await ctx.sendTG('❌ [FUNDING-ARB] Open failed: ' + e.message);
+        return ['Funding arb error: ' + e.message];
+      }
     }
   },
 

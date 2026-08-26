@@ -224,12 +224,12 @@ tr:hover td{background:#14141f}
   <div id="alerts-box"></div>
 
   <div class="g5">
-    <div class="card"><div class="val" id="tc">-</div><div class="lbl">Total Capital</div><div class="sub" id="cg">-</div></div>
-    <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div></div>
-    <div class="card" id="okx-card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div></div>
-    <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div><div class="sub" id="bs">-</div></div>
-    <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken</div><div class="sub" id="ks">-</div></div>
-    <div class="card"><div class="val" id="lcb">-</div><div class="lbl">Coinbase USDC</div><div class="sub" id="cbs">-</div></div>
+    <div class="card"><div class="val" id="tc">-</div><div class="lbl">Total Capital</div><div class="sub" id="tc-delta"></div><div class="sub" id="cg">-</div></div>
+    <div class="card"><div class="val" id="ls">-</div><div class="lbl">Solana USDC</div><div class="sub" id="ls-delta"></div></div>
+    <div class="card" id="okx-card"><div class="val" id="lo">-</div><div class="lbl">OKX USDT</div><div class="sub" id="os">-</div><div class="sub" id="lo-delta"></div></div>
+    <div class="card"><div class="val" id="lb">-</div><div class="lbl">Bybit USDT</div><div class="sub" id="bs">-</div><div class="sub" id="lb-delta"></div></div>
+    <div class="card"><div class="val" id="lk">-</div><div class="lbl">Kraken</div><div class="sub" id="ks">-</div><div class="sub" id="lk-delta"></div></div>
+    <div class="card"><div class="val" id="lcb">-</div><div class="lbl">Coinbase USDC</div><div class="sub" id="cbs">-</div><div class="sub" id="lcb-delta"></div></div>
   </div>
 
   <div class="g5">
@@ -398,21 +398,45 @@ async function doRefresh(){
   try{var r=await fetch('/api/data');var d=await r.json();render(d);loadStatus();}catch(e){console.error(e);}
 }
 
+  function deltaIndicator(curr, prev) {
+    if (prev == null || curr == null) return '<span style="color:#555">&#8212;</span>';
+    var diff = curr - prev;
+    if (Math.abs(diff) < 0.50) return '<span style="color:#f59e0b">&#8212;</span>';
+    if (diff > 0) return '<span style="color:#22c55e">&#9650; $' + diff.toFixed(2) + '</span>';
+    return '<span style="color:#ef4444">&#9660; $' + Math.abs(diff).toFixed(2) + '</span>';
+  }
 async function doLiveBalances(){
   try{
     var r=await fetch('/api/live-balances');var d=await r.json();
+    var prev=liveBal; // snapshot before update
+    prevBal=prev;
     liveBal=d;
     renderWallets(d);
-    // Also update status tab balances
-    if(d.solana!=null)document.getElementById('ls').textContent=fmt2(d.solana);
-    if(d.okx!=null)document.getElementById('lo').textContent=fmt2(d.okx);
-    if(d.bybit!=null)document.getElementById('lb').textContent=fmt2(d.bybit);
-    if(d.kraken!=null&&d.kraken>0){document.getElementById('lk').textContent=fmt2(d.kraken);document.getElementById('ks').innerHTML='<span class="green">online</span>';}
-  var cbEnabled=d.coinbaseEnabled||false;
-  if(document.getElementById('lcb')){document.getElementById('lcb').textContent=d.coinbase!=null?fmt2(d.coinbase):'-';}
-  if(document.getElementById('cbs')){document.getElementById('cbs').innerHTML=!cbEnabled?'<span class="dim">disabled</span>':d.coinbase!=null?'<span class="green">online</span>':'<span class="yellow">-</span>';}
+    // Helper to update a tile with delta indicator
+    function updateTile(elId, deltaElId, curr, prevVal) {
+      var el=document.getElementById(elId);
+      if(el&&curr!=null) el.textContent=fmt2(curr);
+      var del=document.getElementById(deltaElId);
+      if(del) del.innerHTML=deltaIndicator(curr, prevVal);
+    }
+    var ps=prev||{};
+    updateTile('ls','ls-delta',d.solana,ps.solana);
+    updateTile('lo','lo-delta',d.okx,ps.okx);
+    updateTile('lb','lb-delta',d.bybit,ps.bybit);
+    if(d.kraken!=null&&d.kraken>0){
+      updateTile('lk','lk-delta',d.kraken,ps.kraken);
+      document.getElementById('ks').innerHTML='<span class="green">online</span>';
+    }
+    var cbEnabled=d.coinbaseEnabled||false;
+    if(document.getElementById('lcb')){
+      updateTile('lcb','lcb-delta',d.coinbase,ps.coinbase);
+    }
+    if(document.getElementById('cbs')){document.getElementById('cbs').innerHTML=!cbEnabled?'<span class="dim">disabled</span>':d.coinbase!=null?'<span class="green">online</span>':'<span class="yellow">-</span>';}
     var total=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
+    var prevTotal=ps.solana!=null?(ps.solana||0)+(ps.okx||0)+(ps.bybit||0)+(ps.kraken||0)+(ps.coinbase||0):null;
     document.getElementById('tc').textContent=fmt2(total);
+    var tcDelta=document.getElementById('tc-delta');
+    if(tcDelta) tcDelta.innerHTML=deltaIndicator(total,prevTotal);
     // OKX warning
     var okxCard=document.getElementById('okx-card');
     if(d.okx!=null&&d.okx<120){okxCard.className='card danger';}
@@ -446,7 +470,7 @@ function renderWallets(d){
   renderToks('w-bybit-toks',d.bybitTokens);
   // Rebalance table
   var cfg=readConfig||{};
-  // Equal-share rebalancing - target is total/5 for each exchange
+  // Equal-share rebalancing   target is total/5 for each exchange
   var total5=(d.solana||0)+(d.okx||0)+(d.bybit||0)+(d.kraken||0)+(d.coinbase||0);
   var equalShare=Math.round(total5/5);
   var rows=[

@@ -49,6 +49,23 @@ async function cbRequest(method, epPath, body) {
   return r.json();
 }
 
+// ── Get fresh USDC deposit address ───────────────────────────────────────────
+async function getCoinbaseDepositAddress() {
+  // Get list of accounts first to find USDC account UUID
+  const accounts = await cbRequest('GET', '/api/v3/brokerage/accounts');
+  const usdcAccount = (accounts.accounts || []).find(a => a.currency === 'USDC');
+  if (!usdcAccount) throw new Error('Coinbase USDC account not found');
+
+  // Generate a fresh deposit address for the USDC account
+  const result = await cbRequest('POST', '/api/v2/accounts/' + usdcAccount.uuid + '/addresses', {
+    name: 'arb-bot-deposit'
+  });
+  const addr = result.data?.address;
+  if (!addr) throw new Error('Coinbase deposit address generation failed: ' + JSON.stringify(result));
+  console.log('[coinbase] Fresh deposit address:', addr.slice(0,12) + '...');
+  return addr;
+}
+
 // ── Balance ───────────────────────────────────────────────────────────────────
 async function getCoinbaseBalance(currency) {
   const j = await cbRequest('GET', '/api/v3/brokerage/accounts');
@@ -87,6 +104,24 @@ async function coinbaseMarketBuy(symbol, usdcAmount) {
     }
   });
   if (!j.success) throw new Error('Coinbase buy failed: ' + (j.error_response?.message || JSON.stringify(j)));
+  return j.success_response?.order_id;
+}
+
+// ── Market sell (base currency → USDC) ───────────────────────────────────────
+async function coinbaseMarketSell(symbol, baseAmount) {
+  const productId = symbol + '-USDC';
+  const clientOrderId = crypto.randomUUID();
+  const j = await cbRequest('POST', '/api/v3/brokerage/orders', {
+    client_order_id: clientOrderId,
+    product_id: productId,
+    side: 'SELL',
+    order_configuration: {
+      market_market_ioc: {
+        base_size: baseAmount.toString(),
+      }
+    }
+  });
+  if (!j.success) throw new Error('Coinbase sell failed: ' + (j.error_response?.message || JSON.stringify(j)));
   return j.success_response?.order_id;
 }
 
@@ -204,7 +239,7 @@ async function runTests() {
   console.log('Deposit $200 USDC to Coinbase Advanced Trade account');
 }
 
-module.exports = { getCoinbaseBalance, getCoinbaseTicker, coinbaseMarketBuy, coinbaseWithdraw, getCoinbaseWithdrawalStatus, calcCoinbaseSpread, getCoinbaseSolanaProducts, getFeeInfo, TAKER_FEE };
+module.exports = { getCoinbaseBalance, getCoinbaseTicker, coinbaseMarketBuy, coinbaseMarketSell, getCoinbaseOrder, coinbaseWithdraw, getCoinbaseWithdrawalStatus, calcCoinbaseSpread, getCoinbaseSolanaProducts, getFeeInfo, getCoinbaseDepositAddress, TAKER_FEE };
 
 if (require.main === module) {
   runTests().catch(e => console.error(e.message));

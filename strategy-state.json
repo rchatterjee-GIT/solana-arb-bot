@@ -1,0 +1,11 @@
+{
+  "regime": "NEUTRAL",
+  "since": "2026-08-26T07:12:45.370Z",
+  "btcPrice": 78960.3,
+  "btcChange24h": null,
+  "btcChange1h": 0,
+  "solFunding": 0.0027541559973799997,
+  "reason": "BTC NaN%/24hr (neutral range)",
+  "lastCheck": 1787733789842,
+  "newsEvents": []
+}

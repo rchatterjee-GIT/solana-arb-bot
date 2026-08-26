@@ -1,0 +1,112 @@
+{
+  "JTO": {
+    "symbol": "JTO",
+    "wins": [
+      1.9557897009636445,
+      1.768,
+      1.768,
+      2.6022075054273364,
+      1.8885259107551091,
+      1.9925165067704889
+    ],
+    "losses": [
+      1.1171764805299895,
+      2.0056233300230657,
+      2.038244252098559
+    ],
+    "threshold": 1.68,
+    "source": "history-calibration",
+    "winRate": 0.6666666666666666,
+    "updatedAt": "2026-08-25T17:38:51.043Z"
+  },
+  "MEW": {
+    "symbol": "MEW",
+    "wins": [],
+    "losses": [
+      0.9038204881999905
+    ],
+    "threshold": 5,
+    "source": "loss-only-disabled",
+    "winRate": 0,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "JUP": {
+    "symbol": "JUP",
+    "wins": [],
+    "losses": [
+      1.07679028
+    ],
+    "threshold": 5,
+    "source": "loss-only-disabled",
+    "winRate": 0,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "W": {
+    "symbol": "W",
+    "wins": [
+      4.271412828465005
+    ],
+    "losses": [
+      3.6254194998631992
+    ],
+    "threshold": 3.948,
+    "source": "history-calibration",
+    "winRate": 0.5,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "RAY": {
+    "symbol": "RAY",
+    "wins": [],
+    "losses": [
+      4.230355022083336
+    ],
+    "threshold": 5,
+    "source": "loss-only-disabled",
+    "winRate": 0,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "GOAT": {
+    "symbol": "GOAT",
+    "wins": [
+      1.5270191649510765,
+      2.014977628627935
+    ],
+    "losses": [
+      1.2157133069082664,
+      1.4612504376974584,
+      2.5263140317674933,
+      3.1919863473349004
+    ],
+    "threshold": 1.756,
+    "source": "history-calibration",
+    "winRate": 0.3333333333333333,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "PENGU": {
+    "symbol": "PENGU",
+    "wins": [],
+    "losses": [
+      1.2510960479801674,
+      2.3752806342213564,
+      5.837827475000002
+    ],
+    "threshold": 5,
+    "source": "loss-only-disabled",
+    "winRate": 0,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  },
+  "TRUMP": {
+    "symbol": "TRUMP",
+    "wins": [
+      2.4054500866666495
+    ],
+    "losses": [
+      2.052583399999983,
+      1.9989463615163663
+    ],
+    "threshold": 2.229,
+    "source": "history-calibration",
+    "winRate": 0.3333333333333333,
+    "updatedAt": "2026-08-25T17:38:51.045Z"
+  }
+}
