@@ -78,6 +78,8 @@ const HOLD_MIN_SPREAD_PCT    = 0.4;
 const HOLD_REPORT_INTERVAL   = 30 * 60 * 1000;
 
 // ── Per-pair BUY_DEX thresholds ───────────────────────────────────────────────
+const thresholdEngine = require('./threshold-engine');
+
 const BUY_DEX_THRESHOLDS = {
   // Agent can override these via DEX_THRESHOLD_OVERRIDES in arb-config.json
   'SOL': 2.00, 'JTO': 2.50, 'WIF': 2.00, 'RAY': 2.00,
@@ -88,10 +90,15 @@ const BUY_DEX_THRESHOLDS = {
   'DEFAULT': 3.00,
 };
 function getBuyDexThreshold(ccy) {
-  // Agent can override via arb-config.json DEX_THRESHOLD_OVERRIDES
-  const override = liveConfig?.DEX_THRESHOLD_OVERRIDES?.[ccy];
-  if (override != null) return override;
-  return BUY_DEX_THRESHOLDS[ccy] || BUY_DEX_THRESHOLDS['DEFAULT'];
+  // Use dynamic threshold engine — learns from trade outcomes + market data
+  // Falls back to static config if engine has no data yet
+  try {
+    return thresholdEngine.getThreshold(ccy);
+  } catch {
+    const override = liveConfig?.DEX_THRESHOLD_OVERRIDES?.[ccy];
+    if (override != null) return override;
+    return BUY_DEX_THRESHOLDS[ccy] || BUY_DEX_THRESHOLDS['DEFAULT'];
+  }
 }
 
 // Skip lists managed by agent via arb-config.json — no hardcoded fallbacks
@@ -964,23 +971,29 @@ async function withdrawFromBybit(ccy, chain, grossAmount) {
 
 // ── Kraken deposit address ───────────────────────────────────────────────────
 async function getKrakenDepositAddress() {
-  // Kraken uses a fixed deposit address per user — get it from the API
-  const crypto = require('crypto');
-  const nonce = '' + Date.now();
-  const data  = 'nonce=' + nonce;
-  const hash  = crypto.createHash('sha256').update(nonce + data).digest('binary');
-  const hmac  = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
-  hmac.update('/0/private/DepositAddresses', 'binary');
+  // Use the pre-whitelisted withdrawal address from Kraken address book
+  // This avoids the deposit address API which requires extra permissions
+  // The withdrawal address 'solana-bot-wallet' must be added in Kraken → Funding → Withdraw → Add Address
+  const nonce   = '' + Date.now();
+  const postData = 'nonce=' + nonce + '&asset=USDT&aclass=currency';
+  const hash    = crypto.createHash('sha256').update(nonce + postData).digest('binary');
+  const hmac    = crypto.createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+  hmac.update('/0/private/WithdrawAddresses', 'binary');
   hmac.update(hash, 'binary');
   const sig = hmac.digest('base64');
-  const r = await fetch('https://api.kraken.com/0/private/DepositAddresses', {
+  const r = await fetch('https://api.kraken.com/0/private/WithdrawAddresses', {
     method: 'POST',
     headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': sig, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: data + '&asset=USDT&method=Tether+USD+%28ERC20%29'
+    body: postData,
+    signal: AbortSignal.timeout(10000),
   });
   const j = await r.json();
-  if (j.error?.length) throw new Error('Kraken deposit address error: ' + j.error[0]);
-  return j.result?.[0]?.address;
+  if (j.error?.length) throw new Error('Kraken withdraw addresses error: ' + j.error[0]);
+  // Find our bot wallet address
+  const BOT_WALLET = 'wSyZPy2NrfFtUFqzwmDvurDrqw5JXysZ22uLnq1AQaa';
+  const entry = (j.result || []).find(a => a.address === BOT_WALLET || a.key === 'solana-bot' || a.key === 'solana-bot-wallet');
+  if (!entry) throw new Error("Kraken: solana-bot address not found — add wallet in Kraken Funding > Withdraw > Add Address");
+  return entry.address;
 }
 
 // ── Withdraw USDT from OKX to Kraken ─────────────────────────────────────────
@@ -1396,6 +1409,15 @@ async function swapUSDCtoUSDT(amountUsd) {
   await connection.confirmTransaction(sig, 'confirmed');
   return quote.outAmount / 1e6;
 }
+
+// ── Swap USDT → USDC on Solana via Jupiter ────────────────────────────────────
+async function swapUSDTtoUSDC(amountUsd) {
+  const rawAmount = Math.floor(amountUsd * 1e6); // USDT has 6 decimals
+  const { outAmount } = await jupiterSwapRaw(USDT_MINT, USDC_MINT, rawAmount, 100);
+  console.log(`Swapped $${amountUsd} USDT → ${(outAmount/1e6).toFixed(4)} USDC`);
+  return outAmount / 1e6;
+}
+
 
 async function pollAndSwapUSDTtoUSDC(expectedUsd) {
   const startTime = Date.now(), rawExpected = Math.floor(expectedUsd * 1e6 * 0.85), balBefore = await getTokenBalance(USDT_MINT);
@@ -1825,7 +1847,7 @@ async function checkAndExecute() {
   if (activePairs.length === 0) return;
   try {
     const timestamp = new Date().toLocaleTimeString();
-    let bestDex = null, bestOkx = null, bestBybit = null, bestCoinbase = null;
+    let bestDex = null, bestOkx = null, bestBybit = null, bestCoinbase = null, bestSellCoinbase = null;
     const pairResults = await Promise.allSettled(
       activePairs.map(async (pair) => {
         const okx = okxPrices[pair.okxInstId];
@@ -1843,27 +1865,7 @@ async function checkAndExecute() {
         const netOKX      = spreadOKX - (OKX_FEE + DEX_FEE) * 100;
         const spreadBybit = bybit ? ((dexBid - bybit.ask) / bybit.ask) * 100 : -999;
         const netBybit    = spreadBybit - (BYBIT_FEE + DEX_FEE) * 100;
-        const bestBid     = Math.max(okx.bid, bybit?.bid || 0);
-        const bestBidCex  = bestBid === (bybit?.bid || 0) && bybit ? 'Bybit' : 'OKX';
-        const spreadDex   = ((bestBid - dexAsk) / dexAsk) * 100;
-        const netDex      = spreadDex - (OKX_FEE + DEX_FEE) * 100;
-        const dexThresh   = getBuyDexThreshold(pair.okxCcy);
-        const dexEnabled  = pair.buyDexEnabled !== false;
-        const okxViable   = isOKXViable(pair.okxCcy);
-        const bybitViable = pair.bybitCcy ? isBybitViable(pair.bybitCcy) : false;
-        if (spreadOKX > 20 || spreadBybit > 20 || spreadDex > 20) return null;
-        if (dexEnabled)           updatePeakSpread(pair.name, 'BUY_DEX',   spreadDex);
-        if (okxViable)            updatePeakSpread(pair.name, 'BUY_OKX',   spreadOKX);
-        if (bybit && bybitViable) updatePeakSpread(pair.name, 'BUY_BYBIT', spreadBybit);
-        const cbViable = COINBASE_PAIRS.has(pair.okxCcy) && dexEnabled && !(liveConfig.POLICY_SKIP_COINBASE||[]).includes(pair.okxCcy);
-        const estDex   = (spreadDex   / 100) * TRADE_SIZE_USD - (DEX_FEE * 2 * TRADE_SIZE_USD) - 0.15;
-        const estOKX   = (spreadOKX   / 100) * TRADE_SIZE_USD - (OKX_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
-        const estBybit = (spreadBybit / 100) * TRADE_SIZE_USD - (BYBIT_FEE + DEX_FEE) * TRADE_SIZE_USD - 0.15;
-        const cbViable2 = COINBASE_PAIRS.has(pair.okxCcy) && (liveConfig.COINBASE_ENABLED||false);
-        const cbThreshLog = (liveConfig.MIN_SPREAD_COINBASE||1.2) * (1+(liveConfig.MIN_SPREAD_BUFFER_PCT||12)/100);
-        const cbSpreadLog = cbViable2 ? spreadDex : null; // CB buys on CEX sells on DEX - same direction as DEX
-        console.log(`[${timestamp}] ${pair.name.padEnd(11)}${!okxViable?'[Os]':''}${!bybitViable&&pair.bybitCcy?'[Bs]':''}${!dexEnabled?'[Ds]':''}${!okxHealthy?'[Ox]':''} OKX:$${okx.bid}/$${okx.ask} ${bybit?`By:$${bybit.bid}/$${bybit.ask}`:'By:--'} →OKX:${spreadOKX.toFixed(2)}% →By:${bybit?spreadBybit.toFixed(2):'--'}% →DEX:${spreadDex.toFixed(2)}%(≥${dexThresh}%)${cbViable2?' →CB:'+spreadDex.toFixed(2)+'%(≥'+cbThreshLog.toFixed(1)+'%)':''}`);
-        return { pair, okx, bybit, quoteBuy, tokenOut, dexAsk, bestBidCex, dexThresh, dexEnabled, okxViable, bybitViable, spreadOKX, netOKX, spreadBybit, netBybit, spreadDex, netDex, estOKX, estBybit, estDex };
+        return { pair, okx, bybit, quoteBuy, tokenOut, dexAsk, bestBidCex, dexThresh, dexEnabled, okxViable, bybitViable, spreadOKX, netOKX, spreadBybit, netBybit, spreadDex, netDex, estOKX, estBybit, estDex, cbBid, cbAsk, spreadSellCoinbase, estSellCoinbase, cbViable };
       })
     );
     try {
@@ -1916,7 +1918,8 @@ async function checkAndExecute() {
         if (!bestOkx || r.spreadOKX > bestOkx.spreadPct)
           bestOkx = { pair: r.pair, direction: 'BUY_OKX', spreadPct: r.spreadOKX, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'OKX' };
       }
-      if (canBybit && r.bybit && r.bybitViable && r.spreadBybit > bybitThreshFinal && r.netBybit > 0 && r.estBybit >= MIN_PROFIT) {
+
+      if (!liveConfig.DISABLE_BUY_BYBIT && canBybit && r.bybit && r.bybitViable && r.spreadBybit > bybitThreshFinal && r.netBybit > 0 && r.estBybit >= MIN_PROFIT) {
         if (!bestBybit || r.spreadBybit > bestBybit.spreadPct) {
           const bybitTradeSize = liveConfig.TRADE_SIZE_BYBIT || TRADE_SIZE_USD;
           bestBybit = { pair: r.pair, direction: 'BUY_BYBIT', spreadPct: r.spreadBybit, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Bybit', tradeSizeUsd: bybitTradeSize };
@@ -1925,13 +1928,18 @@ async function checkAndExecute() {
       // Coinbase: buy on Coinbase (USDC), sell on DEX
       const cbThresh = (liveConfig.MIN_SPREAD_COINBASE || liveConfig.MIN_SPREAD_CEX || 1.5) * (1 + (liveConfig.MIN_SPREAD_BUFFER_PCT || 12) / 100);
       const cbTradeSize = liveConfig.TRADE_SIZE_COINBASE || TRADE_SIZE_USD;
-      if (canCoinbase && r.cbViable && r.dexEnabled && r.spreadDex > cbThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT) {
+      if (!liveConfig.DISABLE_BUY_COINBASE && canCoinbase && r.cbViable && r.dexEnabled && r.spreadDex > cbThresh && r.netDex > 0 && r.estDex >= MIN_PROFIT) {
         if (!bestCoinbase || r.spreadDex > bestCoinbase.spreadPct)
           bestCoinbase = { pair: r.pair, direction: 'BUY_COINBASE', spreadPct: r.spreadDex, quoteBuy: r.quoteBuy, tokenOut: r.tokenOut, exchange: 'Coinbase', tradeSizeUsd: cbTradeSize };
       }
+      // SELL_COINBASE: buy on DEX, sell on Coinbase (bullish market direction)
+      if (!liveConfig.DISABLE_BUY_COINBASE && canCoinbase && r.cbViable && r.spreadSellCoinbase > cbThresh && r.estSellCoinbase >= MIN_PROFIT) {
+        if (!bestSellCoinbase || r.spreadSellCoinbase > bestSellCoinbase.spreadPct)
+          bestSellCoinbase = { pair: r.pair, direction: 'SELL_COINBASE', spreadPct: r.spreadSellCoinbase, cbBid: r.cbBid, dexAsk: r.dexAsk, tokenOut: r.tokenOut, exchange: 'Coinbase', tradeSizeUsd: cbTradeSize };
+      }
     }
     consecutiveErrors = 0;
-    const toFire = [bestDex, bestOkx, bestBybit, bestCoinbase].filter(Boolean);
+    const toFire = [bestDex, bestOkx, bestBybit, bestCoinbase, bestSellCoinbase].filter(Boolean);
     if (toFire.length > 0) {
       // Claim ALL locks atomically before ANY execution begins
       // This prevents concurrent scans from firing on the same opportunities
@@ -1952,7 +1960,6 @@ async function checkAndExecute() {
     if (canKraken && krakenSynthetic && getKraken()) {
       const kraken   = getKraken();
       const kPairs   = kraken.KRAKEN_PAIRS || [];
-      let bestKraken = null;
       let bestSpread = 0;
       for (const kPair of kPairs) {
         const kPrice = (kraken.krakenPrices || {})[kPair.wsPair];
@@ -2019,12 +2026,38 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
     const cexFee   = exchange === 'Bybit' ? BYBIT_FEE : OKX_FEE;
     const estProfit = (spreadPct / 100) * TRADE_SIZE_USD - (cexFee + DEX_FEE) * TRADE_SIZE_USD;
 
+    // ── Pre-flight DEX liquidity check — abort if DEX can't fill ─────────────
+    if (pair.outputMint && direction !== 'BUY_DEX') {
+      try {
+        const USDC_MINT_PF = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+        const expectedTokenAmt = Math.floor(tokenOut * Math.pow(10, pair.decimals || 6));
+        const qUrl = 'https://quote-api.jup.ag/v6/quote?inputMint=' + pair.outputMint +
+          '&outputMint=' + USDC_MINT_PF + '&amount=' + expectedTokenAmt + '&slippageBps=300';
+        const qRes = await fetch(qUrl, { signal: AbortSignal.timeout(5000) });
+        const qJson = await qRes.json();
+        const outUSDC = parseInt(qJson.outAmount || '0') / 1e6;
+        const priceImpact = parseFloat(qJson.priceImpactPct || '0');
+        if (!qJson.outAmount || outUSDC < tradeSizeUsd * 0.85) {
+          await ctx.fail({ reason: 'Pre-flight: DEX insufficient liquidity (out:$' + outUSDC.toFixed(2) + ')', fundsAffected: false });
+          return;
+        }
+        if (priceImpact > 2.5) {
+          await ctx.fail({ reason: 'Pre-flight: price impact ' + priceImpact.toFixed(2) + '% too high', fundsAffected: false });
+          return;
+        }
+        ctx.log('Pre-flight OK: DEX liquid $' + outUSDC.toFixed(2) + ' impact:' + priceImpact.toFixed(2) + '%');
+      } catch(pfErr) {
+        if (pfErr.name !== 'TimeoutError') {
+          ctx.log('Pre-flight error (non-fatal): ' + pfErr.message);
+        }
+      }
+    }
+
     logFire({ tradeId, pair: pair.name, direction, exchange, spreadPct, outcome: 'fired', reason: null, fundsAffected: false });
-    // Single fire alert
     await sendAlert(
-      `🚨 <b>${direction}: ${pair.name}</b>\n` +
-      `Spread: ${spreadPct.toFixed(3)}% | Est: ${estProfit >= 0 ? '+' : ''}$${estProfit.toFixed(2)}\n` +
-      `Exchange: ${exchange} | Wins: ${consecutiveWins}/${WINS_TARGET}`
+      '⚡ [TRADE] ' + symbol + ' ' + exchange + '\n' +
+      'Spread: ' + spreadPct.toFixed(3) + '% | Est: ' + (estProfit >= 0 ? '+' : '') + '$' + estProfit.toFixed(2) + '\n' +
+      '[1/4] Placing ' + exchange + ' order...'
     );
 
     if (direction === 'BUY_DEX') {
@@ -2061,8 +2094,9 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
         return;
       }
       const okxQty = tokenOut.toFixed(6);
-      ctx.log(`Placing OKX order: ${okxQty} ${symbol}`);
+      ctx.log('Placing OKX order: ' + okxQty + ' ' + symbol);
       await okxPrivate('POST', '/api/v5/trade/order', { instId: pair.okxInstId, tdMode: 'cash', side: 'buy', ordType: 'market', sz: String(TRADE_SIZE_USD), tgtCcy: 'quote_ccy' });
+      await sendAlert('⚡ [TRADE] ' + symbol + ' OKX\n[2/4] Order filled — withdrawing to Solana...');
       await new Promise(r => setTimeout(r, 3000));
       const actualBal = await getOKXTokenBal(pair.okxCcy);
       if (actualBal < 0.000001) {
@@ -2161,6 +2195,71 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
       pendingOkx.push(tradeEntry); // reuse OKX pending pool for polling
       saveState();
       waitAndSwapBack(tradeEntry, ctx).catch(async (err) => { logCrash(`BUY_COINBASE legB [${tradeId}]`, err); removePending('okx', tradeId); saveState(); await ctx.fail({ reason: err.message, fundsAffected: true }); });
+    } else if (direction === 'SELL_COINBASE') {
+      // SELL_COINBASE: buy token on Jupiter DEX, send to Coinbase, sell on Coinbase
+      // Used when Coinbase price > DEX price (bullish CEX conditions)
+      const cb = getCoinbase();
+      if (!cb) { await ctx.fail({ reason: 'Coinbase module not available', fundsAffected: false }); return; }
+      const cbTradeSize = tradeSizeUsd || TRADE_SIZE_USD;
+
+      // Step 1: Buy token on Jupiter DEX using USDC from wallet
+      ctx.log('SELL_COINBASE: buying ' + symbol + ' on Jupiter DEX...');
+      await sendAlert('⚡ [TRADE] ' + symbol + ' SELL_COINBASE\nBullish arb: buying on DEX, selling on Coinbase\n[1/4] Buying on Jupiter...');
+
+      const jupQuote = await getQuote(USDC_MINT, pair.outputMint, cbTradeSize, false, pair.dex);
+      if (!jupQuote.outAmount) { await ctx.fail({ reason: 'Jupiter quote failed', fundsAffected: false }); return; }
+      const tokensBought = jupQuote.outAmount / Math.pow(10, pair.decimals);
+
+      // Execute the DEX buy swap
+      const swapResult = await executeJupiterSwap(jupQuote);
+      if (!swapResult) { await ctx.fail({ reason: 'Jupiter swap failed', fundsAffected: true }); return; }
+      totalTrades++;
+      ctx.log('SELL_COINBASE: bought ' + tokensBought.toFixed(4) + ' ' + symbol + ' on DEX');
+      await sendAlert('⚡ [TRADE] ' + symbol + ' SELL_COINBASE\n[2/4] Bought ' + tokensBought.toFixed(4) + ' ' + symbol + ' — sending to Coinbase...');
+
+      // Step 2: Send token from Solana to Coinbase
+      const COINBASE_DEPOSIT = process.env.COINBASE_DEPOSIT_ADDRESS || 'CnggS74Y3VoFkmNZyqasSjhoLYFzpiKBgdxeNveKHrUC';
+      const tokenMint = new PublicKey(pair.outputMint);
+      const fromAta = await getAssociatedTokenAddress(tokenMint, wallet.publicKey);
+      const toAta   = await getAssociatedTokenAddress(tokenMint, new PublicKey(COINBASE_DEPOSIT));
+      const rawAmt  = Math.floor(tokensBought * Math.pow(10, pair.decimals));
+      try { await getAccount(connection, toAta); }
+      catch {
+        const createTx = new Transaction();
+        createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, new PublicKey(COINBASE_DEPOSIT), tokenMint));
+        const cs = await connection.sendTransaction(createTx, [wallet]);
+        await connection.confirmTransaction(cs, 'confirmed');
+      }
+      const transferTx = new Transaction();
+      transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawAmt));
+      const sig = await connection.sendTransaction(transferTx, [wallet]);
+      await connection.confirmTransaction(sig, 'confirmed');
+      ctx.log('SELL_COINBASE: sent to Coinbase — waiting ~30s for arrival...');
+      await sendAlert('⚡ [TRADE] ' + symbol + ' SELL_COINBASE\n[3/4] Token sent — waiting for Coinbase arrival (~30s)...');
+
+      // Step 3: Wait for token to arrive on Coinbase (~30s)
+      await new Promise(r => setTimeout(r, 35000));
+
+      // Step 4: Sell on Coinbase
+      ctx.log('SELL_COINBASE: selling ' + symbol + ' on Coinbase...');
+      await sendAlert('⚡ [TRADE] ' + symbol + ' SELL_COINBASE\n[4/4] Selling ' + tokensBought.toFixed(4) + ' ' + symbol + ' on Coinbase...');
+
+      const cbSellOrderId = await cb.coinbaseMarketSell(symbol, tokensBought.toFixed(8));
+      await new Promise(r => setTimeout(r, 3000));
+      const cbSellOrder = await cb.getCoinbaseOrder(cbSellOrderId);
+      const usdcReceived = parseFloat(cbSellOrder?.filled_value || '0');
+      const profit = usdcReceived - cbTradeSize;
+
+      totalTrades++;
+      winningTrades += profit > 0 ? 1 : 0;
+      totalProfit   += profit;
+      consecutiveWins  = profit > 0 ? consecutiveWins + 1 : 0;
+      consecutiveClean = profit > 0 ? consecutiveClean + 1 : 0;
+      saveState();
+      logTrade({ date: new Date().toISOString(), tradeId, pair: pair.name, direction: 'SELL_COINBASE', exchange: 'Coinbase', spreadPct, profit, usdcOut: usdcReceived, tradeSizeUsd: cbTradeSize, durationMin: 1, outcome: profit > 0 ? 'WIN' : 'LOSS' });
+      thresholdEngine.updateFromTrade(pair.okxCcy, spreadPct, profit > 0 ? 'WIN' : 'LOSS');
+
+      await ctx.success({ profit, usdcOut: usdcReceived });
     }
 
     if (totalProfit <= -SESSION_STOP_LOSS) { await sendAlert(`⛔ <b>Stop loss hit</b> — down $${Math.abs(totalProfit).toFixed(2)}`); process.exit(1); }
@@ -2168,10 +2267,11 @@ async function executeArb({ pair, direction, spreadPct, quoteBuy, tokenOut, exch
     logCrash(`executeArb [${tradeId}]`, err);
     consecutiveClean = 0; // reset — trade failed, may need intervention
   } finally {
-    if (direction === 'BUY_DEX')   executingDex   = false;
-    if (direction === 'BUY_OKX')      executingOkx      = false;
-    if (direction === 'BUY_BYBIT')    executingBybit    = false;
-    if (direction === 'BUY_COINBASE') executingCoinbase = false;
+    if (direction === 'BUY_DEX')        executingDex      = false;
+    if (direction === 'BUY_OKX')        executingOkx      = false;
+    if (direction === 'BUY_BYBIT')      executingBybit    = false;
+    if (direction === 'BUY_COINBASE')   executingCoinbase = false;
+    if (direction === 'SELL_COINBASE')  executingCoinbase = false;
   }
 }
 
@@ -2397,6 +2497,14 @@ async function pollTelegramCommands() {
           existing.push({ text, time: new Date().toISOString() });
           fs.writeFileSync(cmdFile, JSON.stringify(existing));
         } catch(e) { logCrash('agent relay', e); }
+      } else if (text === '/resync' || text === '/recover') {
+        await sendAlert('🤖 [BOT] Running recovery scan...');
+        try {
+          const recovered = await runRecoveryChecks();
+          await sendAlert('🤖 [BOT] Recovery complete — check wallet for changes');
+        } catch(e) {
+          await sendAlert('❌ Recovery error: ' + e.message);
+        }
       } else if (text === '/holdings') {
         const held = [...pendingOkx, ...pendingBybit].filter(t => t.entryPrice);
         if (held.length === 0) {
@@ -2770,25 +2878,57 @@ async function executeRebalanceMove(move) {
   } else if (move.method === 'okx-to-sol') {
     await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
   } else if (move.method === 'okx-to-bybit') {
-    const depositAddr = await getBybitDepositAddress('USDT');
-    await withdrawUSDTFromOKX(move.amount, depositAddr);
+    // Use pre-whitelisted Bybit USDT address in OKX address book
+    const BYBIT_USDT_ADDR = '6VmfatJMwwPqbvMuqKzgZhcyQWgHLJDwiJCpdcA28Kwt';
+    await withdrawUSDTFromOKX(move.amount, BYBIT_USDT_ADDR, 'USDT-Solana');
   } else if (move.method === 'bybit-to-sol') {
     await withdrawUSDTFromBybit(move.amount, wallet.publicKey.toString());
   } else if (move.method === 'bybit-to-okx') {
     const depositAddr = await getOKXDepositAddress('USDT', 'USDT-Solana');
     await withdrawUSDTFromBybit(move.amount, depositAddr);
   } else if (move.method === 'okx-to-kraken') {
-    await withdrawUSDTFromOKXToKraken(move.amount);
+    // Use pre-whitelisted Kraken USDT Solana deposit address in OKX address book
+    const KRAKEN_USDT_ADDR = 'CJoM8s3uaPRV4gfAB1Ru2QXp8E6AVm8uWyWnHxFYnaSL';
+    await withdrawUSDTFromOKX(move.amount, KRAKEN_USDT_ADDR, 'USDT-Solana');
   } else if (move.method === 'kraken-to-sol') {
     const kraken = getKraken();
     if (!kraken) throw new Error('Kraken module not available');
     await kraken.withdrawFromKraken('USDT', move.amount.toString());
   } else if (move.method === 'coinbase-to-sol') {
     await withdrawFromCoinbaseToSolana(move.amount);
+  } else if (move.method === 'okx-to-coinbase') {
+    // Full automation: OKX USDT → Solana → swap USDT→USDC → send to Coinbase
+    const COINBASE_USDC_ADDR = process.env.COINBASE_DEPOSIT_ADDRESS || 'CnggS74Y3VoFkmNZyqasSjhoLYFzpiKBgdxeNveKHrUC';
+    // Step 1: Withdraw USDT from OKX to Solana wallet
+    await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+    // Step 2: Wait for USDT to arrive on Solana (poll up to 3 min)
+    await sendAlert('🤖 [BOT] OKX→Coinbase: waiting for USDT to arrive on Solana...');
+    const usdtMintPk = new (require('@solana/web3.js').PublicKey)(USDT_MINT);
+    const { getAssociatedTokenAddress, getAccount } = require('@solana/spl-token');
+    const usdtAta = await getAssociatedTokenAddress(usdtMintPk, wallet.publicKey);
+    let usdtArrived = false;
+    for (let i = 0; i < 18; i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      try {
+        const acc = await getAccount(connection, usdtAta);
+        const bal = Number(acc.amount) / 1e6;
+        if (bal >= move.amount * 0.95) { usdtArrived = true; break; }
+      } catch {}
+    }
+    if (!usdtArrived) throw new Error('USDT did not arrive on Solana within 3min — check OKX withdrawal status');
+    // Step 3: Swap USDT → USDC on Jupiter
+    await swapUSDTtoUSDC(move.amount);
+    // Step 4: Send USDC to Coinbase
+    await new Promise(r => setTimeout(r, 5000)); // wait for swap to settle
+    const w2 = await getWalletBalances();
+    const usdcToSend = Math.min(move.amount * 0.995, w2.usdc - 10); // keep $10 buffer
+    if (usdcToSend < 10) throw new Error('Insufficient USDC after swap: $' + w2.usdc.toFixed(2));
+    await sendUSDCOnSolana(usdcToSend, COINBASE_USDC_ADDR);
   } else if (move.method === 'sol-to-coinbase') {
-    // Send USDC from Solana to Coinbase — user must have Coinbase USDC deposit address
-    // For now alert to do manually — Coinbase deposit addresses change
-    throw new Error('sol-to-coinbase: deposit $' + move.amount + ' USDC manually to Coinbase Advanced Trade');
+    // Solana USDC → Coinbase via stable deposit address
+    const COINBASE_USDC_ADDR = process.env.COINBASE_DEPOSIT_ADDRESS || 'CnggS74Y3VoFkmNZyqasSjhoLYFzpiKBgdxeNveKHrUC';
+    if (!COINBASE_USDC_ADDR) throw new Error('Set COINBASE_DEPOSIT_ADDRESS in .env — get from Coinbase Advanced Trade → USDC → Receive → Solana');
+    await sendUSDCOnSolana(move.amount, COINBASE_USDC_ADDR);
   } else {
     throw new Error('Unknown rebalance method: ' + move.method);
   }
@@ -2798,9 +2938,14 @@ async function handleRebalanceCommand(confirm = false) {
   if (rebalancing) { await sendAlert('⚠️ [WARN] Rebalance already in progress'); return; }
   try {
     // ── Step 1: Gather all balances ──────────────────────────────────────────
-    const w       = await getWalletBalances();
-    const okxData = await getOKXBalances();
-    const bybit   = await getBybitEquity();
+    // Fetch all balances with 15s timeout each — prevents /rb hanging silently
+    const withTimeout = (promise, label) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(label + ' timeout')), 15000))
+    ]);
+    const w       = await withTimeout(getWalletBalances(), 'getWalletBalances');
+    const okxData = await withTimeout(getOKXBalances(),    'getOKXBalances');
+    const bybit   = await withTimeout(getBybitEquity(),    'getBybitEquity');
     const statusData = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
     const lb = statusData.liveBalances || {};
 
@@ -2826,13 +2971,15 @@ async function handleRebalanceCommand(confirm = false) {
     const ROUTES = {
       'OKX-Solana':      'okx-to-sol',
       'OKX-Bybit':       'okx-to-bybit',
-      // 'OKX-Kraken': 'okx-to-kraken', // disabled - needs Kraken withdraw permission
+      'OKX-Kraken':      'okx-to-kraken',
       'Bybit-Solana':    'bybit-to-sol',
       'Bybit-OKX':       'bybit-to-okx',
       'Solana-OKX':      'sol-to-okx',
       'Solana-Bybit':    'sol-to-bybit',
-      // 'Kraken-Solana': 'kraken-to-sol', // disabled - needs Kraken withdraw permission
+      'Kraken-Solana':   'kraken-to-sol',
       'Coinbase-Solana': 'coinbase-to-sol',
+      'OKX-Coinbase':    'okx-to-coinbase',
+      'Solana-Coinbase': 'sol-to-coinbase',
     };
 
     const moves = [];
@@ -2868,7 +3015,11 @@ async function handleRebalanceCommand(confirm = false) {
       'Equal share: $' + Math.round(equalShare) + ' | Total: $' + Math.round(total) + '\n\n';
 
     if (moves.length === 0) {
-      await sendAlert(statusMsg + '✅ All balances within 8% of equal share');
+      await sendAlert(
+        statusMsg +
+        '✅ All exchanges balanced within 8% of equal share ($' + Math.round(equalShare) + ' target)\n' +
+        'No moves needed.'
+      );
       return;
     }
 
@@ -2939,6 +3090,29 @@ async function sendUSDTOnSolana(amount, toAddr) {
 }
 
 // ── Helper: withdraw USDT from Bybit to any address ──────────────────────────
+// ── Send USDC on Solana ───────────────────────────────────────────────────────
+async function sendUSDCOnSolana(amount, toAddr) {
+  const usdcMintPk = new PublicKey(USDC_MINT);
+  const destPubkey = new PublicKey(toAddr);
+  const rawUSDC    = Math.floor(amount * 1e6);
+  const fromAta    = await getAssociatedTokenAddress(usdcMintPk, wallet.publicKey);
+  const toAta      = await getAssociatedTokenAddress(usdcMintPk, destPubkey);
+  try { await getAccount(connection, toAta); }
+  catch {
+    const createTx = new Transaction();
+    createTx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, toAta, destPubkey, usdcMintPk));
+    const cs = await connection.sendTransaction(createTx, [wallet]);
+    await connection.confirmTransaction(cs, 'confirmed');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  const transferTx = new Transaction();
+  transferTx.add(createTransferInstruction(fromAta, toAta, wallet.publicKey, rawUSDC));
+  const sig = await connection.sendTransaction(transferTx, [wallet]);
+  await connection.confirmTransaction(sig, 'confirmed');
+  console.log('Sent', amount.toFixed(2), 'USDC to', toAddr.slice(0,8) + '...');
+}
+
+
 async function withdrawUSDTFromBybit(amount, toAddr) {
   const transferId = crypto.randomUUID();
   const t = await bybitPrivate('POST', '/v5/asset/transfer/inter-transfer', {
@@ -2955,13 +3129,25 @@ async function withdrawUSDTFromBybit(amount, toAddr) {
 }
 
 // ── Helper: withdraw USDT from OKX to any address ────────────────────────────
-async function withdrawUSDTFromOKX(amount, toAddr) {
-  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
-    ccy: 'USDT', chain: 'USDT-Solana', dest: '4',
-    amt: amount.toString(), toAddr,
-    fee: '1',
+async function withdrawUSDTFromOKX(amount, toAddr, chain='USDT-Solana') {
+  // OKX Unified Account: must transfer to FUNDING before withdrawal
+  const transferAmt = amount.toFixed(2);
+  const t = await okxPrivate('POST', '/api/v5/asset/transfer', {
+    ccy: 'USDT', amt: transferAmt, from: '18', to: '6', type: '0'
   });
-  if (r.code !== '0') throw new Error('OKX withdraw: ' + r.msg);
+  if (t.code !== '0') throw new Error('OKX transfer to funding failed: ' + t.msg);
+  await new Promise(r => setTimeout(r, 3000)); // wait for transfer
+  const fee = chain === 'USDT-ERC20' ? '1.0' : '1';
+  const netAmt = (parseFloat(transferAmt) - parseFloat(fee)).toFixed(2);
+  const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
+    ccy: 'USDT', chain, dest: '4', amt: netAmt, toAddr, fee,
+  });
+  if (r.code !== '0') {
+    // Try to transfer back to trading if withdrawal fails
+    try { await okxPrivate('POST', '/api/v5/asset/transfer', { ccy: 'USDT', amt: transferAmt, from: '6', to: '18', type: '0' }); } catch {}
+    throw new Error('OKX withdraw: ' + r.msg + ' (' + r.code + ')');
+  }
+  return r.data?.[0]?.wdId;
 }
 
 
@@ -2985,6 +3171,12 @@ async function main() {
   console.log(`   WINS_TARGET:     ${WINS_TARGET}`);
   console.log(`   BUY_DEX on:      ${dexOn.join(', ')}`);
   console.log(`   Static pairs:    ${PAIRS.length}\n`);
+
+  // Bootstrap threshold engine from existing trade history
+  try {
+    thresholdEngine.calibrateFromHistory();
+    console.log('✅ Threshold engine calibrated from trade history');
+  } catch(e) { console.log('⚠️ Threshold calibration error:', e.message); }
 
   await runStartupChecks();
 
@@ -3146,7 +3338,9 @@ async function main() {
   lastReportTime = Date.now();
 }
 
-main().catch(err => logCrash('main', err));async function getBybitEquity() {
+main().catch(err => logCrash('main', err));
+
+async function getBybitEquity() {
   try {
     const r = await bybitPrivate('GET', '/v5/account/wallet-balance', { accountType: 'UNIFIED' });
     const coins = r.result?.list?.[0]?.coin || [];
