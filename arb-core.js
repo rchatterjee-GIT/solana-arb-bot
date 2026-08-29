@@ -349,6 +349,8 @@ async function scan() {
   if (Date.now() - lastConfigLoad > CONFIG_RELOAD) loadConfig();
 
   if (executing) return;
+  // Immediate rebalance if flagged
+  if (config.REBALANCE_NOW) { await checkRebalance(true); return; }
   if (config.DISABLE_BUY_DEX) return;
 
   const skipDex     = new Set(config.POLICY_SKIP_DEX || []);
