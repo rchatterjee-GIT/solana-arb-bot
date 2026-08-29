@@ -131,7 +131,7 @@ async function tg(text) {
 async function fetchBalances() {
   try {
     const [okxBal, bybitBal, krakenBal, solBal] = await Promise.allSettled([
-      okxEx.getFundingBalance('USDT', OKX_CREDS),
+      okxEx.getBalance('USDT', OKX_CREDS),
       bybitEx.getBalance('USDT', BYBIT_CREDS),
       krakenEx.getUSDTBalance(KRAKEN_CREDS),
       (async () => {
