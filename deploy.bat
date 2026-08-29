@@ -1,45 +1,58 @@
 @echo off
-setlocal EnableDelayedExpansion
-cd /d "%~dp0"
+setlocal
+set "BOT=C:\Users\Ramen\solana-arb-bot"
 
 echo ============================================
-echo  Arb Bot Deploy
+echo  arb-core v5.0 -- Deploy
 echo  %date% %time%
 echo ============================================
-
 echo.
-echo [1/4] Pulling latest from GitHub...
+
+echo [1/5] Killing all node processes and bot windows...
+taskkill /F /IM node.exe /T >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Watchdog*" >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Dashboard*" >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq Agent*" >nul 2>&1
+timeout /t 8 /nobreak >nul
+taskkill /F /IM node.exe /T >nul 2>&1
+echo Done.
+echo.
+
+echo [2/5] Syncing disk with git...
+pushd "%BOT%"
 git pull origin main
-if errorlevel 1 (echo ERROR: git pull failed & pause & exit /b 1)
-
+echo Done.
 echo.
-echo [2/4] Running pre-deploy verification...
-node verify-deploy.js
+
+echo [3/5] Running unit tests...
+node "%BOT%\test\unit.test.js"
 if errorlevel 1 (
   echo.
-  echo DEPLOY ABORTED - verification failed.
-  echo Fix the issues above then run deploy.bat again.
-  pause & exit /b 1
+  echo UNIT TESTS FAILED -- deploy aborted
+  popd & pause & exit /b 1
 )
-
 echo.
-echo [3/4] Backing up state...
-if exist "arb-state.json" copy /Y "arb-state.json" "arb-state.json.deploy-bak" >nul
-if exist "trades.json"    copy /Y "trades.json"    "trades.json.deploy-bak"    >nul
-echo       Done. Rollback available via dashboard.
 
-echo.
-echo [4/4] Starting processes...
-taskkill /F /IM node.exe /T >nul 2>&1
-timeout /t 3 /nobreak >nul
-start "Watchdog" /D "%~dp0" node watchdog.js
+echo [4/5] Starting bot windows...
+timeout /t 2 /nobreak >nul
+start "Watchdog"  cmd /k "title Watchdog && pushd %BOT% && node watchdog.js"
 timeout /t 5 /nobreak >nul
-start "Dashboard" /D "%~dp0" node dashboard.js
+start "Dashboard" cmd /k "title Dashboard && pushd %BOT% && node dashboard.js"
+timeout /t 3 /nobreak >nul
+start "Agent"     cmd /k "title Agent && pushd %BOT% && node agent.js"
+echo.
 
+echo [5/5] Waiting 25s then running integration tests...
+timeout /t 25 /nobreak >nul
+node "%BOT%\test\integration.test.js"
+if errorlevel 1 (
+  echo.
+  echo WARNING: INTEGRATION TESTS FAILED
+  popd & pause & exit /b 1
+)
 echo.
 echo ============================================
-echo  DEPLOYED
-echo  Dashboard: http://localhost:3001
+echo  DEPLOY COMPLETE
 echo ============================================
-echo.
-pause >nul
+popd
+pause
