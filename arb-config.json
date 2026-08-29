@@ -64,13 +64,12 @@
   "KRAKEN_SYNTHETIC": false,
   "MIN_SPREAD_KRAKEN": 1.2,
   "DEX_THRESHOLD_OVERRIDES": {
-    "JTO": 2.5,
+    "JTO": 0.8,
     "SOL": 0.8,
-    "WIF": 2.3,
-    "PENGU": 3.8,
-    "PNUT": 3.5,
-    "W": 3.2,
-    "RAY": 2.3
+    "WIF": 1,
+    "PENGU": 1,
+    "PNUT": 1.2,
+    "W": 1.2
   },
   "COINBASE_ENABLED": true,
   "PAIR_MIN_SPREAD": {
@@ -111,6 +110,5 @@
     "JUP",
     "MEW"
   ],
-  "REBALANCE_NOW": true,
   "REBALANCE_TARGET": 319.7914210163375
 }
