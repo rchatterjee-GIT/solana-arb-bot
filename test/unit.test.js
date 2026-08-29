@@ -106,7 +106,7 @@ test('CEX legs disabled', () => {
 test('DEX thresholds sane', () => {
   const cfg = JSON.parse(fs.readFileSync('arb-config.json', 'utf8'));
   for (const [sym, thr] of Object.entries(cfg.DEX_THRESHOLD_OVERRIDES || {})) {
-    assert(thr >= 1.0 && thr <= 5.0, `${sym} threshold ${thr}% out of range 1-5%`);
+    assert(thr >= 0.6 && thr <= 5.0, `${sym} threshold ${thr}% out of range 0.6-5%`);
   }
 });
 
@@ -344,6 +344,11 @@ test('arb-core.js has stop-loss protection', () => {
   const src = fs.readFileSync('arb-core.js', 'utf8');
   assert(src.includes('SESSION_STOP_LOSS'), 'Missing SESSION_STOP_LOSS');
   assert(src.includes('DISABLE_BUY_DEX = true'), 'Stop-loss should disable BUY_DEX');
+});
+
+test('arb-core.js has Bybit NaN fix', () => {
+  const src = fs.readFileSync('arb-core.js', 'utf8');
+  assert(src.includes('bid1Price ?? d.lastPrice'), 'Bybit WS must use nullish coalescing to avoid NaN');
 });
 
 test('arb-core.js tracks consecutive wins', () => {

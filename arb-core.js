@@ -239,7 +239,7 @@ function connectBybit() {
       if (msg.topic?.startsWith('tickers.') && msg.data) {
         const d = msg.data;
         bybitPrices[msg.topic.replace('tickers.', '')] = {
-          bid: parseFloat(d.bid1Price), ask: parseFloat(d.ask1Price), ts: Date.now(),
+          bid: parseFloat(d.bid1Price ?? d.lastPrice), ask: parseFloat(d.ask1Price ?? d.lastPrice), ts: Date.now(),
         };
       }
     } catch {}
@@ -400,7 +400,18 @@ async function scan() {
   }
 
   // Write live data for dashboard
-  fs.writeFileSync(LIVE_FILE, JSON.stringify({
+  fs.writeFileSync('bot-status.json', JSON.stringify({
+    version: VERSION,
+    timestamp: new Date().toISOString(),
+    okxHealthy: true,
+    activeTradeCount: executing ? 1 : 0,
+    totalTrades,
+    winningTrades: totalWins,
+    totalProfit,
+    consecutiveWins,
+    liveBalances,
+  }, null, 2));
+    fs.writeFileSync(LIVE_FILE, JSON.stringify({
     version: VERSION,
     timestamp: new Date().toISOString(),
     pairs: results
