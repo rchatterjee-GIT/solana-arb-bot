@@ -228,7 +228,7 @@ function connectBybit() {
       if (msg.topic?.startsWith('tickers.') && msg.data) {
         const d = msg.data;
         bybitPrices[msg.topic.replace('tickers.', '')] = {
-          bid: parseFloat(d.bid1Price), ask: parseFloat(d.ask1Price), ts: Date.now(),
+          bid: parseFloat(d.bid1Price ?? d.lastPrice), ask: parseFloat(d.ask1Price ?? d.lastPrice), ts: Date.now(),
         };
       }
     } catch {}
@@ -380,6 +380,12 @@ async function scan() {
   }
 
   // Write live data for dashboard
+  fs.writeFileSync('bot-status.json', JSON.stringify({
+    version: VERSION, timestamp: new Date().toISOString(),
+    okxHealthy: true, activeTradeCount: executing ? 1 : 0,
+    totalTrades, winningTrades: totalWins, totalProfit,
+    liveBalances,
+  }, null, 2));
   fs.writeFileSync(LIVE_FILE, JSON.stringify({
     version: VERSION,
     timestamp: new Date().toISOString(),
@@ -436,8 +442,6 @@ async function main() {
   // Wait for initial prices
   console.log('   Waiting for price feeds...');
   await new Promise(r => setTimeout(r, 3000));
-
-  const lines = exchanges.map(k => k + ': $' + (b[k]||0).toFixed(2) + ' (target $' + target.toFixed(2) + ')').join(', ');
 
   // Fetch balances immediately and then every 60s
   fetchBalances();
