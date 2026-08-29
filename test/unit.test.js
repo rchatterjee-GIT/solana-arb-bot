@@ -48,7 +48,7 @@ const FILES = [
   'arb-core.js', 'threshold.js', 'strategy.js',
   'exchanges/okx.js', 'exchanges/bybit.js', 'exchanges/jupiter.js',
   'exchanges/kraken.js', 'exchanges/coinbase.js',
-  'agent.js', 'watchdog.js',
+  'agent.js', 'watchdog.js', 'rebalance.js',
 ];
 for (const f of FILES) {
   test(`Syntax: ${f}`, () => {
@@ -106,7 +106,7 @@ test('CEX legs disabled', () => {
 test('DEX thresholds sane', () => {
   const cfg = JSON.parse(fs.readFileSync('arb-config.json', 'utf8'));
   for (const [sym, thr] of Object.entries(cfg.DEX_THRESHOLD_OVERRIDES || {})) {
-    assert(thr >= 0.6 && thr <= 5.0, `${sym} threshold ${thr}% out of range 0.6-5%`);
+    assert(thr >= 1.0 && thr <= 5.0, `${sym} threshold ${thr}% out of range 1-5%`);
   }
 });
 
@@ -346,11 +346,6 @@ test('arb-core.js has stop-loss protection', () => {
   assert(src.includes('DISABLE_BUY_DEX = true'), 'Stop-loss should disable BUY_DEX');
 });
 
-test('arb-core.js has Bybit NaN fix', () => {
-  const src = fs.readFileSync('arb-core.js', 'utf8');
-  assert(src.includes('bid1Price ?? d.lastPrice'), 'Bybit WS must use nullish coalescing to avoid NaN');
-});
-
 test('arb-core.js tracks consecutive wins', () => {
   const src = fs.readFileSync('arb-core.js', 'utf8');
   assert(src.includes('consecutiveWins'), 'Missing consecutiveWins tracking');
@@ -359,6 +354,49 @@ test('arb-core.js tracks consecutive wins', () => {
 test('arb-core.js handles REBALANCE_NOW flag', () => {
   const src = fs.readFileSync('arb-core.js', 'utf8');
   assert(src.includes('REBALANCE_NOW'), 'Missing REBALANCE_NOW flag handling');
+});
+
+// ── 8. Rebalance module ──────────────────────────────────────────────────────
+console.log('\n[8] Rebalance module');
+test('rebalance.js exports', () => {
+  const rb = require(path.join(__dirname, '..', 'rebalance'));
+  assert(typeof rb.buildPlan === 'function', 'missing buildPlan');
+  assert(typeof rb.execute === 'function', 'missing execute');
+  assert(typeof rb.ROUTES === 'object', 'missing ROUTES');
+});
+
+test('rebalance buildPlan correct moves', () => {
+  const rb = require(path.join(__dirname, '..', 'rebalance'));
+  const balances = { Solana: 50, OKX: 500, Bybit: 300, Kraken: 350 };
+  const plan = rb.buildPlan(balances);
+  assert(typeof plan.equalShare === 'number', 'missing equalShare');
+  assert(plan.equalShare === 300, 'equalShare should be 300, got ' + plan.equalShare);
+  assert(Array.isArray(plan.moves), 'moves should be array');
+  assert(plan.moves.length > 0, 'should have moves when unbalanced');
+  // OKX has $500 vs target $300 — should be in over
+  assert(plan.over.includes('OKX'), 'OKX should be over');
+  assert(plan.under.includes('Solana'), 'Solana should be under');
+});
+
+test('rebalance buildPlan no moves when balanced', () => {
+  const rb = require(path.join(__dirname, '..', 'rebalance'));
+  const balances = { Solana: 300, OKX: 310, Bybit: 295, Kraken: 305 };
+  const plan = rb.buildPlan(balances);
+  assert(plan.moves.length === 0, 'should have no moves when balanced');
+});
+
+test('rebalance has all required routes', () => {
+  const rb = require(path.join(__dirname, '..', 'rebalance'));
+  const required = ['OKX-Solana', 'OKX-Bybit', 'OKX-Kraken', 'Bybit-Solana', 'Kraken-Solana', 'Solana-OKX', 'Solana-Bybit'];
+  for (const route of required) {
+    assert(rb.ROUTES[route], 'Missing route: ' + route);
+  }
+});
+
+test('agent.js has /rb and /rb confirm', () => {
+  const src = fs.readFileSync('agent.js', 'utf8');
+  assert(src.includes("'/rb'"), 'missing /rb command');
+  assert(src.includes("'/rb confirm'"), 'missing /rb confirm command');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

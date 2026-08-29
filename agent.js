@@ -299,7 +299,8 @@ async function handleCommand(text) {
       '/balances — exchange balances\n' +
       '/trades — last 5 trades\n' +
       '/wins — win/loss summary\n' +
-      '/rb confirm — trigger rebalance\n' +
+      '/rb — show rebalance plan\n' +
+      '/rb confirm — execute rebalance\n' +
       '/crash — last crash log\n' +
       '/pause — pause trading\n' +
       '/resume — resume trading\n' +

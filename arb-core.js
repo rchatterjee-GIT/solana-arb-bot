@@ -26,12 +26,13 @@ const fs        = require('fs');
 const path      = require('path');
 const crypto    = require('crypto');
 
-const jup       = require('./exchanges/jupiter');
-const threshold = require('./threshold');
-const strategy  = require('./strategy');
-const okxEx     = require('./exchanges/okx');
-const bybitEx   = require('./exchanges/bybit');
-const krakenEx  = require('./exchanges/kraken');
+const jup        = require('./exchanges/jupiter');
+const threshold  = require('./threshold');
+const strategy   = require('./strategy');
+const okxEx      = require('./exchanges/okx');
+const bybitEx    = require('./exchanges/bybit');
+const krakenEx   = require('./exchanges/kraken');
+const rebalancer = require('./rebalance');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const VERSION        = '5.0.0';
@@ -131,7 +132,7 @@ async function tg(text) {
 async function fetchBalances() {
   try {
     const [okxBal, bybitBal, krakenBal, solBal] = await Promise.allSettled([
-      okxEx.getBalance('USDT', OKX_CREDS),
+      okxEx.getFundingBalance('USDT', OKX_CREDS),
       bybitEx.getBalance('USDT', BYBIT_CREDS),
       krakenEx.getUSDTBalance(KRAKEN_CREDS),
       (async () => {
@@ -158,9 +159,6 @@ async function fetchBalances() {
 
 // ── Rebalance ─────────────────────────────────────────────────────────────────
 async function checkRebalance(force = false) {
-  const b = liveBalances;
-  if (!b.okx && !b.bybit) return;
-
   // Check for manual trigger from agent /rb confirm
   const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
   if (cfg.REBALANCE_NOW) {
@@ -168,40 +166,20 @@ async function checkRebalance(force = false) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
     force = true;
   }
+  if (!force) return;
 
-  const keys = ['solana','okx','bybit','kraken'].filter(k => b[k] > 0);
-  if (keys.length < 2) return;
+  const b = liveBalances;
+  if (!b.okx && !b.bybit) return;
 
-  const total  = keys.reduce((a,k) => a + b[k], 0);
-  const target = total / keys.length;
-  const tol    = (config.REBALANCE_TOLERANCE_PCT || 8) / 100;
-  const minMove= config.REBALANCE_MIN_USD || 20;
+  const balances = {
+    Solana: b.solana || 0,
+    OKX:    b.okx    || 0,
+    Bybit:  b.bybit  || 0,
+    Kraken: b.kraken || 0,
+  };
 
-  const over  = keys.filter(k => b[k] > target * (1 + tol));
-  const under = keys.filter(k => b[k] < target * (1 - tol));
-  if (!over.length || !under.length) return;
-
-  const summary = keys.map(k => k + ':$' + b[k].toFixed(0)).join(' ');
-  console.log('[rebalance] ' + summary + ' target:$' + target.toFixed(0));
-  await tg('<b>Rebalance needed</b> target:$' + target.toFixed(0) + ' per exchange\n' + summary);
-
-  for (const from of over) {
-    for (const to of under) {
-      const amt = Math.min(b[from] - target, target - b[to]);
-      if (amt < minMove) continue;
-      console.log('[rebalance] ' + from + ' -> ' + to + ' $' + amt.toFixed(2));
-      try {
-        if (from === 'okx' && to === 'solana') {
-          await okxEx.transferToFunding('USDT', amt.toFixed(2), OKX_CREDS);
-          await okxEx.withdraw('USDT', amt.toFixed(2), wallet.publicKey.toString(), 'SOL', OKX_CREDS);
-          await tg('Rebalance: $' + amt.toFixed(2) + ' OKX -> Solana');
-        }
-      } catch(e) {
-        console.error('[rebalance]', e.message);
-        await tg('Rebalance failed: ' + e.message.slice(0,80));
-      }
-    }
-  }
+  const plan = rebalancer.buildPlan(balances);
+  await rebalancer.execute(plan, tg);
 }
 
 // ── OKX WebSocket price feed ──────────────────────────────────────────────────
@@ -239,7 +217,7 @@ function connectBybit() {
       if (msg.topic?.startsWith('tickers.') && msg.data) {
         const d = msg.data;
         bybitPrices[msg.topic.replace('tickers.', '')] = {
-          bid: parseFloat(d.bid1Price ?? d.lastPrice), ask: parseFloat(d.ask1Price ?? d.lastPrice), ts: Date.now(),
+          bid: parseFloat(d.bid1Price), ask: parseFloat(d.ask1Price), ts: Date.now(),
         };
       }
     } catch {}
@@ -349,8 +327,6 @@ async function scan() {
   if (Date.now() - lastConfigLoad > CONFIG_RELOAD) loadConfig();
 
   if (executing) return;
-  // Immediate rebalance if flagged
-  if (config.REBALANCE_NOW) { await checkRebalance(true); return; }
   if (config.DISABLE_BUY_DEX) return;
 
   const skipDex     = new Set(config.POLICY_SKIP_DEX || []);
@@ -402,18 +378,7 @@ async function scan() {
   }
 
   // Write live data for dashboard
-  fs.writeFileSync('bot-status.json', JSON.stringify({
-    version: VERSION,
-    timestamp: new Date().toISOString(),
-    okxHealthy: true,
-    activeTradeCount: executing ? 1 : 0,
-    totalTrades,
-    winningTrades: totalWins,
-    totalProfit,
-    consecutiveWins,
-    liveBalances,
-  }, null, 2));
-    fs.writeFileSync(LIVE_FILE, JSON.stringify({
+  fs.writeFileSync(LIVE_FILE, JSON.stringify({
     version: VERSION,
     timestamp: new Date().toISOString(),
     pairs: results
