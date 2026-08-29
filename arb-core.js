@@ -60,11 +60,13 @@ const PAIRS = [
 let config        = {};
 let okxPrices     = {};   // instId → { bid, ask, ts }
 let bybitPrices   = {};   // instId → { bid, ask, ts }
-let executing     = false;
-let totalTrades   = 0;
-let totalWins     = 0;
-let totalProfit   = 0;
-let lastConfigLoad = 0;
+let executing      = false;
+let totalTrades    = 0;
+let totalWins      = 0;
+let totalProfit    = 0;
+let consecutiveWins = 0;
+let lastConfigLoad  = 0;
+const SESSION_STOP_LOSS = 50; // stop trading if down $50 in session
 
 const connection  = new Connection(process.env.RPC_URL, 'confirmed');
 const wallet      = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(process.env.PRIVATE_KEY)));
@@ -93,15 +95,16 @@ function loadConfig() {
 function loadState() {
   try {
     const s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    totalTrades  = s.totalTrades  || 0;
-    totalWins    = s.totalWins    || 0;
-    totalProfit  = s.totalProfit  || 0;
+    totalTrades     = s.totalTrades     || 0;
+    totalWins       = s.totalWins       || 0;
+    totalProfit     = s.totalProfit     || 0;
+    consecutiveWins = s.consecutiveWins || 0;
   } catch {}
 }
 
 function saveState() {
   fs.writeFileSync(STATE_FILE, JSON.stringify({
-    version: VERSION, totalTrades, totalWins, totalProfit,
+    version: VERSION, totalTrades, totalWins, totalProfit, consecutiveWins,
     updatedAt: new Date().toISOString(),
   }, null, 2));
 }
@@ -128,7 +131,7 @@ async function tg(text) {
 async function fetchBalances() {
   try {
     const [okxBal, bybitBal, krakenBal, solBal] = await Promise.allSettled([
-      okxEx.getBalance('USDT', OKX_CREDS),
+      okxEx.getFundingBalance('USDT', OKX_CREDS),
       bybitEx.getBalance('USDT', BYBIT_CREDS),
       krakenEx.getUSDTBalance(KRAKEN_CREDS),
       (async () => {
@@ -154,9 +157,17 @@ async function fetchBalances() {
 }
 
 // ── Rebalance ─────────────────────────────────────────────────────────────────
-async function checkRebalance() {
+async function checkRebalance(force = false) {
   const b = liveBalances;
   if (!b.okx && !b.bybit) return;
+
+  // Check for manual trigger from agent /rb confirm
+  const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+  if (cfg.REBALANCE_NOW) {
+    delete cfg.REBALANCE_NOW;
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+    force = true;
+  }
 
   const keys = ['solana','okx','bybit','kraken'].filter(k => b[k] > 0);
   if (keys.length < 2) return;
@@ -228,7 +239,7 @@ function connectBybit() {
       if (msg.topic?.startsWith('tickers.') && msg.data) {
         const d = msg.data;
         bybitPrices[msg.topic.replace('tickers.', '')] = {
-          bid: parseFloat(d.bid1Price ?? d.lastPrice), ask: parseFloat(d.ask1Price ?? d.lastPrice), ts: Date.now(),
+          bid: parseFloat(d.bid1Price), ask: parseFloat(d.ask1Price), ts: Date.now(),
         };
       }
     } catch {}
@@ -290,9 +301,18 @@ async function executeBuyDex(pair, spreadPct, dexAsk, tradeSizeUsd) {
 
     // Update state
     totalTrades++;
-    if (profit > 0) totalWins++;
+    if (profit > 0) { totalWins++; consecutiveWins++; }
+    else { consecutiveWins = 0; }
     totalProfit += profit;
     saveState();
+
+    // Session stop-loss check
+    if (totalProfit < -SESSION_STOP_LOSS) {
+      await tg('⛔ <b>Session stop-loss hit</b> — down $' + Math.abs(totalProfit).toFixed(2) + '\nTrading paused. /resume to restart.');
+      const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      cfg.DISABLE_BUY_DEX = true;
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+    }
 
     const trade = {
       date: new Date().toISOString(), tradeId, pair: pair.name,
@@ -380,12 +400,6 @@ async function scan() {
   }
 
   // Write live data for dashboard
-  fs.writeFileSync('bot-status.json', JSON.stringify({
-    version: VERSION, timestamp: new Date().toISOString(),
-    okxHealthy: true, activeTradeCount: executing ? 1 : 0,
-    totalTrades, winningTrades: totalWins, totalProfit,
-    liveBalances,
-  }, null, 2));
   fs.writeFileSync(LIVE_FILE, JSON.stringify({
     version: VERSION,
     timestamp: new Date().toISOString(),
