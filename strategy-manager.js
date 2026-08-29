@@ -49,7 +49,7 @@ const REGIME_CONFIGS = {
     FUNDING_ARB_ENABLED:false,
     TRIANGULAR_ARB_ENABLED:true,   // triangular runs in neutral
     MIN_SPREAD_BUFFER_PCT: 5,
-    DEX_THRESHOLD_OVERRIDES: { JTO: 1.8, SOL: 1.8, WIF: 2.0, PENGU: 1.8, PNUT: 2.0, W: 2.5 },
+    DEX_THRESHOLD_OVERRIDES: { JTO: 0.80, SOL: 0.80, WIF: 1.00, PENGU: 1.00, PNUT: 1.20, W: 1.20 },
   },
   BEAR: {
     DISABLE_BUY_OKX:    true,
