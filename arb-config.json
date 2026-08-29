@@ -7,21 +7,20 @@
     "RAY",
     "RENDER",
     "TRUMP",
-    "BONK",
-    "JUP",
-    "MEW"
+    "JTO"
   ],
   "POLICY_SKIP_BYBIT": [
     "BOME",
-    "POPCAT",
-    "ZEUS",
+    "BONK",
     "GOAT",
+    "JUP",
+    "MEW",
+    "POPCAT",
+    "TRUMP",
     "RAY",
     "RENDER",
-    "TRUMP",
-    "BONK",
-    "JUP",
-    "MEW"
+    "ZEUS",
+    "JTO"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
@@ -97,18 +96,17 @@
   "FUNDING_ARB_ENABLED": false,
   "TRIANGULAR_ARB_ENABLED": true,
   "ACTIVE_REGIME": "NEUTRAL",
-  "REGIME_SINCE": "2026-08-26T14:51:22.980Z",
+  "REGIME_SINCE": "2026-08-29T15:55:11.651Z",
   "POLICY_SKIP_DEX": [
+    "TRUMP",
     "BOME",
     "POPCAT",
     "ZEUS",
     "GOAT",
     "RAY",
     "RENDER",
-    "TRUMP",
+    "MEW",
     "BONK",
-    "JUP",
-    "MEW"
-  ],
-  "REBALANCE_TARGET": 319.7914210163375
+    "JUP"
+  ]
 }

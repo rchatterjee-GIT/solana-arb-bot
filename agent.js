@@ -1,407 +1,425 @@
-/**
- * agent.js — Telegram Agent v5.0
- *
- * Monitors bot health, market conditions, and responds to commands.
- * Single responsibility: Telegram interface + automated rules.
- *
- * Commands:
- *   /status              — bot health + balances + P&L
- *   /balances            — exchange balances
- *   /trades              — last 5 trades
- *   /wins                — win/loss summary
- *   /rb confirm          — trigger rebalance
- *   /crash               — last crash log entry
- *   /restart             — restart bot via watchdog
- *   /pause               — pause trading
- *   /resume              — resume trading
- *   /regime              — current market regime
- *   /regime check        — force regime re-check
- *   /funding             — funding rates
- *   /thresholds          — pair thresholds
- *   /calibrate           — recalibrate thresholds from history
- *   /listings            — listing monitor report
- *   /scan-okx            — full OKX universe scan
- *   /dex on|off          — toggle DEX arb
- */
+// agent.js — fully autonomous trading agent
+// Runs as a separate process alongside the bot
+// Monitors performance, adjusts config, self-heals, reports
 
-'use strict';
 require('dotenv').config();
-const fs   = require('fs');
-const path = require('path');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
+const rules  = require('./agent-rules');
+const { fetchMarketData, getMarketData } = require('./market-data');
+const { run: runListingMonitor } = require('./listing-monitor');
+const { runNewsTrawl, formatDigest } = require('./news-monitor');
+const { fetchFundingRates, getFundingData } = require('./funding-monitor');
 
-const VERSION      = '5.0.0';
-const CONFIG_FILE  = path.join(__dirname, 'arb-config.json');
-const STATUS_FILE  = path.join(__dirname, 'bot-status.json');
-const LIVE_FILE    = path.join(__dirname, 'arb-live.json');
-const STATE_FILE   = path.join(__dirname, 'arb-state.json');
-const TRADES_FILE  = path.join(__dirname, 'arb-trades.json');
-const CRASH_FILE   = path.join(__dirname, 'crash.log');
-const AGENT_STATE  = path.join(__dirname, 'agent-state.json');
+const CONFIG_FILE    = path.join(__dirname, 'arb-config.json');
+const STATE_FILE     = path.join(__dirname, 'arb-state.json');
+const TRADES_FILE    = path.join(__dirname, 'trades.json');
+const FIRES_FILE     = path.join(__dirname, 'fires.json');
+const STATUS_FILE    = path.join(__dirname, 'bot-status.json');
+const CRASH_FILE     = path.join(__dirname, 'crash.log');
+const AGENT_FILE     = path.join(__dirname, 'agent-state.json');
+const AGENT_LOG      = path.join(__dirname, 'agent.log');
 
-const TG_TOKEN = process.env.TELEGRAM_TOKEN;
-const TG_CHAT  = process.env.TELEGRAM_CHAT_ID;
-const POLL_MS  = 60000; // rule check interval
+const AGENT_VERSION  = 'v1.2';
+const CYCLE_MS       = 60 * 1000;  // run every 60 seconds
+const PAUSED_KEY     = 'paused';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function readJSON(f) {
-  try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; }
-}
+function readJSON(f) { try { return JSON.parse(fs.readFileSync(f,'utf8')); } catch { return null; } }
+function writeJSON(f, d) { fs.writeFileSync(f, JSON.stringify(d, null, 2)); }
 
-function loadConfig()     { return readJSON(CONFIG_FILE) || {}; }
-function loadStatus()     { return readJSON(STATUS_FILE) || {}; }
-function loadState()      { return readJSON(STATE_FILE)  || {}; }
-function loadAgentState() { return readJSON(AGENT_STATE) || {}; }
-function saveAgentState(s){ fs.writeFileSync(AGENT_STATE, JSON.stringify(s, null, 2)); }
-
-function log(msg) {
-  const line = '[' + new Date().toISOString() + '] ' + msg;
-  console.log(line);
-  try { fs.appendFileSync('agent.log', line + '\n'); } catch {}
-}
-
-// ── Telegram ──────────────────────────────────────────────────────────────────
-async function tg(text) {
-  if (!TG_TOKEN || !TG_CHAT) return;
+function agentLog(msg, level='INFO') {
+  const line = `[${new Date().toISOString().slice(0,19)}] [${level}] ${msg}`;
+  console.log(`🤖 ${line}`);
   try {
-    const r = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: 'HTML' }),
-    });
-    const j = await r.json();
-    if (!j.ok) log('TG error: ' + JSON.stringify(j));
-  } catch(e) { log('TG send error: ' + e.message); }
-}
-
-let lastUpdateId = 0;
-async function pollTelegram() {
-  if (!TG_TOKEN) return;
-  try {
-    const r = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/getUpdates?offset=' + (lastUpdateId + 1) + '&timeout=10', {
-      signal: AbortSignal.timeout(15000),
-    });
-    const j = await r.json();
-    if (!j.ok || !j.result?.length) return;
-    for (const update of j.result) {
-      lastUpdateId = update.update_id;
-      const text = update.message?.text?.trim();
-      if (text) {
-        log('TG command: ' + text);
-        const reply = await handleCommand(text);
-        if (reply) await tg(reply);
-      }
-    }
+    const existing = fs.existsSync(AGENT_LOG) ? fs.readFileSync(AGENT_LOG,'utf8') : '';
+    const lines = existing.split('\n').filter(Boolean);
+    lines.push(line);
+    fs.writeFileSync(AGENT_LOG, lines.slice(-1000).join('\n') + '\n');
   } catch {}
 }
 
-// ── Command handlers ──────────────────────────────────────────────────────────
-async function handleCommand(text) {
-  const cmd = text.toLowerCase().trim();
+async function sendTG(text) {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(function(){controller.abort();}, 8000);
+    await fetch('https://api.telegram.org/bot'+process.env.TELEGRAM_TOKEN+'/sendMessage', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text, parse_mode:'HTML'}),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    // Log to agent feed (suppress if it's already a log entry)
+    const preview = text.replace(/<[^>]+>/g,'').split('\n')[0].slice(0,80);
+    if (!preview.startsWith('TG:')) agentLog('TG sent: '+preview);
+  } catch(e) { agentLog('Telegram send failed: '+e.message, 'WARN'); }
+}
 
-  // ── /status ────────────────────────────────────────────────────────────────
-  if (cmd === '/status') {
-    const status = loadStatus();
-    const state  = loadState();
-    const cfg    = loadConfig();
-    const age    = status.timestamp ? Math.round((Date.now() - new Date(status.timestamp).getTime()) / 1000) : 999;
-    const b      = status.liveBalances || {};
-    const total  = (b.solana||0) + (b.okx||0) + (b.bybit||0) + (b.kraken||0) + (b.coinbase||0);
-    const botOk  = age < 30;
-
-    return (botOk ? '✅' : '❌') + ' <b>arb-core v' + VERSION + '</b>\n' +
-      'Bot: ' + (botOk ? 'running' : 'STALE ' + age + 's') + '\n' +
-      'Regime: ' + (cfg.ACTIVE_REGIME || 'NEUTRAL') + '\n' +
-      'BUY_DEX: ' + (cfg.DISABLE_BUY_DEX ? 'DISABLED' : 'ENABLED') + '\n\n' +
-      '<b>Balances</b>\n' +
-      'Solana: $' + (b.solana||0).toFixed(2) + '\n' +
-      'OKX: $' + (b.okx||0).toFixed(2) + '\n' +
-      'Bybit: $' + (b.bybit||0).toFixed(2) + '\n' +
-      'Kraken: $' + (b.kraken||0).toFixed(2) + '\n' +
-      'Total: $' + total.toFixed(2) + '\n\n' +
-      '<b>P&L</b>\n' +
-      'Trades: ' + (state.totalTrades||0) + ' | Wins: ' + (state.totalWins||0) + '\n' +
-      'Profit: $' + (state.totalProfit||0).toFixed(4);
+function buildPairStats(trades) {
+  const stats = {};
+  const real = trades.filter(t => t.direction !== 'RECOVERY');
+  for (const t of real) {
+    if (!stats[t.pair]) stats[t.pair] = {
+      total:0, wins:0, losses:0, pnl:0, spreads:[], winSpreads:[], lossSpreads:[],
+      recentLosses:0, lastExchange:null, lastDate:null
+    };
+    const s = stats[t.pair];
+    s.total++;
+    s.pnl += t.profit||0;
+    s.spreads.push(t.spreadPct||0);
+    s.lastExchange = (t.direction||'').replace('BUY_','');
+    s.lastDate = t.date;
+    if (t.profit > 0) { s.wins++; s.winSpreads.push(t.spreadPct||0); }
+    else { s.losses++; s.lossSpreads.push(t.spreadPct||0); }
   }
-
-  // ── /balances ─────────────────────────────────────────────────────────────
-  if (cmd === '/balances') {
-    const b = loadStatus().liveBalances || {};
-    const total = Object.values(b).reduce((a,v) => a + (typeof v === 'number' ? v : 0), 0);
-    return '<b>Balances</b>\n' +
-      'Solana: $' + (b.solana||0).toFixed(2) + '\n' +
-      'OKX: $'    + (b.okx||0).toFixed(2) + '\n' +
-      'Bybit: $'  + (b.bybit||0).toFixed(2) + '\n' +
-      'Kraken: $' + (b.kraken||0).toFixed(2) + '\n' +
-      'Coinbase: $' + (b.coinbase||0).toFixed(2) + '\n' +
-      'Total: $'  + total.toFixed(2);
+  // Calculate derived stats
+  for (const [pair, s] of Object.entries(stats)) {
+    s.winRate = s.total ? s.wins/s.total : 0;
+    s.lossRate = s.total ? s.losses/s.total : 0;
+    s.avgSpread = s.spreads.length ? s.spreads.reduce((a,b)=>a+b,0)/s.spreads.length : 0;
+    s.avgWinSpread = s.winSpreads.length ? s.winSpreads.reduce((a,b)=>a+b,0)/s.winSpreads.length : 0;
+    s.minWinSpread = s.winSpreads.length ? Math.min(...s.winSpreads) : 0;
+    // Count consecutive recent losses (last 5 trades for this pair)
+    const pairTrades = real.filter(t=>t.pair===pair).slice(-5);
+    let consec = 0;
+    for (let i=pairTrades.length-1;i>=0;i--) { if(pairTrades[i].profit<=0)consec++;else break; }
+    s.recentLosses = consec;
   }
+  return stats;
+}
 
-  // ── /trades ───────────────────────────────────────────────────────────────
-  if (cmd === '/trades') {
-    const trades = readJSON(TRADES_FILE) || [];
-    const recent = trades.slice(-5).reverse();
-    if (!recent.length) return 'No trades yet';
-    const lines = recent.map(t =>
-      (t.outcome === 'WIN' ? '✅' : '❌') + ' ' +
-      t.pair + ' ' + t.direction + '\n' +
-      '  Spread: ' + (t.spreadPct||0).toFixed(3) + '% | P&L: ' + (t.profit >= 0 ? '+' : '') + '$' + (t.profit||0).toFixed(4) + '\n' +
-      '  ' + (t.date||'').slice(0,16).replace('T',' ')
-    ).join('\n\n');
-    return '<b>Recent Trades</b>\n\n' + lines;
+async function getBalances() {
+  // Read from bot-status liveBalances if available, else from state
+  const status = readJSON(STATUS_FILE)||{};
+  const state  = readJSON(STATE_FILE)||{};
+  return {
+    solana:   status.liveBalances?.solana   || null,
+    okx:      status.liveBalances?.okx      || null,
+    bybit:    status.liveBalances?.bybit    || null,
+    kraken:   status.liveBalances?.kraken   || null,
+    coinbase: status.liveBalances?.coinbase || null,
+  };
+}
+
+async function resyncState() {
+  const state  = readJSON(STATE_FILE)||{};
+  const trades = readJSON(TRADES_FILE)||[];
+  const real   = trades.filter(t=>t.direction!=='RECOVERY');
+  const wins   = real.filter(t=>t.profit>0).length;
+  const pnl    = real.reduce((a,t)=>a+(t.profit||0),0);
+  let cw=0; for(let i=real.length-1;i>=0;i--){if(real[i].profit>0)cw++;else break;}
+  const corrected = {...state, totalTrades:real.length, winningTrades:wins, totalProfit:pnl, consecutiveWins:cw, lastResync:new Date().toISOString()};
+  writeJSON(STATE_FILE, corrected);
+  agentLog(`State resynced: ${real.length} trades, ${wins} wins, P&L $${pnl.toFixed(2)}`);
+}
+
+function getRecentCrashLines() {
+  try {
+    const log = fs.readFileSync(CRASH_FILE,'utf8');
+    const lines = log.split('\n');
+    const cutoff = Date.now() - 60*60*1000; // last hour
+    return lines.filter(l => {
+      const match = l.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
+      return match && new Date(match[1]).getTime() > cutoff;
+    });
+  } catch { return []; }
+}
+
+function handleTelegramCommand(text, agentState) {
+  if (text === '/agent status') {
+    const paused = agentState[PAUSED_KEY];
+    return `🤖 Agent ${AGENT_VERSION}\nStatus: ${paused?'PAUSED':'RUNNING'}\nCycle: every 60s\nLast run: ${agentState.lastRun?.slice(0,19)||'never'}\nActions today: ${agentState.actionsToday||0}`;
   }
-
-  // ── /wins ─────────────────────────────────────────────────────────────────
-  if (cmd === '/wins') {
-    const trades = readJSON(TRADES_FILE) || [];
-    const wins   = trades.filter(t => t.outcome === 'WIN');
-    const losses = trades.filter(t => t.outcome === 'LOSS');
-    const profit = trades.reduce((a,t) => a + (t.profit||0), 0);
-    const wr     = trades.length ? Math.round(wins.length / trades.length * 100) : 0;
-    return '<b>Win/Loss Summary</b>\n' +
-      'Trades: ' + trades.length + '\n' +
-      'Wins: ' + wins.length + ' (' + wr + '%)\n' +
-      'Losses: ' + losses.length + '\n' +
-      'Total P&L: ' + (profit >= 0 ? '+' : '') + '$' + profit.toFixed(4);
+  if (text === '/agent pause') { agentState[PAUSED_KEY]=true; return '🤖 Agent paused — no autonomous actions will be taken'; }
+  if (text === '/agent resume') { agentState[PAUSED_KEY]=false; return '🤖 Agent resumed'; }
+  if (text === '/agent history') {
+    const history = (agentState.history||[]).slice(-10);
+    if (!history.length) return '🤖 No actions taken yet';
+    return '🤖 Last 10 actions:\n' + history.map(h=>`${h.time.slice(0,16)} ${h.rule}: ${h.changes.join(', ')}`).join('\n');
   }
-
-  // ── /rb confirm ───────────────────────────────────────────────────────────
-  if (cmd === '/rb confirm') {
-    const b = loadStatus().liveBalances || {};
-    const keys = ['solana','okx','bybit','kraken'].filter(k => b[k] > 0);
-    if (keys.length < 2) return '❌ Insufficient balance data for rebalance';
-    const total  = keys.reduce((a,k) => a + b[k], 0);
-    const target = total / keys.length;
-    const over   = keys.filter(k => b[k] > target * 1.08);
-    const under  = keys.filter(k => b[k] < target * 0.92);
-    if (!over.length || !under.length) {
-      return '✅ Balances already within 8% tolerance\n' +
-        keys.map(k => k + ': $' + b[k].toFixed(2)).join('\n') +
-        '\nTarget: $' + target.toFixed(2);
-    }
-    // Write rebalance flag for bot to pick up
-    const cfg = loadConfig();
-    cfg.REBALANCE_NOW = true;
-    cfg.REBALANCE_TARGET = target;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-    return '⚖️ Rebalance triggered\nTarget: $' + target.toFixed(2) + ' per exchange\n' +
-      'Over: ' + over.map(k => k + ' $' + b[k].toFixed(2)).join(', ') + '\n' +
-      'Under: ' + under.map(k => k + ' $' + b[k].toFixed(2)).join(', ') + '\n' +
-      'Bot will execute within 30s';
+  if (text === '/agent report') return '__FORCE_REPORT__';
+  if (text === '/agent macro') return '__SHOW_MACRO__';
+  if (text === '/agent approve-thresholds') {
+    // Read fresh from file — in-memory agentState may not have latest
+    const freshState = readJSON(AGENT_FILE) || {};
+    const pending = freshState.pendingThresholdChanges || [];
+    if (!pending.length) return '🔍 [AGENT] No pending threshold changes\nSend /agent thresholds to check status';
+    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname,'arb-config.json'),'utf8'));
+    if (!cfg.DEX_THRESHOLD_OVERRIDES) cfg.DEX_THRESHOLD_OVERRIDES = {};
+    const changes = pending.map(p => {
+      cfg.DEX_THRESHOLD_OVERRIDES[p.symbol] = p.to;
+      return p.symbol + ': ' + p.from + '% → ' + p.to + '%';
+    });
+    fs.writeFileSync(path.join(__dirname,'arb-config.json'), JSON.stringify(cfg, null, 2));
+    freshState.pendingThresholdChanges = [];
+    writeJSON(AGENT_FILE, freshState);
+    agentLog('Thresholds approved: ' + changes.join(', '));
+    return '🔍 [AGENT] Thresholds applied:\n' + changes.join('\n') + '\nConfig reloads in 30s.';
   }
-
-  // ── /crash ────────────────────────────────────────────────────────────────
-  if (cmd === '/crash') {
+  if (text === '/agent listings') {
     try {
-      const lines = fs.readFileSync(CRASH_FILE, 'utf8').split('\n').filter(Boolean);
-      const last5 = lines.slice(-5).join('\n');
-      return '<b>Last crash entries:</b>\n' + last5;
-    } catch { return 'No crash log found'; }
-  }
-
-  // ── /pause / /resume ──────────────────────────────────────────────────────
-  if (cmd === '/pause') {
-    const cfg = loadConfig();
-    cfg.DISABLE_BUY_DEX = true;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-    return '⏸️ Trading paused — BUY_DEX disabled';
-  }
-
-  if (cmd === '/resume') {
-    const cfg = loadConfig();
-    cfg.DISABLE_BUY_DEX = false;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-    return '▶️ Trading resumed — BUY_DEX enabled';
-  }
-
-  // ── /regime ───────────────────────────────────────────────────────────────
-  if (cmd === '/regime') {
-    try {
-      const sm = require('./strategy');
-      return sm.generateReport();
-    } catch(e) { return '❌ Strategy error: ' + e.message; }
-  }
-
-  if (cmd === '/regime check') {
-    try {
-      const sm  = require('./strategy');
-      const cfg = loadConfig();
-      await tg('🔍 Checking market regime...');
-      const changed = await sm.checkAndApply(cfg, CONFIG_FILE);
-      const newCfg  = loadConfig();
-      return '✅ Regime check complete\nRegime: ' + newCfg.ACTIVE_REGIME + (changed ? ' (CHANGED)' : ' (unchanged)');
-    } catch(e) { return '❌ ' + e.message; }
-  }
-
-  // ── /thresholds ───────────────────────────────────────────────────────────
-  if (cmd === '/thresholds') {
-    try {
-      const te = require('./threshold');
-      return te.generateReport();
-    } catch(e) { return '❌ ' + e.message; }
-  }
-
-  // ── /calibrate ────────────────────────────────────────────────────────────
-  if (cmd === '/calibrate') {
-    try {
-      const te = require('./threshold');
-      te.calibrateFromHistory(TRADES_FILE);
-      return te.generateReport();
-    } catch(e) { return '❌ ' + e.message; }
-  }
-
-  // ── /funding ──────────────────────────────────────────────────────────────
-  if (cmd === '/funding') {
-    try {
-      const fa = require('./funding-arb');
-      const pairs = ['SOL','JTO','WIF','PENGU','PNUT'];
-      await tg('📡 Fetching funding rates...');
-      const report = await fa.generateFundingReport(pairs);
-      return report;
-    } catch(e) { return '❌ ' + e.message; }
-  }
-
-  // ── /listings ─────────────────────────────────────────────────────────────
-  if (cmd === '/listings') {
-    try {
-      const lm = require('./listing-monitor');
+      const lm=require('./listing-monitor');
       return lm.generateListingReport();
-    } catch(e) { return '❌ ' + e.message; }
+    } catch(e) { return '🔍 [AGENT] Listing report error: '+e.message; }
   }
-
-  // ── /scan-okx ─────────────────────────────────────────────────────────────
-  if (cmd === '/scan-okx') {
-    tg('🔍 Starting OKX universe scan (~5min)...').catch(()=>{});
-    require('./listing-monitor').scanFullOKXUniverse(tg)
-      .then(r => tg('✅ OKX scan: ' + r.added + ' new pairs from ' + r.total + ' checked').catch(()=>{}))
-      .catch(e => tg('❌ ' + e.message).catch(()=>{}));
-    return null;
+  if (text === '/agent strategy') { try{const sm=require('./strategy-manager');return sm.generateReport();}catch(e){return 'Strategy error: '+e.message;} }
+  if (text === '/agent strategy check') { require('./strategy-manager').checkAndSwap(sendTG).catch(()=>{}); return null; }
+  if (text === '/agent funding') { require('./funding-arb').generateFundingReport(['SOL','JTO','WIF','PENGU','PNUT']).then(r=>sendTG(r)).catch(e=>sendTG('Error: '+e.message)); return null; }
+  if (text === '/agent listings') { try{const lm=require('./listing-monitor');return lm.generateListingReport();}catch(e){return 'Error: '+e.message;} }
+  if (text === '/agent scan-okx') { require('./listing-monitor').scanFullOKXUniverse(sendTG).catch(()=>{}); return null; }
+  if (text === '/agent calibrate') { try{const te=require('./threshold-engine');te.calibrateFromHistory();return te.generateReport();}catch(e){return 'Error: '+e.message;} }
+  if (text === '/agent pair-thresholds') { try{const te=require('./threshold-engine');return te.generateReport();}catch(e){return 'Error: '+e.message;} }
+  if (text === '/agent dex-arb on') { const c=JSON.parse(require('fs').readFileSync('arb-config.json'));c.DEX_ARB_ENABLED=true;require('fs').writeFileSync('arb-config.json',JSON.stringify(c,null,2));return 'DEX-ARB enabled'; }
+  if (text === '/agent dex-arb off') { const c=JSON.parse(require('fs').readFileSync('arb-config.json'));c.DEX_ARB_ENABLED=false;require('fs').writeFileSync('arb-config.json',JSON.stringify(c,null,2));return 'DEX-ARB disabled'; }
+  if (text === '/agent skip-thresholds') {
+    const freshState = readJSON(AGENT_FILE) || {};
+    freshState.pendingThresholdChanges = [];
+    writeJSON(AGENT_FILE, freshState);
+    return '🔍 [AGENT] Threshold recommendations dismissed';
   }
-
-  // ── /dex on|off ───────────────────────────────────────────────────────────
-  if (cmd === '/dex on') {
-    const cfg = loadConfig();
-    cfg.DEX_ARB_ENABLED = true;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-    return '⚡ DEX arb enabled';
+  if (text === '/agent thresholds') {
+    const freshState = readJSON(AGENT_FILE) || {};
+    const pending = freshState.pendingThresholdChanges || [];
+    if (!pending.length) return '🔍 [AGENT] No pending threshold recommendations';
+    const lines = pending.map(p => p.symbol + ': ' + p.from + '% → ' + p.to + '%\n  Reason: ' + p.reason).join('\n');
+    return '🔍 [AGENT] Pending threshold changes:\n' + lines + '\n\n/agent approve-thresholds to apply\n/agent skip-thresholds to dismiss';
   }
-
-  if (cmd === '/dex off') {
-    const cfg = loadConfig();
-    cfg.DEX_ARB_ENABLED = false;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-    return '⚡ DEX arb disabled';
-  }
-
-  // ── /help ─────────────────────────────────────────────────────────────────
-  if (cmd === '/help') {
-    return '<b>arb-core v' + VERSION + ' Commands</b>\n\n' +
-      '/status — bot health + balances + P&L\n' +
-      '/balances — exchange balances\n' +
-      '/trades — last 5 trades\n' +
-      '/wins — win/loss summary\n' +
-      '/rb — show rebalance plan\n' +
-      '/rb confirm — execute rebalance\n' +
-      '/crash — last crash log\n' +
-      '/pause — pause trading\n' +
-      '/resume — resume trading\n' +
-      '/regime — current market regime\n' +
-      '/regime check — force regime re-check\n' +
-      '/thresholds — pair thresholds\n' +
-      '/calibrate — recalibrate from history\n' +
-      '/funding — funding rates\n' +
-      '/listings — listing monitor\n' +
-      '/scan-okx — full OKX universe scan\n' +
-      '/dex on|off — toggle DEX arb';
-  }
-
-  return null; // unknown command
+  return null;
 }
 
-// ── Automated monitoring rules ────────────────────────────────────────────────
-async function runRules() {
-  const status    = loadStatus();
-  const cfg       = loadConfig();
-  const agentState= loadAgentState();
-  const now       = Date.now();
+const AGENT_CMD_FILE = path.join(__dirname, 'agent-cmd.json');
 
-  // Rule 1: Bot stale alert
-  if (status.timestamp) {
-    const age = (now - new Date(status.timestamp).getTime()) / 1000;
-    const lastAlert = agentState.lastStaleAlert || 0;
-    if (age > 180 && now - lastAlert > 5 * 60 * 1000) {
-      await tg('🚨 <b>Bot stale ' + Math.round(age) + 's</b> — may be crashed. Check watchdog.');
-      agentState.lastStaleAlert = now;
-      saveAgentState(agentState);
-    }
-  }
-
-  // Rule 2: Strategy regime check (every 5 minutes)
-  const lastRegime = agentState.lastRegimeCheck || 0;
-  if (now - lastRegime > 5 * 60 * 1000) {
-    try {
-      const sm      = require('./strategy');
-      const changed = await sm.checkAndApply(cfg, CONFIG_FILE);
-      if (changed) {
-        const newCfg = loadConfig();
-        const emoji  = newCfg.ACTIVE_REGIME === 'BULL' ? '🟢' : newCfg.ACTIVE_REGIME === 'BEAR' ? '🔴' : '🟡';
-        await tg(emoji + ' <b>Regime changed → ' + newCfg.ACTIVE_REGIME + '</b>\n' + sm.generateReport());
-      }
-      agentState.lastRegimeCheck = now;
-      saveAgentState(agentState);
-    } catch(e) { log('Regime check error: ' + e.message); }
-  }
-
-  // Rule 3: Spread approaching threshold alert (every 5 minutes)
-  const lastSpread = agentState.lastSpreadAlert || 0;
-  if (now - lastSpread > 5 * 60 * 1000) {
-    try {
-      const live = readJSON(LIVE_FILE);
-      const liveAge = live ? (now - new Date(live.timestamp).getTime()) / 1000 : 999;
-      if (liveAge < 30 && live.pairs) {
-        const approaching = live.pairs.filter(p =>
-          p.spreadDex > 0 && p.spreadDex > p.dexThresh * 0.5
-        );
-        if (approaching.length > 0) {
-          const lines = approaching.map(p =>
-            p.name.replace('/USDT','') + ': ' + p.spreadDex.toFixed(3) + '% (thr:' + p.dexThresh.toFixed(2) + '%)'
-          ).join('\n');
-          await tg('📡 <b>Spreads approaching threshold</b>\n' + lines);
-          agentState.lastSpreadAlert = now;
-          saveAgentState(agentState);
+async function checkCommands(agentState) {
+  try {
+    if (!fs.existsSync(AGENT_CMD_FILE)) return;
+    const cmds = JSON.parse(fs.readFileSync(AGENT_CMD_FILE,'utf8'));
+    if (!cmds.length) return;
+    // Process each command
+    for (const cmd of cmds) {
+      agentLog('Command received: ' + cmd.text);
+      const response = handleTelegramCommand(cmd.text, agentState);
+      if (response === '__FORCE_REPORT__') {
+        agentState.lastDailyReport = 0;
+        agentState.lastOutlookReport = 0;
+        await sendTG('Forcing outlook report on next cycle...');
+      } else if (response === '__SHOW_MACRO__') {
+        const mcFile = path.join(__dirname, 'macro-context.json');
+        if (require('fs').existsSync(mcFile)) {
+          const mc = JSON.parse(require('fs').readFileSync(mcFile,'utf8'));
+          const t = mc.themes?.[0];
+          if (t) {
+            await sendTG('<b>Current Macro Context</b>\n' + t.date + ': ' + t.headline + '\nPhase: ' + (mc.structuralInsights?.marketPhase||'unknown') + '\nSentiment: ' + t.sentiment + '\nImplications:\n' + t.implications.slice(0,3).map(function(i){return '• '+i;}).join('\n'));
+          }
+        } else {
+          await sendTG('No macro context file found');
         }
+      } else if (response) {
+        await sendTG(response);
       }
-    } catch {}
+    }
+    // Clear processed commands
+    fs.writeFileSync(AGENT_CMD_FILE, '[]');
+  } catch(e) { agentLog('Command check error: ' + e.message, 'WARN'); }
+}
+
+async function runCycle(agentState) {
+  if (agentState[PAUSED_KEY]) { agentLog('Agent paused — skipping cycle'); return; }
+
+  const config  = readJSON(CONFIG_FILE)||{};
+  // Snapshot only agent-owned keys to avoid false positives from bot writes
+  const AGENT_OWNED_SNAP = ['POLICY_SKIP_OKX','POLICY_SKIP_BYBIT','PAIR_MIN_SPREAD','TEMP_SKIPS','MIN_SPREAD_CEX','MIN_SPREAD_KRAKEN','TRADE_SIZE_BYBIT','DEX_THRESHOLD_OVERRIDES'];
+  const configBefore = JSON.stringify(AGENT_OWNED_SNAP.reduce(function(a,k){a[k]=config[k];return a;},{}));
+  const state   = readJSON(STATE_FILE)||{};
+  const trades  = readJSON(TRADES_FILE)||[];
+  const fires   = readJSON(FIRES_FILE)||[];
+  const botStatus = readJSON(STATUS_FILE)||{};
+  const real    = trades.filter(t=>t.direction!=='RECOVERY');
+  const pairStats = buildPairStats(trades);
+  const balances  = await getBalances();
+  const pending   = [...(botStatus.pendingDex||[]), ...(botStatus.pendingOkx||[]), ...(botStatus.pendingBybit||[])];
+  const recentCrashLines = getRecentCrashLines();
+
+  // Get market data (cached, refreshes every 30min)
+  let marketData = getMarketData();
+  if (!marketData) {
+    agentLog('Refreshing market data...');
+    marketData = await fetchMarketData(config.TRADE_SIZE_USD || 120);
   }
 
-  // Rule 4: Low balance warning
-  const lastBalAlert = agentState.lastBalAlert || 0;
-  if (now - lastBalAlert > 60 * 60 * 1000) {
-    const b = status.liveBalances || {};
-    const low = Object.entries(b).filter(([k,v]) => typeof v === 'number' && v > 0 && v < 50 && k !== 'total');
-    if (low.length > 0) {
-      await tg('⚠️ <b>Low balance warning</b>\n' + low.map(([k,v]) => k + ': $' + v.toFixed(2)).join('\n'));
-      agentState.lastBalAlert = now;
-      saveAgentState(agentState);
+  // Get funding data (cached 15min)
+  let fundingData = getFundingData();
+  if (!fundingData) {
+    try {
+      fundingData = await fetchFundingRates();
+      if (fundingData && fundingData.signals.length > 0) {
+        agentLog('Funding: '+fundingData.signals.map(function(s){return s.sym+' '+( s.rate*100).toFixed(3)+'%';}).join(', '));
+      }
+    } catch(e) { agentLog('Funding fetch error: '+e.message,'WARN'); }
+  }
+
+  // Load macro context (manually updated from news/research)
+  let macroContext = null;
+  try {
+    const mcFile = path.join(__dirname, 'macro-context.json');
+    if (require('fs').existsSync(mcFile)) {
+      macroContext = JSON.parse(require('fs').readFileSync(mcFile,'utf8'));
+    }
+  } catch {}
+
+  const ctx = {
+    config, state, trades, fires, pairStats, balances, pending,
+    botStatus, agentState, recentCrashLines, marketData, fundingData, macroContext,
+    realTradeCount: real.length,
+    sendTG, resyncState,
+  };
+
+  let configChanged = false;
+  const allChanges = [];
+
+  const now = Date.now();
+  for (const rule of rules) {
+    try {
+      // Cooldown: info rules max once per hour, warn once per 30min, critical always
+      const lastFired = agentState.ruleCooldowns?.[rule.id] || 0;
+      const cooldown = rule.severity === 'critical' ? 0 : rule.severity === 'warn' ? 30*60*1000 : 60*60*1000;
+      if (cooldown > 0 && now - lastFired < cooldown) continue;
+
+      const issues = rule.detect(ctx);
+      if (!issues) continue;
+
+      // Record fire time
+      if (!agentState.ruleCooldowns) agentState.ruleCooldowns = {};
+      agentState.ruleCooldowns[rule.id] = now;
+
+      agentLog(`Rule triggered: ${rule.name} (${rule.severity})`, rule.severity === 'critical' ? 'WARN' : 'INFO');
+      const changes = await rule.action(ctx, issues);
+
+      if (changes && changes.length) {
+        allChanges.push(...changes.map(c => ({ time: new Date().toISOString(), rule: rule.id, changes: [c], severity: rule.severity })));
+        for (const c of changes) agentLog(`Action: ${c}`);
+        configChanged = true;
+      }
+    } catch(e) {
+      agentLog(`Rule ${rule.id} error: ${e.message}`, 'ERROR');
     }
   }
+
+  // Only watch agent-owned keys — bot writes other fields (APPROACH_BANDS etc)
+  const AGENT_OWNED = ['POLICY_SKIP_OKX','POLICY_SKIP_BYBIT','PAIR_MIN_SPREAD',
+    'TEMP_SKIPS','MIN_SPREAD_CEX','MIN_SPREAD_KRAKEN','TRADE_SIZE_BYBIT','DEX_THRESHOLD_OVERRIDES'];
+  const before = JSON.parse(configBefore);
+  const changedKeys = AGENT_OWNED.filter(function(k) {
+    return JSON.stringify(ctx.config[k]) !== JSON.stringify(before[k]);
+  });
+  if (changedKeys.length > 0) {
+    agentLog('Config changed: ' + changedKeys.join(', ') + ' by: ' + allChanges.map(function(c){return c.rule;}).join(', '));
+    // Re-read config fresh before writing to avoid overwriting bot changes
+    const freshConfig = readJSON(CONFIG_FILE) || {};
+    for (const k of AGENT_OWNED) { freshConfig[k] = ctx.config[k]; }
+    // Clean up expired TEMP_SKIPS before writing
+    if (freshConfig.TEMP_SKIPS) {
+      const now2 = Date.now();
+      Object.keys(freshConfig.TEMP_SKIPS).forEach(function(k) {
+        if (freshConfig.TEMP_SKIPS[k] < now2) delete freshConfig.TEMP_SKIPS[k];
+      });
+    }
+    writeJSON(CONFIG_FILE, freshConfig);
+    agentLog('Config updated — bot will hot-reload within 30s');
+    const configChanges = allChanges.filter(function(c) { return c.severity !== 'info' || c.changes[0].includes('%') || c.changes[0].includes('skip'); });
+    if (configChanges.length) {
+      const msgs = configChanges.map(function(c) { return '• ' + c.changes[0]; }).join('\n');
+      await sendTG('Agent Actions\n' + msgs);
+    }
+  }
+
+  // Update agent state
+  agentState.lastRun = new Date().toISOString();
+  agentState.history = [...(agentState.history||[]), ...allChanges].slice(-100);
+  agentState.actionsToday = (agentState.actionsToday||0) + allChanges.length;
+  // Reset daily action count at midnight
+  const today = new Date().toISOString().slice(0,10);
+  if (agentState.lastActionDate !== today) { agentState.actionsToday = allChanges.length; agentState.lastActionDate = today; }
+
+  writeJSON(AGENT_FILE, agentState);
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  log('Agent v' + VERSION + ' starting');
-  await tg('🤖 <b>Agent v' + VERSION + ' online</b>\n/help for commands');
+  agentLog('Agent ' + AGENT_VERSION + ' starting...');
+  sendTG('🔍 [AGENT] ' + AGENT_VERSION + ' online | /agent status | report | macro | pause | resume').catch(function(){});
 
-  // Poll Telegram every 3 seconds
-  setInterval(pollTelegram, 3000);
+  let agentState = readJSON(AGENT_FILE) || { history: [], lastDailyReport: 0 };
+  // Clean up any stale TEMP_SKIPS on startup
+  try {
+    const cfg = readJSON(CONFIG_FILE) || {};
+    if (cfg.TEMP_SKIPS) {
+      const now0 = Date.now();
+      let cleaned = false;
+      Object.keys(cfg.TEMP_SKIPS).forEach(function(k) {
+        if (cfg.TEMP_SKIPS[k] < now0) { delete cfg.TEMP_SKIPS[k]; cleaned = true; }
+      });
+      if (cleaned) { writeJSON(CONFIG_FILE, cfg); agentLog('Cleaned stale TEMP_SKIPS on startup'); }
+    }
+  } catch(e) {}
+  // Initialise command file
+  if (!fs.existsSync(AGENT_CMD_FILE)) fs.writeFileSync(AGENT_CMD_FILE, '[]');
 
-  // Run monitoring rules every minute
-  setInterval(runRules, POLL_MS);
+  // Run first cycle after 5 second delay to allow process to settle
+  await new Promise(function(r){setTimeout(r,5000);});
+  try {
+    await Promise.race([
+      runCycle(agentState),
+      new Promise(function(_,rej){setTimeout(function(){rej(new Error('First cycle timeout'));},30000);})
+    ]);
+  } catch(e) { agentLog('First cycle error: '+e.message, 'ERROR'); }
 
-  // Run rules immediately on start
-  await runRules();
+  // Check commands every 10 seconds for fast response
+  setInterval(async () => {
+    try { await checkCommands(agentState); }
+    catch(e) { agentLog('Command check error: '+e.message, 'ERROR'); }
+  }, 10 * 1000);
+
+  // News trawl every 4 hours
+  setInterval(async () => {
+    try {
+      const result = await Promise.race([
+        runNewsTrawl(sendTG),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('News timeout'));},60000);})
+      ]);
+      if (result && result.relevant > 0) {
+        const digest = formatDigest(result);
+        if (digest) {
+          agentLog('News: ' + result.relevant + ' relevant articles, ' + result.urgent + ' urgent');
+          await sendTG(digest);
+        }
+      } else {
+        agentLog('News trawl: no new relevant articles');
+      }
+    } catch(e) { agentLog('News trawl error: '+e.message, 'WARN'); }
+  }, 4 * 60 * 60 * 1000);
+
+  // Scan for new listings and news every 5 minutes
+  setInterval(async () => {
+    try {
+      const result = await Promise.race([
+        runListingMonitor(),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('Listing timeout'));},60000);})
+      ]);
+      if (result && (result.newOKX > 0 || result.newBybit > 0 || result.newKraken > 0 || result.newCoinbase > 0)) {
+        agentLog('New listings: OKX +' + result.newOKX + ' Bybit +' + result.newBybit + ' Kraken +' + result.newKraken + ' Coinbase +' + (result.newCoinbase||0));
+      }
+    } catch(e) { agentLog('Listing scan error: '+e.message, 'ERROR'); }
+  }, 5 * 60 * 1000);
+
+  // Run full analysis cycle every 60 seconds
+  setInterval(async () => {
+    try {
+      await Promise.race([
+        runCycle(agentState),
+        new Promise(function(_,rej){setTimeout(function(){rej(new Error('Cycle timeout'));},45000);})
+      ]);
+    }
+    catch(e) { agentLog('Cycle error: '+e.message, 'ERROR'); }
+  }, CYCLE_MS);
 }
 
-main().catch(e => {
-  log('Agent fatal: ' + e.message);
-  process.exit(1);
-});
+main().catch(e => { agentLog('Fatal: '+e.message, 'ERROR'); process.exit(1); });
