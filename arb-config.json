@@ -6,8 +6,7 @@
     "GOAT",
     "RAY",
     "RENDER",
-    "TRUMP",
-    "JTO"
+    "TRUMP"
   ],
   "POLICY_SKIP_BYBIT": [
     "BOME",
@@ -17,10 +16,10 @@
     "MEW",
     "POPCAT",
     "TRUMP",
+    "JTO",
     "RAY",
     "RENDER",
-    "ZEUS",
-    "JTO"
+    "ZEUS"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
@@ -80,8 +79,10 @@
     "RAY": 3.5,
     "PNUT": 9.5
   },
-  "TEMP_SKIPS": {},
-  "lastTestDate": "2026-08-23T06:02:39.204Z",
+  "TEMP_SKIPS": {
+    "TRUMP:POLICY_SKIP_OKX": 1788161437187
+  },
+  "lastTestDate": "2026-08-30T06:02:06.408Z",
   "lastTestSummary": {
     "passed": 96,
     "failed": 5,
@@ -96,7 +97,7 @@
   "FUNDING_ARB_ENABLED": false,
   "TRIANGULAR_ARB_ENABLED": true,
   "ACTIVE_REGIME": "NEUTRAL",
-  "REGIME_SINCE": "2026-08-29T16:02:51.871Z",
+  "REGIME_SINCE": "2026-08-30T12:21:04.207Z",
   "POLICY_SKIP_DEX": [
     "TRUMP",
     "BOME",
