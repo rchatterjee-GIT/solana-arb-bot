@@ -19,9 +19,9 @@ const CONFIG_FILE     = path.join(__dirname, 'arb-config.json');
 const TRADES_FILE     = path.join(__dirname, 'trades.json');
 
 // Floors — never go below these regardless of data
-const MIN_THRESHOLD    = 1.2;  // absolute minimum spread % to fire
+const MIN_THRESHOLD    = 0.60; // absolute minimum spread % to fire
 const MAX_THRESHOLD    = 5.0;  // absolute maximum (pair effectively disabled above this)
-const BUFFER_PCT       = 0.10; // 10% buffer on top of calculated threshold
+const BUFFER_PCT       = 0.05; // 5% buffer on top of calculated threshold
 const OBSERVATION_MINS = 60;   // minutes to observe a new pair before setting threshold
 const BREAK_EVEN_BUFFER = 0.30; // add 0.30% on top of break-even for new pairs
 
@@ -38,6 +38,17 @@ function saveThresholds(thresholds) {
 // ── Get effective threshold for a pair ───────────────────────────────────────
 function getThreshold(symbol) {
   const thresholds = loadThresholds();
+  // Config override takes priority over learned thresholds
+  const configOverride = (function() {
+    try {
+      const cfg = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "arb-config.json"), "utf8"));
+      return cfg.DEX_THRESHOLD_OVERRIDES && cfg.DEX_THRESHOLD_OVERRIDES[symbol] != null ? cfg.DEX_THRESHOLD_OVERRIDES[symbol] : null;
+    } catch { return null; }
+  })();
+  if (configOverride != null) {
+    const buffered = configOverride * (1 + BUFFER_PCT);
+    return Math.max(MIN_THRESHOLD, buffered);
+  }
   const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
 
   // 1. Check pair-thresholds.json (dynamic)
