@@ -6,7 +6,8 @@
     "GOAT",
     "RAY",
     "RENDER",
-    "TRUMP"
+    "TRUMP",
+    "JTO"
   ],
   "POLICY_SKIP_BYBIT": [
     "BOME",
@@ -16,10 +17,10 @@
     "MEW",
     "POPCAT",
     "TRUMP",
-    "JTO",
     "RAY",
     "RENDER",
-    "ZEUS"
+    "ZEUS",
+    "JTO"
   ],
   "RECOVERY_SKIP_BYBIT": [
     "SOL"
@@ -97,7 +98,7 @@
   "FUNDING_ARB_ENABLED": false,
   "TRIANGULAR_ARB_ENABLED": true,
   "ACTIVE_REGIME": "NEUTRAL",
-  "REGIME_SINCE": "2026-08-30T12:21:04.207Z",
+  "REGIME_SINCE": "2026-08-30T14:17:36.103Z",
   "POLICY_SKIP_DEX": [
     "TRUMP",
     "BOME",

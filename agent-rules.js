@@ -489,12 +489,12 @@ module.exports = [
       
       // DEX pairs with their base thresholds and volume tiers
       const DEX_PAIRS = [
-        { sym: 'JTO',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 30e6,  minVol2: 50e6  },
-        { sym: 'RAY',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 10e6,  minVol2: 25e6  },
-        { sym: 'PENGU', base: 4.5, aggressive: 3.0, conservative: 5.0, minVol: 20e6,  minVol2: 50e6  },
-        { sym: 'W',     base: 3.2, aggressive: 2.5, conservative: 3.5, minVol: 15e6,  minVol2: 40e6  },
-        { sym: 'WIF',   base: 2.5, aggressive: 2.0, conservative: 3.0, minVol: 20e6,  minVol2: 50e6  },
-        { sym: 'PNUT',  base: 3.5, aggressive: 2.5, conservative: 4.0, minVol: 10e6,  minVol2: 25e6  },
+        { sym: 'JTO',   base: 0.80, aggressive: 0.70, conservative: 1.20, minVol: 30e6,  minVol2: 50e6  },
+        { sym: 'RAY',   base: 2.50, aggressive: 2.00, conservative: 3.00, minVol: 10e6,  minVol2: 25e6  },
+        { sym: 'PENGU', base: 1.00, aggressive: 0.80, conservative: 1.50, minVol: 20e6,  minVol2: 50e6  },
+        { sym: 'W',     base: 1.20, aggressive: 1.00, conservative: 1.80, minVol: 15e6,  minVol2: 40e6  },
+        { sym: 'WIF',   base: 1.00, aggressive: 0.80, conservative: 1.50, minVol: 20e6,  minVol2: 50e6  },
+        { sym: 'PNUT',  base: 1.20, aggressive: 1.00, conservative: 1.80, minVol: 10e6,  minVol2: 25e6  },
       ];
 
       const adjustments = [];
