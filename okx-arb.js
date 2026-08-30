@@ -1876,7 +1876,7 @@ async function checkAndExecute() {
         const okxViable   = !liveConfig.DISABLE_BUY_OKX && !(liveConfig.POLICY_SKIP_OKX||[]).includes(pair.okxCcy);
         const bybitViable = bybit && !liveConfig.DISABLE_BUY_BYBIT && !(liveConfig.POLICY_SKIP_BYBIT||[]).includes(pair.okxCcy);
         const cbViable    = COINBASE_PAIRS.has(pair.okxCcy) && dexEnabled && !(liveConfig.POLICY_SKIP_COINBASE||[]).includes(pair.okxCcy);
-        const cbBid = null, cbAsk = null, spreadSellCoinbase = -999, estSellCoinbase = -999;
+        process.stdout.write(new Date().toLocaleTimeString()+" "+pair.name+" DEX:"+spreadDex.toFixed(2)+"\n");        const cbBid = null, cbAsk = null, spreadSellCoinbase = -999, estSellCoinbase = -999;
         return { pair, okx, bybit, quoteBuy, tokenOut, dexAsk, bestBidCex, dexThresh, dexEnabled, okxViable, bybitViable, spreadOKX, netOKX, spreadBybit, netBybit, spreadDex, netDex, estOKX, estBybit, estDex, cbBid, cbAsk, spreadSellCoinbase, estSellCoinbase, cbViable };
       })
     );
