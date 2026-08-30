@@ -2955,16 +2955,16 @@ async function handleRebalanceCommand(confirm = false) {
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error(label + ' timeout')), 15000))
     ]);
-    const w       = await withTimeout(getWalletBalances(), 'getWalletBalances');
-    const okxData = await withTimeout(getOKXBalances(),    'getOKXBalances');
-    const bybit   = await withTimeout(getBybitEquity(),    'getBybitEquity');
+    // balances read from bot-status.json liveBalances (updated every 60s)
+
+
     const statusData = JSON.parse(fs.readFileSync(path.join(__dirname,'bot-status.json'),'utf8'));
     const lb = statusData.liveBalances || {};
 
     const balances = {
-      Solana:   w.usdc              || 0,
-      OKX:      okxData.usdt        || 0,
-      Bybit:    bybit               || 0,
+      Solana:   lb.solana   || 0,
+      OKX:      lb.okx      || 0,
+      Bybit:    lb.bybit    || 0,
       Kraken:   lb.kraken           || 0,
       Coinbase: lb.coinbase         || 0,
     };
