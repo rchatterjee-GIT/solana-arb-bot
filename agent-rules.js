@@ -32,6 +32,7 @@ module.exports = [
       for (const issue of issues) {
         const { ccy, exchange } = issue;
         // Add to appropriate skip list for 24 hours
+        if ((exchange === 'OKX' && ctx.config.DISABLE_BUY_OKX) || (exchange === 'Bybit' && ctx.config.DISABLE_BUY_BYBIT)) continue;
         const skipKey = exchange === 'OKX' ? 'POLICY_SKIP_OKX' : exchange === 'Bybit' ? 'POLICY_SKIP_BYBIT' : null;
         if (skipKey && !ctx.config[skipKey].includes(ccy)) {
           ctx.config[skipKey].push(ccy);
