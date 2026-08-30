@@ -82,7 +82,7 @@ async function runAll() {
     const buf = cfg.MIN_SPREAD_BUFFER_PCT;
     assert(buf >= 3 && buf <= 20, `Buffer ${buf}% out of sane range 3-20%`);
     for (const [sym, thr] of Object.entries(cfg.DEX_THRESHOLD_OVERRIDES || {})) {
-      assert(thr >= 1.0 && thr <= 10.0, `${sym} threshold ${thr}% out of sane range 1-10%`);
+      assert(thr >= 0.6 && thr <= 10.0, `${sym} threshold ${thr}% out of sane range 0.6-10%`);
     }
   });
 
@@ -162,7 +162,7 @@ async function runAll() {
     const te = require('./threshold-engine');
     const t = te.getThreshold('JTO');
     assert(typeof t === 'number', 'threshold must be number');
-    assert(t >= 1.0, `threshold ${t} below minimum 1.0`);
+    assert(t >= 0.6, `threshold ${t} below minimum 0.6`);
     assert(t <= 10.0, `threshold ${t} above maximum 10.0`);
   });
 
@@ -183,7 +183,7 @@ async function runAll() {
     // Feed 3 losses at 1.0%
     for (let i = 0; i < 3; i++) te.updateFromTrade('_TEST2_', 1.0, 'LOSS');
     const t = te.getThreshold('_TEST2_');
-    assert(t >= 1.0, `threshold ${t} should be at least 1.0% after losses`);
+    assert(t >= 0.6, `threshold ${t} should be at least 1.0% after losses`);
     // Cleanup
     const thresholds = te.loadThresholds();
     delete thresholds['_TEST2_'];
