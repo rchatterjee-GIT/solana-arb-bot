@@ -2903,9 +2903,25 @@ async function executeRebalanceMove(move) {
     const KRAKEN_USDT_ADDR = 'CJoM8s3uaPRV4gfAB1Ru2QXp8E6AVm8uWyWnHxFYnaSL';
     await withdrawUSDTFromOKX(move.amount, KRAKEN_USDT_ADDR, 'USDT-Solana');
   } else if (move.method === 'kraken-to-sol') {
-    const kraken = getKraken();
-    if (!kraken) throw new Error('Kraken module not available');
-    await kraken.withdrawFromKraken('USDT', move.amount.toString());
+    // Kraken→Solana: use named withdrawal key 'solana-bot' (pre-configured in Kraken account)
+    // Asset: USDT, Key: 'solana-bot', verified address: wSyZPy2NrfFtUFqzwmDvurDrqw5JXysZ22uLnq1AQaa
+    const nonce = '' + Date.now();
+    const postData = 'nonce=' + nonce + '&asset=USDT&key=solana-bot&amount=' + move.amount.toString();
+    const hash = require('crypto').createHash('sha256').update(nonce + postData).digest('binary');
+    const hmac = require('crypto').createHmac('sha512', Buffer.from(process.env.KRAKEN_API_SECRET, 'base64'));
+    hmac.update('/0/private/Withdraw', 'binary');
+    hmac.update(hash, 'binary');
+    const sig = hmac.digest('base64');
+    const kr = await fetch('https://api.kraken.com/0/private/Withdraw', {
+      method: 'POST',
+      headers: { 'API-Key': process.env.KRAKEN_API_KEY, 'API-Sign': sig, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: postData, signal: AbortSignal.timeout(15000),
+    });
+    const kj = await kr.json();
+    if (kj.error?.length) throw new Error('Kraken withdraw error: ' + kj.error[0]);
+    console.log('[rebalance] Kraken→Solana withdrawal ID:', kj.result?.refid);
+    // USDT arrives on Solana, then needs swap to USDC
+    await sendAlert('Kraken→Solana: $' + move.amount + ' USDT sent. Will arrive in 10-30min then auto-swap to USDC.');
   } else if (move.method === 'coinbase-to-sol') {
     await withdrawFromCoinbaseToSolana(move.amount);
   } else if (move.method === 'okx-to-coinbase') {
@@ -3149,7 +3165,7 @@ async function withdrawUSDTFromOKX(amount, toAddr, chain='USDT-Solana') {
   });
   if (t.code !== '0') throw new Error('OKX transfer to funding failed: ' + t.msg);
   await new Promise(r => setTimeout(r, 3000)); // wait for transfer
-  const fee = chain === 'USDT-ERC20' ? '1.0' : '1';
+  const fee = chain === 'USDT-ERC20' ? '1.0' : chain === 'USDT-TRC20' ? '1.5' : '0.29'; // USDT-Solana fee verified 0.29
   const netAmt = (parseFloat(transferAmt) - parseFloat(fee)).toFixed(2);
   const r = await okxPrivate('POST', '/api/v5/asset/withdrawal', {
     ccy: 'USDT', chain, dest: '4', amt: netAmt, toAddr, fee,

@@ -133,13 +133,22 @@ async function getCoinbaseOrder(orderId) {
 
 // ── Withdraw to Solana ────────────────────────────────────────────────────────
 async function coinbaseWithdraw(symbol, amount, toAddress) {
-  // Uses the v2 sends API for crypto withdrawals
-  const j = await cbRequest('POST', '/v2/accounts/' + symbol + '/transactions', {
+  // USDC account ID - verified 30 Aug 2026
+  const USDC_ACCOUNT_ID = '12cf9d1c-5344-51aa-81ba-f5bd0a27d4f6';
+  // Use v2 send with correct GB travel rule fields
+  // Verified working format from docs.cdp.coinbase.com/coinbase-business/transfer-apis/travel-rule
+  const j = await cbRequest('POST', '/v2/accounts/' + USDC_ACCOUNT_ID + '/transactions', {
     type: 'send',
     to: toAddress,
     amount: amount.toString(),
     currency: symbol,
     network: 'solana',
+    travel_rule_data: {
+      is_self: 'IS_SELF_TRUE',
+      beneficiary_name: 'RC',
+      beneficiary_address: { country: 'GB' },
+      beneficiary_wallet_type: 'WALLET_TYPE_SELF_HOSTED',
+    },
   });
   if (j.errors) throw new Error('Coinbase withdrawal failed: ' + JSON.stringify(j.errors));
   return j.data?.id;
