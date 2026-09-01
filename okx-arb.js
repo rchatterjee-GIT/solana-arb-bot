@@ -2889,6 +2889,8 @@ async function executeRebalanceMove(move) {
     await withdrawUSDTFromSolana(move.amount, depositAddr);
   } else if (move.method === 'okx-to-sol') {
     await withdrawUSDTFromOKX(move.amount, wallet.publicKey.toString());
+    // Poll for USDT arrival on Solana then swap to USDC
+    await pollAndSwapUSDTtoUSDC(move.amount);
   } else if (move.method === 'okx-to-bybit') {
     // Use pre-whitelisted Bybit USDT address in OKX address book
     const BYBIT_USDT_ADDR = '6VmfatJMwwPqbvMuqKzgZhcyQWgHLJDwiJCpdcA28Kwt';
